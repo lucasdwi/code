@@ -22,3 +22,17 @@ h{i} = plot(models.Base{1,sigModels.Base.ModelNumber(i)});
 title(sigModels.Base.Group{i});
 l = legend('show'); set(l,'visible','off');
 text(0.5,0.1,strcat('p \approx ',num2str(round(sigModels.Base.pValue(i),4))),'Units','normalized','HorizontalAlignment','center');
+%% Plot sigmodels 7 of rest data and 11 of rest_vs_binge data
+figure;
+subplot(1,2,1)
+i = 7;
+h{i} = plot(models.Base{1,sigModels.Base.ModelNumber(i)});
+title(strcat('Rest:',sigModels.Base.Group{i}));
+l = legend('show'); set(l,'visible','off');
+text(0.5,0.1,strcat('p \approx ',num2str(round(sigModels.Base.pValue(i),4))),'Units','normalized','HorizontalAlignment','center');
+subplot(1,2,2)
+i = 11;
+h{i} = plot(modelsComp.Base{1,sigComp.Base.ModelNumber(i)});
+title(strcat('BvR:',sigComp.Base.Group{i}));
+l = legend('show'); set(l,'visible','off');
+text(0.5,0.1,strcat('p \approx ',num2str(round(sigModels.Base.pValue(i),4))),'Units','normalized','HorizontalAlignment','center');

@@ -1,8 +1,8 @@
 %%
 % load file and create pl2 struct
-cd('C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge');
-fname = 'H10BaseSep27_pl2done-01_plx.pl2';
-pl2 = PL2GetFileIndex('H10BaseSep27_pl2done-01_plx.pl2');
+cd('C:\Users\Lucas\Desktop');
+fname = name;
+pl2 = PL2GetFileIndex(name);
 
 %%
 % Display all ad channels in file

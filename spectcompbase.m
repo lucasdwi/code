@@ -1,4 +1,4 @@
-function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,stdPower,psdTrls,TFRs,fd1,fd2,avgCoh,relCoh,stdCoh] = spectcompbase(file1,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,ftimwin,eventInfo,test)
+function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(file1,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,ftimwin,eventInfo,comp)
 %% Used to compute and plot spectrogram of normalized EEG data 
 % Normalization to baseline (event2) within the same animal
 
@@ -19,19 +19,13 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,stdPower,psdTrls,
 % minInt = minimum interval length of data to keep; format = seconds 
 % NaNcutoff = number of standard deviations from the average number of NaNs
 %   per channel at which to get rid of channel; format = integer (e.g. 1.5) 
-% event1 = first event of interest; format: Approach = 1; Binge = 2; Rest =
-%   3. 
-% event2 = second event of interest, baseline; format: Approach = 1; Binge
-%   = 2; Rest = 3. 
 % foi = frequencies of interest; format = [first step last] in Hz 
 %   (e.g. [1 2 150] 
-% ftimwin = time window steps used for both spectrograms; format = seconds 
-% toi1 = time range of interest for first event; format = [first step last]
-%   in seconds; N.B. last toi will usually = minInt  
-% toi2 = time range of interest for first event; format = [first step last] 
-%   in seconds; N.B. last toi will usually = minInt
-% normType = type of normalization to conduct; format = 'absolute',
-%   'relative', 'relchange' 
+% ftimwin = time window steps used for both spectrograms; format = seconds
+% eventInfo = structure of information about events; format: row = event;
+%   column 1 = event tag (Approach = 1; Binge = 2; Rest = 3); column 2 = time
+%   range of interest [first step last] in seconds; N.B. last toi will
+%   usually = minInt 
 % 
 %Code called:
 % eventInd.m
@@ -53,7 +47,9 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,stdPower,psdTrls,
 % clnTrls = cell array of clean trials for the three behaviors
 % TFR_event1 = output of FFT for event 1
 % TFR_event2 = output of FFT for event 2
-%% Check varargin - should be a n x 2 array with n = number of events of interest
+%% Initialize varargout
+stdPower = []; stdCoh = [];
+%% Check eventInfo - should be a n x 2 array with n = number of events of interest
 if size(eventInfo,2) ~= 2
     disp('It looks like your event information is incomplete, press Ctrl+C to quit or any other key to continue');
     pause
@@ -103,8 +99,17 @@ disp('Trializing data with trialExtract.m')
 [clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFPTsNaN,adfreq,minInt,dsf,chans);
 %% Calculate power spectra and plot 
 tic
+
 disp('Calculating power spectra and plotting average total power with powerComp.m')
-[psdTrls,relPower,stdPower,powerPlots] = powerComp(trls,adfreq,eventLabel,chans,test);
+if length(comp) == 1
+    [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,eventLabel,chans,comp);
+    %varargout = {};
+end
+if length(comp) == 2
+    [psdTrls,relPower,powerPlots,varargout] = powerComp(trls,adfreq,eventLabel,chans,comp);
+    stdPower = varargout; clear varargout;
+    %varargout{1} = stdPower;
+end
 toc
 %% Use Fieldtrip for Fourier Analysis
 channelCombos = {'NASL', 'NASR'; 'NASL', 'NACL'; 'NASL', 'NACR'; 'NASR','NACL';'NASR','NACR';'NACL','NACR'};
@@ -119,12 +124,12 @@ cfg.t_ftimwin    = ones(size(cfg.foi)).*ftimwin;
 cfg.keeptrials   = 'yes';
 cfg.channel      = LFPTsNaN.label;
 cfg.channelcmb   = channelCombos;
-cfg.toi          = eventInfo{test(1),2}(1):eventInfo{test(1),2}(2):eventInfo{test(1),2}(3);
+cfg.toi          = eventInfo{comp(1),2}(1):eventInfo{comp(1),2}(2):eventInfo{comp(1),2}(3);
 
-TFRs{1} = ft_freqanalysis(cfg,trls{test(1)});
+TFRs{1} = ft_freqanalysis(cfg,trls{comp(1)});
 toc
 
-if length(test) == 2
+if length(comp) == 2
     % Event2
     tic
     cfg = []; % Create empy cfg
@@ -135,10 +140,10 @@ if length(test) == 2
     cfg.foi = foi(1):foi(2):foi(3); % Frequencies of interest
     cfg.keeptrials = 'yes'; % For stastical comparison
     cfg.t_ftimwin = ones(size(cfg.foi)).*ftimwin;
-    cfg.toi = eventInfo{test(2),2}(1):eventInfo{test(2),2}(2):eventInfo{test(2),2}(3); % Times of interest
+    cfg.toi = eventInfo{comp(2),2}(1):eventInfo{comp(2),2}(2):eventInfo{comp(2),2}(3); % Times of interest
     cfg.channelcmb   = channelCombos;
 
-    TFRs{2} = ft_freqanalysis(cfg,trls{test(2)});
+    TFRs{2} = ft_freqanalysis(cfg,trls{comp(2)});
     toc
 end
 
@@ -148,36 +153,54 @@ end
 % toc
 %% Plot coherence
 tic
-[fd1,fd2,avgCoh,relCoh,stdCoh,cohPlots] = cohComp(TFRs,eventLabel);
+if length(comp) == 1
+    [avgCoh,relCoh,cohPlots,fds] = cohComp(TFRs,eventLabel,comp);
+end
+if length(comp) == 2
+    [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp);
+    stdCoh = varargout;
+    %varargout{2} = stdCoh;
+end
 toc
 %% Normalize
 % [statData] = baselineSpectro(TFR_event1,TFR_event2,normType);
 %% Save plots that exist
 % Set up directory and cd to it
-% mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1));
-% cd(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1));
-% % Save power plots
-% if ~isempty(powerPlots)
-%     powerPlotNames = {'PSDs','TotalPower'};
-%     for i = 1:size(powerPlots,2)
-%         savefig(powerPlots{i},powerPlotNames{i});
-%     end
-% end
-% % Save coherence plots
-% if ~isempty(cohPlots)
-%     cohPlotNames = {'Coh'};
-%     for i = 1:size(cohPlots,2)
-%         savefig(cohPlots{i},cohPlotNames{i});
-%     end
-% end
-% Save spectrograms
+cond = {'_approach','_binge','_rest','_vs'};
+if length(comp) == 1
+    mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1,cond{comp}));
+    cd(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1,cond{comp}));
+else if length(comp) == 2
+        mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1,cond{comp(1)},'_vs',cond{comp(2)}));
+        cd(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',file1,cond{comp(1)},'_vs',cond{comp(2)}));
+    end
+end
+% Save power plots
+if ~isempty(powerPlots)
+    powerPlotNames = {'PSDs','TotalPower'};
+    for i = 1:size(powerPlots,2)
+        savefig(powerPlots{i},powerPlotNames{i});
+    end
+end
+% Save coherence plots
+if ~isempty(cohPlots)
+    cohPlotNames = {'Coh'};
+    for i = 1:size(cohPlots,2)
+        savefig(cohPlots{i},cohPlotNames{i});
+    end
+end
+%% Save spectrograms
 % spectroPlotNames = {'Event1','Event2'};
 % for i = 1:size(spectroPlots,2)
 %     savefig(spectroPlots{i},spectroPlotNames{i});
 % end
 
-%% Save variables
+%% Save variabless
 % Just save processed PSD and coherence data; skip actual TFR and FD data
 % to save space.
-save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\syn\',file1,'_processed.mat'),'psdTrls','avgCoh','relCoh','stdCoh');
+if length(comp) == 1
+   save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\processed\',file1,cond{comp},'.mat'),'psdTrls','relPower','avgCoh','relCoh','fds'); 
+end
+if length(comp) == 2
+    save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\processed\',file1,cond{comp(1)},'_vs',cond{comp(2)},'.mat'),'psdTrls','relPower','avgCoh','relCoh','stdCoh','fds');
 end

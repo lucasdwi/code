@@ -1,23 +1,23 @@
-function [psdTrls,relPower,stdPower,powerPlots] = powerComp(trlData,adfreq,eventLabel,chans,test)
+function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,eventLabel,chans,comp)
 % trlData = cell array of data structure for each event; format: {1} =
 %   Approach; {2} = Binge; {3} = Rest
 
 %% Initialize
 clrs = {[0.2081 0.1663 0.5292];[0.0265 0.6137 0.8135];[0.6473 0.7456 0.4188];[0.9990 0.7653 0.2164]};
 
-% If only one value in test, then will look at just one event; if two
+% If only one value in comp, then will look at just one event; if two
 % values then will compare those two events
 nTrials = {};
-if length(test) == 1
-    nTrials = {length(trlData{test}.trial)};
-    trls = trlData(test);
+if length(comp) == 1
+    nTrials = {length(trlData{comp}.trial)};
+    trls = trlData(comp);
     events = {'event1'};
 end
 
-if length(test) == 2
-   nTrials{1} = length(trlData{1,test(1)}.trial);
-   nTrials{2} = length(trlData{1,test(2)}.trial);
-   trls = {trlData{test(1)},trlData{test(2)}};
+if length(comp) == 2
+   nTrials{1} = length(trlData{1,comp(1)}.trial);
+   nTrials{2} = length(trlData{1,comp(2)}.trial);
+   trls = {trlData{comp(1)},trlData{comp(2)}};
    events = {'event1','event2'};
 end
 
@@ -71,7 +71,7 @@ for i = 1:length(events)
     end
     xlim([0 150]);
     xlabel('Frequency (Hz)');
-    title(eventLabel{test(i)});
+    title(eventLabel{comp(i)});
 end
 % Linkaxes of both event subplots
 if length(events) == 2
@@ -133,6 +133,7 @@ end
 if length(events) == 2
 relPower = (psdTrls.event1.Avg-psdTrls.event2.Avg)./abs(psdTrls.event2.Avg);
 stdPower = relPower.*(psdTrls.event1.Std./psdTrls.event1.Avg + psdTrls.event2.Std./psdTrls.event2.Avg);
+varargout{1} = stdPower;
 end
 
 %% Plot average power differences
@@ -150,10 +151,10 @@ if length(events) == 2
     subplot(1,3,3)
     h = barwitherr(stdPower.*100,relPower.*100);
     set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'});
-    l = legend(trls{test(1)}.label);
+    l = legend(trls{comp(1)}.label);
     set(l,'Location','southeast');
-    title(['Percent change in ',eventLabel{test(1)},' from ',eventLabel{test(2)}]);
-    xlabel('Frequency Band'); ylabel(['Percent change from ',eventLabel{test(2)}]);
+    title(['Percent change in ',eventLabel{comp(1)},' from ',eventLabel{comp(2)}]);
+    xlabel('Frequency Band'); ylabel(['Percent change from ',eventLabel{comp(2)}]);
     % Set color scheme
     for i = 1:chans
          h(1,i).FaceColor = clrs{i};
@@ -195,7 +196,7 @@ if length(events) == 2
             end
         end
     end
-    l = legend({eventLabel{test(1)};eventLabel{test(2)}}); 
+    l = legend({eventLabel{comp(1)};eventLabel{comp(2)}}); 
     set(l,'Position',[0.909 0.828 0.089 0.095]);
     axes('Position',[0 0 1 1],'Xlim',[0 1],'Ylim',[0 1],'Box','off','Visible','off','Units','normalized','clipping','off');
     text(0.5,1,'\bf Total average power','HorizontalAlignment','Center','VerticalAlignment','top');

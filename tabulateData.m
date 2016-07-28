@@ -1,4 +1,8 @@
-function [T,allPredict,allResponse,allGroups] = tabulateData
+function [T,allPredict,allResponse,allGroups] = tabulateData(comp)
+%%
+% comp = indicates whether data is from between conditions or one
+%   condition: 1 = from one condition; 2 = from two conditions (i.e. binge vs rest) 
+%%
 files.Base = {'H10BaseSep27','H13BaseSep27','H14BaseSep29','H15BaseSep29','I1BaseNov9','I2BaseNov9','I3BaseNov9','I4BaseSep24','I6BaseSep18','I8BaseSep23','I11BaseOct30','I12BaseNov12'};
 files.Dep = {'H10FoodDepSep25','H13FoodDepSep25','H14FoodDepSep28','H15FoodDepSep28','I1FoodDepNov13','I2FoodDep24Dec16','I3FoodDep24Nov2','I4FoodDepSep30','I6FoodDepSep30','I8FoodDepSep30','I11FoodDep24Dec16','I12FoodDepNov13'};
 %% Extract data from all processed files
@@ -7,20 +11,33 @@ PSDs = {};
 Cohs = {};
 ntrials = {};
 for c = 1:length(cond)
-    events = {'event1','event2'};
+    if length(comp) == 1
+        events = {'event1'};
+        filestr = '_rest.mat';
+    end
+    if length(comp) == 2
+        events = {'event1','event2'};
+        filestr = '_processed.mat';
+    end
     for i = 1:length(files.(cond{c}))
-        load(strcat('C:\Users\Lucas\Desktop\GreenLab\data\processed\',files.(cond{c}){i},'_processed.mat'));
+        load(strcat('C:\Users\Lucas\Desktop\GreenLab\data\processed\',files.(cond{c}){i},filestr));
         for j = 1:length(events)
             PSDs.(cond{c}).Overall{i,j} = psdTrls.(events{j}).Overall;
             PSDs.(cond{c}).Bands{i,j} = psdTrls.(events{j}).Avg;
             ntrials.(cond{c}){i,j} = length(psdTrls.(events{j}).Pow);
             Cohs.rel.(cond{c}){i,1} = relCoh';
-            Cohs.std.(cond{c}){i,1} = stdCoh';
-            %names.(cond{c}){i,1} = files.(cond{c}){i};
+            if length(comp) == 1
+                PSDs.(cond{c}).Bands{i,length(events)+1} = relPower;
+            end
+            if length(comp) == 2
+                Cohs.std.(cond{c}){i,1} = stdCoh';
+            end
         end
         % Calculates percent change from baseline (rest) to binge
-        PSDs.(cond{c}).Bands{i,3} = (PSDs.(cond{c}).Bands{i,1}-PSDs.(cond{c}).Bands{i,2})./abs(PSDs.(cond{c}).Bands{i,2});
-        clear psdTrls relCoh stdCoh
+        if length(comp) == 2
+            PSDs.(cond{c}).Bands{i,3} = (PSDs.(cond{c}).Bands{i,1}-PSDs.(cond{c}).Bands{i,2})./abs(PSDs.(cond{c}).Bands{i,2});
+        end
+        clear psdTrls relPower relCoh stdCoh;
     end
 end
 %% Define group membership
@@ -80,7 +97,12 @@ for f = 1:numel(cond)
     T.(cond{f}) = horzcat(T.(cond{f}),table(coreReduct',shellReduct','VariableNames',{'coreReduct','shellReduct'}));
     % Fill in power data (channel-band (cb) data)
     for i = 1:numel(cbNames)
-        thiscbT = table(cb.(cond{f}){i}(:,3),'VariableNames',cellstr(cbNames(i)));
+        if length(comp) == 1
+            thiscbT = table(cb.(cond{f}){i}(:,2),'VariableNames',cellstr(cbNames(i)));
+        end
+        if length(comp) == 2
+            thiscbT = table(cb.(cond{f}){i}(:,3),'VariableNames',cellstr(cbNames(i)));
+        end
         T.(cond{f}) = horzcat(T.(cond{f}),thiscbT);
     end
     % Fill in coherence data (pair-band (pb) data)
