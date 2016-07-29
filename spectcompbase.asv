@@ -112,12 +112,7 @@ if length(comp) == 2
 end
 toc
 %% Use Fieldtrip for Fourier Analysis
-% Get channel combinations
-cmb = nchoosek(1:length(lfpchan),2);
-for c = 1:size(cmb,1)
-    channelCmb{c,:} = LFPTs.label(cmb(c,:));
-end
-%%
+%
 channelCombos = {'NASL', 'NASR'; 'NASL', 'NACL'; 'NASL', 'NACR'; 'NASR','NACL';'NASR','NACR';'NACL','NACR'};
 % Event 1
 tic

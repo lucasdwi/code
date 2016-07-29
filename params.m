@@ -16,10 +16,10 @@ cond = fieldnames(T.Base);
 alph = [.001:.001:1];
 %% Test alphas
 %for c = 1:length(cond)
-    % Extract predictors and normalize to be >0x
+    % Extract predictors and normalize to be >0
     predict = table2array(T.Base(:,8:end))+1;
     % Columns of response variables
-    for j = 4:5
+    for j = 2:5
             % Extract response
             response = table2array(T.Base(:,j));
             % Cycle through alphas
@@ -33,7 +33,7 @@ alph = [.001:.001:1];
                     % Get index of lambda with lowest misclassification error
                     ind = find(CVerr.lambda == CVerr.lambda_min);
                     % Store each minimum error in matrix of cell array
-                    allDev{j-1}(ii,r) = CVerr.cvm(ind);
+                    allDev{1,j-1}(ii,r) = CVerr.cvm(ind);
                 end
             end
             toc            
@@ -82,7 +82,7 @@ for c = 1:size(allBeta,2)
     end
 end
 %% Manual filling - alpha
-for j = 5
+for j = 3
     z = find(not(allDev{1,j-1}),1);
     s = size(allDev{1,j-1},1);
     while  s < 1000 
