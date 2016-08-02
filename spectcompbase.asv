@@ -147,11 +147,13 @@ end
 toc
 %% Use Fieldtrip for Fourier Analysis
 % Get channel combinations
-cmb = nchoosek(1:length(lfpchan),2);
-channelCmb = zeros();
+cmb = nchoosek(1:chans,2);
+channelCmb = cell(size(cmb,1));
+%%
 for c = 1:size(cmb,1)
-    channelCmb(c,:) = LFPTs.label(cmb(c,:));
+    channelCmb{c,:} = LFPTs.label(cmb(c,:));
 end
+%%
 % Event 1
 tic
 cfg              = [];

@@ -64,6 +64,9 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,
 %   if two events: change in event1 coherence per band from event2
 % stdPower = the variance in power (only if two events)
 % stdCoh = the variance in coherence (only if two events)
+
+% Example Inputs:
+% file1 = 'H10BaseSep27'; dsf=5;thresh=2.5;onset=5;offset=17000;minInt=3;NaNcutoff=1.5;foi=[1 2 150];ftimwin=0.5; eventInfo = {1,[0 0.005 3];2,[0 0.005 3];3,[0 0.005 3]};comp=[3]; filter = 'y';
 %% Initialize varargout
 stdPower = []; stdCoh = [];
 %% Checks
@@ -148,10 +151,10 @@ toc
 %% Use Fieldtrip for Fourier Analysis
 % Get channel combinations
 cmb = nchoosek(1:chans,2);
-channelCmb = zeros(size(cmb,1));
 for c = 1:size(cmb,1)
     channelCmb(c,:) = LFPTs.label(cmb(c,:));
 end
+%%
 % Event 1
 tic
 cfg              = [];
