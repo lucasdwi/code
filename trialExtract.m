@@ -1,20 +1,20 @@
 function [clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFPTsNaN,adfreq,minInt,dsf,chans)
 %% Trialize LFPTsNaN.data based on event markers
 % Inputs:
-% event1 = first event of interest; format: Approach = 1; Binge = 2; Rest =
-%   3. 
-% event2 = second event of interest, baseline; format: Approach = 1; Binge
-%   = 2; Rest = 3. 
+% eventInfo = structure of information about events; format: row = event;
+%   column 1 = event tag (Approach = 1; Binge = 2; Rest = 3); column 2 = time
+%   range of interest [first step last] in seconds; N.B. last toi will
+%   usually = minInt 
 % eventInds = vector of indices in eventTs of behaviors; format:
 %   [integers]; e.g. [indO,indRs,indRe,indAs,indAe,indBs,indBe,indRm]; from
 %   eventInd.m
 % eventTs = event structure with behavior time stamps and labels; from
 %   ConvertPl2All_Files.m (Stott)
-% LFPTsNaN = NaNed LFPTs data structure; from threshFilt.m
-% adfreq = sampling rate of data; from ConvertPl2All_Files.m (Stott)
+% LFPTs = LFPTs data structure
+% adfreq = sampling rate of data; format = Hz; from ConvertPl2All_Files.m (Stott)
 % minInt = minimum interval for clean data; format: seconds
-% dsf = downsample factor; format: integer
-% chans = number of channels
+% dsf = downsample factor; format = integer
+% chans = number of channels; format = integer
 
 % Outputs:
 % clnTrls = cell array of all clean trials of all behavior; row = behavior
@@ -22,10 +22,9 @@ function [clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFP
 % clnEvents = collapsed clnTrls
 % varargout = cell array of data structure for all events in eventInfo
 
-% Requires output of threshFilt.m, eventInd.m, ConvertPl2All_Files.m
-% (Stott)
-
+% Requires output of eventInd.m
 %% Creates cell array of continuous behavior epoch timestamps
+
 % intTime{i,j}(k,l)
 % i = behavior (approach, binge, rest)
 % j = epoch number

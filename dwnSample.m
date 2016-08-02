@@ -1,21 +1,22 @@
 function [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq,chans)
 %% Decimates LFPTs data and downsamples time vector
 % Inputs:
-% LFPTs = LFP data structure
-% dsf = downsample factor 
-% adfreq = sampling rate
-% chans = number of channels 
+% LFPTs = data structure
+% dsf = downsample factor; format = integer 
+% adfreq = sampling rate; format = Hz
+% chans = number of channels; format = integer
+
 % Outputs:
-% LFPTs = downsampled LFP data
+% LFPTs = downsampled data
 % adfreq = new sampling rate
 %%
-dwnLFPTs.data = [];
+LFPTsDwn.data = [];
 
 for i = 1:chans
-    dwnLFPTs.data(i,:) = decimate(LFPTs.data(i,:),dsf);
+    LFPTsDwn.data(i,:) = decimate(LFPTs.data(i,:),dsf);
 end
-dwnLFPTs.tvec = downsample(LFPTs.tvec,dsf);
-% Overwrite old LFPTs with dwnLFPTs; for further analysis
-LFPTs.data = dwnLFPTs.data;
-LFPTs.tvec = dwnLFPTs.tvec;
+LFPTsDwn.tvec = downsample(LFPTs.tvec,dsf);
+% Overwrite old LFPTs with LFPTsdwn; for further analysis
+LFPTs.data = LFPTsDwn.data;
+LFPTs.tvec = LFPTsDwn.tvec;
 adfreq = adfreq/dsf;

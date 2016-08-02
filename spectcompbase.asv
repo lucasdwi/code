@@ -1,13 +1,14 @@
-function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(file1,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,ftimwin,eventInfo,comp)
+function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(file1,filter,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,ftimwin,eventInfo,comp)
 %% Used to compute and plot spectrogram of normalized EEG data 
 % Normalization to baseline (event2) within the same animal
 
-%,TFR_event1,TFR_event2,statData
 % Inputs: 
 % file1 = data file with behavior of interest; format = 'filename' without
 %   .filetype designation (in this case .mat)
 %   N.B.: files need to be converted from .pl2 to .mat data structure using
 %   ConvertPl2All_Files.m (by Jeffery Stott)
+% filter = whether or not to apply filter; format = 'y' or 'n' with
+%   apostrophes
 % dsf = downsample factor; format = integer
 %   N.B.: dsf, onset, and offset need to be chosen such that onset and
 %   offset are multiples of dsf
@@ -26,8 +27,13 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,
 %   column 1 = event tag (Approach = 1; Binge = 2; Rest = 3); column 2 = time
 %   range of interest [first step last] in seconds; N.B. last toi will
 %   usually = minInt 
-% 
-%Code called:
+% comp = events to analyze; format = integer or integer-pair of event tags
+%   (Approach = 1; Binge = 2; Rest = 3) 
+
+% Data structure used throughout obtained from ConvertPl2All_Files.m and
+% Pl2tomvdmGenFile.m (Jeffery Stott)
+
+% Code called:
 % eventInd.m
 % threshFilt.m
 %   chkNaN.m
@@ -35,6 +41,7 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,
 
 % Fieldtrip code:
 % ft_prepare_layout.m
+% ft_connectivityanalysis.m
 % ft_freqanalysis.m
 % ft_multiplot.m
 
@@ -42,19 +49,37 @@ function [LFPTsNaN,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,
 % LFPTsNaN = NaNed data structure
 % nNaN = number of NaNs per channel and standard deviations from mean
 % indSkp = indices of channels to be skipped over
-% trl1 = trialized data for event 1
-% trl2 = trialized data for event 2
+% trls = structure of trialized data
 % clnTrls = cell array of clean trials for the three behaviors
-% TFR_event1 = output of FFT for event 1
-% TFR_event2 = output of FFT for event 2
+% clnEvents = collapsed clean trials
+% relPower = matrix of relative power levels per frequency band
+%   if one event: percent of total power from theta to h gamma per band
+%   it two events: change in event1 power per band from event2
+% psdTrls = outputs from pwelch in dB
+% TFRs = outputs from ft_freqanalysis
+% fds = outputs from ft_connenctivity analysis
+% avgCoh = average coherence in each channel combination per band
+% relCoh = matrix of relative coherence levels per band
+%   if one event: percent of total coherence from theta to h gamma per band
+%   if two events: change in event1 coherence per band from event2
+% stdPower = the variance in power (only if two events)
+% stdCoh = the variance in coherence (only if two events)
 %% Initialize varargout
 stdPower = []; stdCoh = [];
-%% Check eventInfo - should be a n x 2 array with n = number of events of interest
+%% Checks
+% Check eventInfo - should be a n x 2 array with n = number of events of interest
 if size(eventInfo,2) ~= 2
-    disp('It looks like your event information is incomplete, press Ctrl+C to quit or any other key to continue');
+    disp('It looks like you are missing either an event tag or toi in eventInfo, press Ctrl+C to quit or any other key to continue.');
     pause
 end
-%% Determine indices for events and create Rest Middle
+% Check last toi of eventInfo = minInt
+for e = 1:size(eventInfo,1)
+    if eventInfo{e,2}(3) ~= minInt
+        disp(strcat('Event ',num2str(e),' toi has a different length than minInt, press Ctrl+C to quit or any other key to continue.'));
+        pause
+    end
+end
+%% Determine indices for events and create 'Rest Middle'
 tic
 cd('C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\');
 disp('Loading file and extracting event indices with eventInd.m')
@@ -70,21 +95,29 @@ for ii = 1:size(eventInfo,1)
 end
 toc
 %% Filter
-tic
-disp('Applying 60 Hz filter')
-[b,a] = cheby1(4,0.5,[59 61]*2/adfreq,'stop');
-%fvtool(b2,a2,'Fs',adfreq);
-%figure; plot(LFPTs.data(1,1:20000));
-LFPTsFilt = LFPTs;
-for i = 1:chans
-    LFPTsFilt.data(i,:) = filtfilt(b,a,LFPTsFilt.data(i,:));
+if filter == 'y'
+    tic
+    disp('Applying 60 Hz filter')
+    % Create first order Chebychev stopband filter from 59 to 61 Hz
+    [b,a] = cheby1(4,0.5,[59 61]*2/adfreq,'stop');
+    % Plot filter
+    %fvtool(b2,a2,'Fs',adfreq);
+    %figure; plot(LFPTs.data(1,1:20000));
+    % Setup filtered LFPT structure
+    LFPTsFilt = LFPTs;
+    % Apply filter to all chans
+    for i = 1:chans
+        LFPTsFilt.data(i,:) = filtfilt(b,a,LFPTsFilt.data(i,:));
+    end
+    % Overwrite LFPTs with LFPTsFilt
+    LFPTs = LFPTsFilt;
+    toc
 end
-toc
 %% Downsample data
 tic
 if dsf > 1
     disp('Downsampling data with dwnSample.m')
-    [LFPTsdwn,adfreq] = dwnSample(LFPTsFilt,dsf,adfreq,chans);
+    [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq,chans);
 else
     disp('Skipping downsampling')
 end
@@ -92,28 +125,33 @@ toc
 %% Threshold data
 tic
 disp('Thresholding data with threshFilt')
-[LFPTsNaN,nNaN,indSkp] = threshFilt(LFPTsdwn,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
+[LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
 toc
+%% Check channel quality
+% tic
+%
+% toc
 %% Trialize around events
 disp('Trializing data with trialExtract.m')
-[clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFPTsNaN,adfreq,minInt,dsf,chans);
+[clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFPTs,adfreq,minInt,dsf,chans);
 %% Calculate power spectra and plot 
 tic
-
 disp('Calculating power spectra and plotting average total power with powerComp.m')
 if length(comp) == 1
     [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,eventLabel,chans,comp);
-    %varargout = {};
 end
 if length(comp) == 2
     [psdTrls,relPower,powerPlots,varargout] = powerComp(trls,adfreq,eventLabel,chans,comp);
     stdPower = varargout; clear varargout;
-    %varargout{1} = stdPower;
 end
 toc
 %% Use Fieldtrip for Fourier Analysis
-%
-channelCombos = {'NASL', 'NASR'; 'NASL', 'NACL'; 'NASL', 'NACR'; 'NASR','NACL';'NASR','NACR';'NACL','NACR'};
+% Get channel combinations
+cmb = nchoosek(1:length(lfpchan),2);
+channelCmb = zeros();
+for c = 1:size(cmb,1)
+    channelCmb(c,:) = LFPTs.label(cmb(c,:));
+end
 % Event 1
 tic
 cfg              = [];
@@ -123,8 +161,8 @@ cfg.taper        = 'hanning';
 cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
 cfg.t_ftimwin    = ones(size(cfg.foi)).*ftimwin; 
 cfg.keeptrials   = 'yes';
-cfg.channel      = LFPTsNaN.label;
-cfg.channelcmb   = channelCombos;
+cfg.channel      = LFPTs.label;
+cfg.channelcmb   = channelCmb;
 cfg.toi          = eventInfo{comp(1),2}(1):eventInfo{comp(1),2}(2):eventInfo{comp(1),2}(3);
 
 TFRs{1} = ft_freqanalysis(cfg,trls{comp(1)});
@@ -135,14 +173,14 @@ if length(comp) == 2
     tic
     cfg = []; % Create empy cfg
     cfg.output = 'powandcsd';
-    cfg.channel = LFPTsNaN.label;
+    cfg.channel = LFPTs.label;
     cfg.method = 'mtmconvol';
     cfg.taper = 'hanning';
     cfg.foi = foi(1):foi(2):foi(3); % Frequencies of interest
     cfg.keeptrials = 'yes'; % For stastical comparison
     cfg.t_ftimwin = ones(size(cfg.foi)).*ftimwin;
     cfg.toi = eventInfo{comp(2),2}(1):eventInfo{comp(2),2}(2):eventInfo{comp(2),2}(3); % Times of interest
-    cfg.channelcmb   = channelCombos;
+    cfg.channelcmb   = channelCmb;
 
     TFRs{2} = ft_freqanalysis(cfg,trls{comp(2)});
     toc

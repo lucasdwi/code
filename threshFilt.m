@@ -1,26 +1,29 @@
-function [LFPTsNaN,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
+function [LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
 %% Find indices of values > |thres| and NaN
 
 % Inputs:
 % LFPTs = LFPTs data structure from ConvertPl2All_Files.m (Stott)
 % thresh = maximum value at which to NaN data; format: mV (e.g. 2.5 will
-% NaN any data above/equal to 2.5 or below/equal to 2.5
-% onset = amount of data before threshold cross to NaN; format: indices 
+%   NaN any data above/equal to 2.5 or below/equal to 2.5
+% onset = amount of data before threshold cross to NaN; format: samples 
 %   (e.g. 1 = 0.5 ms; 2000 = 1 sec) 
-% offset = amount of data after threshold cross to NaN; format: indices
+% offset = amount of data after threshold cross to NaN; format: samples
 %   (e.g. 1 = 0.5 ms; 2000 = 1 sec)  
 % minInt = minimum interval length of data to keep; format: seconds 
 % NaNcutoff = number of standard deviations from the average number of NaNs
-%   per channel at which to get rid of channel; format = integer (e.g. 1.5)
-% adfreq = sampling frequency
-% dsf = downsampling factor
-% chan = number of channels
+%   per channel at which to get rid of channel; format = positive number
+%   (e.g. 1.5)
+% adfreq = sampling frequency; format = Hz
+% dsf = downsampling factor; format = integer
+% chans = number of channels; format = integer
 
-% Create int onset->offset
-% thresh = 2.5 mV
-% onset = 5 milliseconds (0.005 seconds)
-% offset = 17000 milliseconds (17 seconds)
-% minInt = 5 seconds
+% Outputs:
+% LFPTs = NaNed LFPT data structure
+% nNaN = number of NaNed samples per channel
+% indSkp = indices of channels skipped due to too many NaNs
+
+% Code:
+% chkNaN.m
 
 %% Create threshInd structure; 1 = above threshhold, 0 = not
 threshInd = cell(1,chans); % Columns = channels; {1,:} = indices above thresh; {2,:} = onset indices; {3,:} = offset indices
@@ -88,8 +91,17 @@ if chk_empty ~= 0
     [nNaN,indSkp] = chkNaN(LFPTsNaN,chans,NaNcutoff);
     %% Find chunks of existing data
     % Sum each column across rows to get all channels to have the same number
-    % of NaNed indices
-    LFPTsNaN.oneChan = sum(LFPTsNaN.data,1); 
+    % of NaNed indices per channel
+    if isempty(indSkp)
+        LFPTsNaN.oneChan = sum(LFPTsNaN.data,1); 
+    end
+    % If channel was skipped, then don't include in sum to avoid NaNing all
+    % data
+    if ~isempty(indSkp)
+        c = (1:chans);
+        c = c(c~=indSkp);
+        LFPTsNaN.oneChan = sum(LFPTsNaN.data(c,:),1);
+    end
     % Spread LFPTsNaN.oneChan across all channels
     LFPTsNaN.data(:,isnan(LFPTsNaN.oneChan)) = NaN; 
     % Find where data starts and stops
@@ -104,7 +116,6 @@ if chk_empty ~= 0
     if ~isnan(LFPTsNaN.oneChan(end))
         dataStop = horzcat(dataStop,length(LFPTsNaN.oneChan));
     end
-
     %% Check size of intervals and if < minInt, NaN
     for i = 1:length(dataStart)
         if dataStop(i) - dataStart(i) <= (minInt*adfreq+1)
@@ -112,8 +123,9 @@ if chk_empty ~= 0
         end
     end
 else
-    LFPTsNaN = LFPTs;
     nNaN = [];
     indSkp = [];
 end
+% Overwrite LFPTs with LFPTsNaN
+LFPTs = LFPTsNaN;
 end

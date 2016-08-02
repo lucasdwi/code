@@ -1,8 +1,30 @@
 function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,eventLabel,chans,comp)
+%% Uses pwelch to compute power and plots overall PSD per channel and 
+% either a distribution of power per frequency band for each channel or a 
+% relative change in each frequency band 
+
+% Inputs:
 % trlData = cell array of data structure for each event; format: {1} =
 %   Approach; {2} = Binge; {3} = Rest
+% adfreq = sampling rate; format = Hz
+% eventLabel = cell array of behaviors; format = string
+% chans = number of channels; format = integer
+% comp = events to analyze; format = integer or integer-pair of event tags
+%   (Approach = 1; Binge = 2; Rest = 3) 
+
+% Outputs:
+% psdTrls = power data structure for each event; contains PSD for each
+%   trial of data (.Pow), average PSD (.Overall), average power within each
+%   band (.Avg), standard deviation within each band (.Std), and power from
+%   lowest to highest band (.totalPower)
+% relPower = either percent of total power in each band per channel (1
+%   value in comp) or relative change in power in each band per channel
+%   between 2 events (2 values in comp)
+% powerPlots = array of plot information
+% varargout = if 2 values in comp, then carries error from both
 
 %% Initialize
+% Colors to use for each channel in plotting
 clrs = {[0.2081 0.1663 0.5292];[0.0265 0.6137 0.8135];[0.6473 0.7456 0.4188];[0.9990 0.7653 0.2164]};
 
 % If only one value in comp, then will look at just one event; if two
@@ -20,7 +42,6 @@ if length(comp) == 2
    trls = {trlData{comp(1)},trlData{comp(2)}};
    events = {'event1','event2'};
 end
-
 %%
 %trl1.nTrials = length(trl1.trial); trl2.nTrials = length(trl2.trial);
 %trls = {trl1,trl2};

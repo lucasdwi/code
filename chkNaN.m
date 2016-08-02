@@ -6,13 +6,14 @@ function [nNaN,indSkp] = chkNaN(LFPTsNaN,chans,NaNcutoff)
 % Inputs:
 % LFPTsNaN = LFPTsNaN data structure; from threshFilt.m
 % chans = number of channels; from threshFilt.m
-% cutoff = point at which channel has too many NaNs; format: standard
+% NaNcutoff = point at which channel has too many NaNs; format: standard
 %   deviations (e.g. 1.5)
 
 % Outputs:
 % nNaN = matrix of number of NaNs per channel (row 1) and number of
 %   standard deviations from mean (row2)
 % indSkp = indices of those channels with number of NaNs >= cutoff
+%   N.B. used by threshFilt.m
 %% Find channels with more NaNs than cutoff allows
 nNaN = zeros(2,chans);
 indSkp = [];

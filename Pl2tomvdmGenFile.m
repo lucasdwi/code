@@ -98,19 +98,19 @@ end
 
 % added by JJS. 2016-03-17. 
 disp('saving file')
-% sd = [];
-% 
-% sd.ad = ad;
-% sd.adfreq = adfreq; 
-% sd.eventTs = eventTs;
-% sd.fn = fn;
-% sd.lfpchan = lfpchan;
-% sd.LFPTs = LFPTs;
-% sd.n = n;
-% sd.pl2 = pl2;
-% sd.TimeSampEr = TimeSampEr;
-% sd.ts = ts;
-% sd.WBchan = WBchan;
+sd = [];
+
+sd.ad = ad;
+sd.adfreq = adfreq; 
+sd.eventTs = eventTs;
+sd.fn = fn;
+sd.lfpchan = lfpchan;
+sd.LFPTs = LFPTs;
+sd.n = n;
+sd.pl2 = pl2;
+sd.TimeSampEr = TimeSampEr;
+sd.ts = ts;
+sd.WBchan = WBchan;
 
 % Edited by LLD to not use data structure when saving 2016-7-29
 save(strcat(filenamein, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');

@@ -1,4 +1,22 @@
 function [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp)
+%% Uses output of ft_freqanalysis.m to compute coherence from cross-spectral densities
+
+% Inputs:
+% TFRs = data structures from ft_freqanalysis.m
+% eventLabel = cell array of behaviors; format = string
+% comp = events to analyze; format = integer or integer-pair of event tags
+%   (Approach = 1; Binge = 2; Rest = 3) 
+
+% Outputs:
+% avgCoh = matrix of average coherence values, channel-pair X frequency
+%   band
+% relCoh = matrix of coherence normalized to either the average coherence
+%   in each pair (1 value in comp) or the first event normalized the the
+%   second (2 values in comp)
+% cohPlots = array of plot information
+% fds = output of ft_connectivityanalysis.m 
+% varargout = if 2 values in comp, then the error carried through from each
+%   event coherence average
 %% Calculate coherence
 cfg = {};
 cfg.method = 'coh';
@@ -93,8 +111,8 @@ for i = 1:length(TFRs)
 end
 %% Normalize coherence values
 % If one condition, normalize average coherence within each frequency band
-% to the channel combination with the highest avg coherence across all
-% frequencies
+% to the average coherence from beginning of alpha to end of high gamma
+
 % maxCoh = max(totalCoh(:,1); for Matt
 
 if length(comp) == 1
