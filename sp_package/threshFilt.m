@@ -122,10 +122,9 @@ if chk_empty ~= 0
             LFPTsNaN.data(:,dataStart(i):dataStop(i)) = NaN;
         end
     end
+    % Overwrite LFPTs with LFPTsNaN
+    LFPTs = LFPTsNaN; 
 else
     nNaN = [];
     indSkp = [];
-end
-% Overwrite LFPTs with LFPTsNaN
-LFPTs = LFPTsNaN;
 end

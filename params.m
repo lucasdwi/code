@@ -81,63 +81,63 @@ for c = 1:size(allBeta,2)
         allBeta{2,c}(2,ii) = sum(allBeta{1,c}(:,ii)~=0)/1000;
     end
 end
-%% Manual filling - alpha
-for j = 3
-    z = find(not(allDev{1,j-1}),1);
-    s = size(allDev{1,j-1},1);
-    while  s < 1000 
-        try
-        response = table2array(T.Base(:,j));
-        % Cycle through alphas
-        for ii = s:length(alph)
-            % Setup 'opts' structure with alpha value
-            opts.alpha = alph(ii);
-            % Start at beginning of row, first column
-            for r = 1:20
-                % Fit cross validated (3-fold due to size) logistic regression
-                CVerr = cvglmnet(predict,response,'binomial','opts','class',3);
-                % Get index of lambda with lowest misclassification error
-                ind = find(CVerr.lambda == CVerr.lambda_min);
-                % Store each minimum error in matrix of cell array
-                allDev{j-1}(ii,r) = CVerr.cvm(ind);
-            end
-        end
-        catch err
-            if strcmp(err.identifier, 'Index exceeds matrix dimensions.')
-                s = size(allDev{1,j-1},1);
-            end
-        end
-        s = size(allDev{1,j-1},1);
-        disp(s)
-    end
-end
-%% Manual filling - lambda
-for j = 5
-    z = find(not(allLam{1,j-1}),1);
-    s = size(allLam{1,j-1},1);
-    while  s < 1000 
-        try
-        response = table2array(T.Base(:,j));
-        % Cycle through alphas
-        for ii = s:1000
-            CVerr = cvglmnet(predict,response,'binomial','opts','class',3);
-            % Save minimum lambda
-            allLam{c}(ii,1) = CVerr.lambda_min;
-            % Save lamba +1 SE from min
-            allLam{c}(ii,2) = CVerr.lambda_1se;
-            % Save index of +1SE lambda
-            allLam{c}(ii,3) = find(CVerr.lambda == CVerr.lambda_1se);
-            % Save misclassification error for +1SE lambda
-            allLam{c}(ii,4) = CVerr.cvm(allLam{c}(ii,3));
-            % Save betas at lambda +1 SE from min
-            allBeta{c}(ii,:) = CVerr.glmnet_fit.beta(:,allLam{c}(ii,3))';
-        end
-        catch err
-            if strcmp(err.identifier, 'Index exceeds matrix dimensions.')
-                s = size(allLam{1,j-1},1);
-            end
-        end
-        s = size(allLam{1,j-1},1);
-        disp(s)
-    end
-end
+% %% Manual filling - alpha
+% for j = 3
+%     z = find(not(allDev{1,j-1}),1);
+%     s = size(allDev{1,j-1},1);
+%     while  s < 1000 
+%         try
+%         response = table2array(T.Base(:,j));
+%         % Cycle through alphas
+%         for ii = s:length(alph)
+%             % Setup 'opts' structure with alpha value
+%             opts.alpha = alph(ii);
+%             % Start at beginning of row, first column
+%             for r = 1:20
+%                 % Fit cross validated (3-fold due to size) logistic regression
+%                 CVerr = cvglmnet(predict,response,'binomial','opts','class',3);
+%                 % Get index of lambda with lowest misclassification error
+%                 ind = find(CVerr.lambda == CVerr.lambda_min);
+%                 % Store each minimum error in matrix of cell array
+%                 allDev{j-1}(ii,r) = CVerr.cvm(ind);
+%             end
+%         end
+%         catch err
+%             if strcmp(err.identifier, 'Index exceeds matrix dimensions.')
+%                 s = size(allDev{1,j-1},1);
+%             end
+%         end
+%         s = size(allDev{1,j-1},1);
+%         disp(s)
+%     end
+% end
+% %% Manual filling - lambda
+% for j = 5
+%     z = find(not(allLam{1,j-1}),1);
+%     s = size(allLam{1,j-1},1);
+%     while  s < 1000 
+%         try
+%         response = table2array(T.Base(:,j));
+%         % Cycle through alphas
+%         for ii = s:1000
+%             CVerr = cvglmnet(predict,response,'binomial','opts','class',3);
+%             % Save minimum lambda
+%             allLam{c}(ii,1) = CVerr.lambda_min;
+%             % Save lamba +1 SE from min
+%             allLam{c}(ii,2) = CVerr.lambda_1se;
+%             % Save index of +1SE lambda
+%             allLam{c}(ii,3) = find(CVerr.lambda == CVerr.lambda_1se);
+%             % Save misclassification error for +1SE lambda
+%             allLam{c}(ii,4) = CVerr.cvm(allLam{c}(ii,3));
+%             % Save betas at lambda +1 SE from min
+%             allBeta{c}(ii,:) = CVerr.glmnet_fit.beta(:,allLam{c}(ii,3))';
+%         end
+%         catch err
+%             if strcmp(err.identifier, 'Index exceeds matrix dimensions.')
+%                 s = size(allLam{1,j-1},1);
+%             end
+%         end
+%         s = size(allLam{1,j-1},1);
+%         disp(s)
+%     end
+% end

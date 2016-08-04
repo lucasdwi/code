@@ -1,26 +1,50 @@
-function [T,allPredict,allResponse,allGroups] = tabulateData(comp)
-%%
-% comp = indicates whether data is from between conditions or one
-%   condition: 1 = from one condition; 2 = from two conditions (i.e. binge vs rest) 
-%%
-files.Base = {'H10BaseSep27','H13BaseSep27','H14BaseSep29','H15BaseSep29','I1BaseNov9','I2BaseNov9','I3BaseNov9','I4BaseSep24','I6BaseSep18','I8BaseSep23','I11BaseOct30','I12BaseNov12'};
-files.Dep = {'H10FoodDepSep25','H13FoodDepSep25','H14FoodDepSep28','H15FoodDepSep28','I1FoodDepNov13','I2FoodDep24Dec16','I3FoodDep24Nov2','I4FoodDepSep30','I6FoodDepSep30','I8FoodDepSep30','I11FoodDep24Dec16','I12FoodDepNov13'};
+function [T,allPredict,allResponse,allGroups] = tabulateData(files,comp,n)
+%% Collects data from group of files and puts in table (subject X variable) 
+% N.B.: change 'files' structure as needed and make sure current directory
+% is correct
+
+% Inputs:
+% files = array of file names to be tabulated; format = string array
+%   N.B.: can be gotten from fileCycle.m
+% comp = condition(s) to analyze; 1 value = from one condition; 2 values =
+%   from two conditions (i.e. binge vs rest); if 2 conditions, make sure
+%   there are the same number of animals (files) in each condition
+% n = number of files per animal; format = integer
+
+% Outputs:
+% T = data table (subject X variable)
+% allPredict = vector of variable names that can be used as predictors
+% allResponse = vector of variables that are responses, predicted
+% allGroups = array of strings for groups that subjects can belong to
+
+% Example:
+% [...] = tabulateData([3],{'Base'})
+%   Will process all files in directory with 'Base' in name and 
+
+% files.Base = {'H10BaseSep27','H13BaseSep27','H14BaseSep29','H15BaseSep29','I1BaseNov9','I2BaseNov9','I3BaseNov9','I4BaseSep24','I6BaseSep18','I8BaseSep23','I11BaseOct30','I12BaseNov12'};
+% files.Dep = {'H10FoodDepSep25','H13FoodDepSep25','H14FoodDepSep28','H15FoodDepSep28','I1FoodDepNov13','I2FoodDep24Dec16','I3FoodDep24Nov2','I4FoodDepSep30','I6FoodDepSep30','I8FoodDepSep30','I11FoodDep24Dec16','I12FoodDepNov13'};
+%% Set path
+% cd(sdir);
+% %% Setup files to be processed
+% for f = 1:length(fType)
+%     files.(fType{f}) = extractfield(dir(strcat('*',fType{f},'*')),'name')';
+% end
 %% Extract data from all processed files
-cond = fieldnames(files); %{'Base','Dep'};
+cond = fieldnames(files);
 PSDs = {};
 Cohs = {};
 ntrials = {};
 for c = 1:length(cond)
-    if length(comp) == 1
-        events = {'event1'};
-        filestr = '_rest.mat';
-    end
-    if length(comp) == 2
-        events = {'event1','event2'};
-        filestr = '_processed.mat';
-    end
+     if length(comp) == 1
+         events = {'event1'};
+%         filestr = '_rest.mat';
+     end
+     if length(comp) == 2
+         events = {'event1','event2'};
+%         filestr = '_processed.mat';
+     end
     for i = 1:length(files.(cond{c}))
-        load(strcat('C:\Users\Lucas\Desktop\GreenLab\data\processed\',files.(cond{c}){i},filestr));
+        load(files.(cond{c})(i).name);
         for j = 1:length(events)
             PSDs.(cond{c}).Overall{i,j} = psdTrls.(events{j}).Overall;
             PSDs.(cond{c}).Bands{i,j} = psdTrls.(events{j}).Avg;
@@ -41,12 +65,22 @@ for c = 1:length(cond)
     end
 end
 %% Define group membership
-shellReduct = [-0.069767442,-0.4140625,0.06993007,-0.564343164,-0.499866986,-0.20657277,-0.4353683,-0.452188799,-0.060344828,-0.593134139,0.016771488,-0.350282486];
-coreReduct = [-0.444861215,-0.15625,-0.27972028,0.105898123,-0.396212933,-0.241622575,-0.073514602,0.093333333,-0.340761374,-0.568500539,0.228710462,-0.249753208];
+shellPercents = [-0.069767442,-0.4140625,0.06993007,-0.564343164,-0.499866986,-0.20657277,-0.4353683,-0.452188799,-0.060344828,-0.593134139,0.016771488,-0.350282486];
+corePercents= [-0.444861215,-0.15625,-0.27972028,0.105898123,-0.396212933,-0.241622575,-0.073514602,0.093333333,-0.340761374,-0.568500539,0.228710462,-0.249753208];
+% Replicate Percents for each n files per animal
+shellReduct = repmat(shellPercents,n,1);
+shellReduct = shellReduct(:)';
+coreReduct = repmat(corePercents,n,1);
+coreReduct = coreReduct(:)';
+% Setup responder group based on a reduction of more than 26%
 shellRespond = (shellReduct <= -0.26);
 coreRespond = (coreReduct <= -0.26);
-shellStrict = [0,1,0,1,0,0,1,1,0,0,0,0];
-coreStrict = [1,0,1,0,0,0,0,0,1,0,0,1];
+% Replicate Stricts for each n files per animal
+shellStrict = repmat([0,1,0,1,0,0,1,1,0,0,0,0],n,1);
+shellStrict = shellStrict(:)';
+coreStrict = repmat([1,0,1,0,0,0,0,0,1,0,0,1],n,1);
+coreStrict = coreStrict(:)';
+
 all = ones(length(shellReduct),1);
 
 allGroups = {'all' 'shellRespond' 'shellStrict' 'coreRespond' 'coreStrict'};
@@ -88,10 +122,11 @@ for i = 1:length(chlComb)
     end
 end
 %% Create data table
-tic
 for f = 1:numel(cond)
+    % Extract file names from files structure
+    fNames = extractfield(files.(cond{f}),'name')';
     % Initialize with animal name and group membership
-    T.(cond{f}) = array2table(groupLog,'VariableNames',allGroups,'RowNames',{'H10','H13','H14','H15','I1','I2','I3','I4','I6','I8','I11','I12'});
+    T.(cond{f}) = array2table(groupLog,'VariableNames',allGroups,'RowNames',fNames);
     %T.(cond{f}) = table(shellRespond',shellOnly',coreRespond',coreOnly','VariableNames',{'shellRespond','shellOnly','coreRespond','coreOnly'},'RowNames',{'H10','H13','H14','H15','I1','I2','I3','I4','I6','I8','I11','I12'});
     % Add binge response columns
     T.(cond{f}) = horzcat(T.(cond{f}),table(coreReduct',shellReduct','VariableNames',{'coreReduct','shellReduct'}));
@@ -111,7 +146,6 @@ for f = 1:numel(cond)
        T.(cond{f}) = horzcat(T.(cond{f}),thispbT);
     end
 end
-toc
 %% Define predictor (x) and response (y) variables for regressions
 allPredict = horzcat(cbNames,pbNames);
 allResponse = {'shellReduct','coreReduct'};
