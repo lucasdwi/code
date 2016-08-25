@@ -83,7 +83,7 @@ bandNames = fieldnames(bands);
 for i = 1:length(TFRs)
     for j = 1:length(bandNames)
         % Create frequency band intervals from indices in freq
-        bands.(bandNames{j}).ind = [find(fd1.freq>bands.(bandNames{j}).limit(1),1),find(fd1.freq<bands.(bandNames{j}).limit(2),1,'last')];
+        bands.(bandNames{j}).ind = [find(fd1.freq>=bands.(bandNames{j}).limit(1),1),find(fd1.freq<=bands.(bandNames{j}).limit(2),1,'last')];
     end
     for j = 1:length(bandNames)
         for k = 1:length(fd1.labelcmb)

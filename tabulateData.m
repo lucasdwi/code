@@ -65,8 +65,9 @@ for c = 1:length(cond)
     end
 end
 %% Define group membership
-shellPercents = [-0.069767442,-0.4140625,0.06993007,-0.564343164,-0.499866986,-0.20657277,-0.4353683,-0.452188799,-0.060344828,-0.593134139,0.016771488,-0.350282486];
-corePercents= [-0.444861215,-0.15625,-0.27972028,0.105898123,-0.396212933,-0.241622575,-0.073514602,0.093333333,-0.340761374,-0.568500539,0.228710462,-0.249753208];
+% Order: H10,H13,H14,H15,I11,I12,I1,I2,I3,I4,I6,I8
+shellPercents = [-0.069767442,-0.4140625,0.06993007,-0.564343164,0.016771488,-0.350282486,-0.499866986,-0.20657277,-0.4353683,-0.452188799,-0.060344828,-0.593134139];
+corePercents= [-0.444861215,-0.15625,-0.27972028,0.105898123,0.228710462,-0.249753208,-0.396212933,-0.241622575,-0.073514602,0.093333333,-0.340761374,-0.568500539];
 % Replicate Percents for each n files per animal
 shellReduct = repmat(shellPercents,n,1);
 shellReduct = shellReduct(:)';
@@ -76,9 +77,9 @@ coreReduct = coreReduct(:)';
 shellRespond = (shellReduct <= -0.26);
 coreRespond = (coreReduct <= -0.26);
 % Replicate Stricts for each n files per animal
-shellStrict = repmat([0,1,0,1,0,0,1,1,0,0,0,0],n,1);
+shellStrict = repmat([0,1,0,1,0,0,0,0,1,1,0,0],n,1);
 shellStrict = shellStrict(:)';
-coreStrict = repmat([1,0,1,0,0,0,0,0,1,0,0,1],n,1);
+coreStrict = repmat([1,0,1,0,0,1,0,0,0,0,1,0],n,1);
 coreStrict = coreStrict(:)';
 
 all = ones(length(shellReduct),1);

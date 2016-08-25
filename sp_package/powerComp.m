@@ -109,7 +109,7 @@ bandNames = fieldnames(bands);
 for i = 1:length(trls)
     for j = 1:length(bandNames)
         % Create frequency band intervals from indices in F
-        bands.(bandNames{j}).ind = [find(F>bands.(bandNames{j}).limit(1),1),find(F<bands.(bandNames{j}).limit(2),1,'last')];
+        bands.(bandNames{j}).ind = [find(F>=bands.(bandNames{j}).limit(1),1),find(F<=bands.(bandNames{j}).limit(2),1,'last')];
         for k = 1:nTrials{i}
             for c = 1:chans
                 % Integrates across frequency bands and puts in 5x4 matrix

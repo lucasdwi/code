@@ -13,7 +13,7 @@ function [varargout] = fileCycle(fun,fType,files,sdir)
 %   N.B.: if more than one source directory is to be used, rerun
 %   fileCycle.m for each
 
-% Outputs: Depend on function group called (see those functoins for more
+% Outputs: Depend on function group called (see those functions for more
 %   detail)
 
 % Example:
@@ -42,7 +42,7 @@ if strcmp(fun,'scb')
     % Run spectcompbase.m
     for i = 1:length(files)
         [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,1.5,[1 2 150],0.5,{1,[0 0.005 3];2,[0 0.005 3];3,[0 0.005 3]},[3])
-        close all; clearvars -except files i;
+        close all; clearvars -except files i sdir;
     end
 end
 %% Initialize files to be tabulated, then run through tabulateData.m
