@@ -14,7 +14,7 @@ indAe = find(not(cellfun('isempty',strfind(eventTs.label,'Approach (End)'))));
 indBs = find(not(cellfun('isempty',strfind(eventTs.label,'Binge (Start)'))));
 indBe = find(not(cellfun('isempty',strfind(eventTs.label,'Binge (End)'))));
 indRm = 11;
-% Set up new index matrix 
+%% Set up new index matrix 
 eventInds = [];
 eventInds(1:8,1) = [indO,indRs,indRe,indAs,indAe,indBs,indBe,indRm];
 % Create 'Rest Middle' label

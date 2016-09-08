@@ -52,12 +52,13 @@ end
 % eventLabel{2} = behaviors{event2};
 %%
 psdTrls = {};
-for i = 1:length(trls)
-    for j = 1:nTrials{i}
+for ii = 1:length(trls)
+    for j = 1:nTrials{ii}
         for k = 1:chans
-            [Pxx,F] = pwelch(trls{i}.trial{1,j}(k,:),hamming(length(trls{i}.trial{1,j}(k,:))),[],length(trls{i}.trial{1,j}(k,:)),adfreq);
+            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(length(trls{ii}.trial{1,j}(k,:))),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
             % Convert PSD into dB and store
-            psdTrls.(events{i}).Pow{1,j}(k,:) = (10*log10(Pxx))';
+            psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
+            %psdTrls.(events{ii}).Pow(k,:,j) = (10*log10(Pxx))';
         end
     end
 end
@@ -69,30 +70,30 @@ notchInd = [nearest_idx3(59,F);nearest_idx3(61.5,F)];
 % Find average overall PSD and plot
 powerPlots{1} = figure('Position',[1 1 1500 500]);
 ax = cell(1,length(events));
-for i = 1:length(events)
-    psdTrls.(events{i}).Overall = mean(cat(3,psdTrls.(events{i}).Pow{1,:}),3);
+for ii = 1:length(events)
+    psdTrls.(events{ii}).Overall = mean(cat(3,psdTrls.(events{ii}).Pow{1,:}),3);
     % NaN notch data
-    psdTrls.(events{i}).Overall(:,notchInd(1):notchInd(2)) = NaN;
+    psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
     % Check number of events and set up subplots accordingly
     if length(events) == 1
-        subplot(1,2,i)
+        subplot(1,2,ii)
     else if length(events) == 2
-    subplot(1,3,i);
+    subplot(1,3,ii);
         end
     end
     for j = 1:chans
-        hold on; ax{i} = plot(F,psdTrls.(events{i}).Overall(j,:),'color',clrs{j});
+        hold on; ax{ii} = plot(F,psdTrls.(events{ii}).Overall(j,:),'color',clrs{j});
         % Fill NaN data in plot
         thisstart = [F(notchInd(1)-1),F(notchInd(2)+1)];
-        thisend = [psdTrls.(events{i}).Overall(j,notchInd(1)-1),psdTrls.(events{i}).Overall(j,notchInd(2)+1)];
+        thisend = [psdTrls.(events{ii}).Overall(j,notchInd(1)-1),psdTrls.(events{ii}).Overall(j,notchInd(2)+1)];
         plot(thisstart,thisend,'color',clrs{j});
     end 
-    if i == 1
+    if ii == 1
         ylabel('Power (dB)');
     end
     xlim([0 150]);
     xlabel('Frequency (Hz)');
-    title(eventLabel{comp(i)});
+    title(eventLabel{comp(ii)});
 end
 % Linkaxes of both event subplots
 if length(events) == 2
@@ -106,32 +107,30 @@ hold off;
 bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15 30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
 % Find indices corresponding to frequency bands
 bandNames = fieldnames(bands);
-for i = 1:length(trls)
+for ii = 1:length(trls)
     for j = 1:length(bandNames)
         % Create frequency band intervals from indices in F
         bands.(bandNames{j}).ind = [find(F>=bands.(bandNames{j}).limit(1),1),find(F<=bands.(bandNames{j}).limit(2),1,'last')];
-        for k = 1:nTrials{i}
+        for k = 1:nTrials{ii}
             for c = 1:chans
                 % Integrates across frequency bands and puts in 5x4 matrix
                 % in second row;[theta; alpha; beta; low gamma; high gamma] 
-                psdTrls.(events{i}).Pow{2,k}(j,c) = trapz(bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2),psdTrls.(events{i}).Pow{1,k}(c,bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
+                psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2),psdTrls.(events{ii}).Pow{1,k}(c,bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
                 % Removes values around notch filter
                 if j == 4
-                    notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{i}).Pow{1,k}(c,notchInd(1):notchInd(2)));
-                    psdTrls.(events{i}).Pow{2,k}(j,c) = psdTrls.(events{i}).Pow{2,k}(j,c) - notchOut;
+                    notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{ii}).Pow{1,k}(c,notchInd(1):notchInd(2)));
+                    psdTrls.(events{ii}).Pow{2,k}(j,c) = psdTrls.(events{ii}).Pow{2,k}(j,c) - notchOut;
                 end
-                % Sums
-                % psdTrls.(events{i}).Pow{3,k}(j,c) = sum(psdTrls.(events{i}).Pow{1,k}(c,bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
             end
         end
     end
 end
 %% Calculate absolute average PSD and standard deviation for each channel across frequency bands
-for i = 1:length(events)
+for ii = 1:length(events)
     for j = 1:length(bandNames)
         for c = 1:chans
-            psdTrls.(events{i}).Avg = mean(cat(3,psdTrls.(events{i}).Pow{2,:}),3);
-            psdTrls.(events{i}).Std = std(cat(3,psdTrls.(events{i}).Pow{2,:}),0,3);
+            psdTrls.(events{ii}).Avg = mean(cat(3,psdTrls.(events{ii}).Pow{2,:}),3);
+            psdTrls.(events{ii}).Std = std(cat(3,psdTrls.(events{ii}).Pow{2,:}),0,3);
         end
     end
 end
@@ -142,10 +141,10 @@ end
 % falls outside of the bands
 if length(events) == 1
     relPower = zeros(length(bandNames),chans);
-        for c = 1:chans
-            psdTrls.event1.totalPower(c) = trapz(bands.thet.ind(1):notchInd(1)-1,psdTrls.event1.Overall(c,bands.thet.ind(1):notchInd(1)-1))+trapz(notchInd(2)+1:bands.hgam.ind(2),psdTrls.event1.Overall(c,notchInd(2)+1:bands.hgam.ind(2)));
-            relPower(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
-        end
+    for c = 1:chans
+        psdTrls.event1.totalPower(c) = trapz(bands.thet.ind(1):notchInd(1)-1,psdTrls.event1.Overall(c,bands.thet.ind(1):notchInd(1)-1))+trapz(notchInd(2)+1:bands.hgam.ind(2),psdTrls.event1.Overall(c,notchInd(2)+1:bands.hgam.ind(2)));
+        relPower(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
+    end
 end
 
 % If two events: compare relative change from baseline in total power in each band
@@ -177,8 +176,8 @@ if length(events) == 2
     title(['Percent change in ',eventLabel{comp(1)},' from ',eventLabel{comp(2)}]);
     xlabel('Frequency Band'); ylabel(['Percent change from ',eventLabel{comp(2)}]);
     % Set color scheme
-    for i = 1:chans
-         h(1,i).FaceColor = clrs{i};
+    for ii = 1:chans
+         h(1,ii).FaceColor = clrs{ii};
     end
 end
 tightfig(powerPlots{1});
@@ -188,9 +187,9 @@ if length(events) == 2
     powerArray1 = cat(3,psdTrls.event1.Pow{2,:});
     powerArray2 = cat(3,psdTrls.event2.Pow{2,:});
     hy = cell(length(bandNames),chans); p = cell(length(bandNames),chans);
-    for i = 1:chans
+    for ii = 1:chans
         for j = 1:length(bandNames)
-            [hy{j,i,1},p{j,i,1}] = ttest2(powerArray1(j,i,:),powerArray2(j,i,:));
+            [hy{j,ii,1},p{j,ii,1}] = ttest2(powerArray1(j,ii,:),powerArray2(j,ii,:));
         end
     end
 end
@@ -198,21 +197,21 @@ end
 if length(events) == 2
     powerPlots{2} = figure('Position',[1 1 1226 472]);
     hBar = cell(1,chans);
-    for i = 1:chans
-        subplot(1,chans,i)
-        [hBar{i}] = barwitherr([psdTrls.event1.Std(:,i),psdTrls.event2.Std(:,i)],[psdTrls.event1.Avg(:,i),psdTrls.event2.Avg(:,i)]);
+    for ii = 1:chans
+        subplot(1,chans,ii)
+        [hBar{ii}] = barwitherr([psdTrls.event1.Std(:,ii),psdTrls.event2.Std(:,ii)],[psdTrls.event1.Avg(:,ii),psdTrls.event2.Avg(:,ii)]);
         set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'})
-        title([trls{1}.label{i}],'FontSize',9);
+        title([trls{1}.label{ii}],'FontSize',9);
         hold on
         for j = 1:length(bandNames)
-            if hy{j,i,1} == 1
-                if max(hBar{i}(1).YData(j),hBar{i}(2).YData(j)) > 0
-                    plot(j,max(hBar{i}(1).YData(j)+psdTrls.event1.Std(j,i),hBar{i}(2).YData(j)+psdTrls.event2.Std(j,i))+0.2*(hBar{i}(1).Parent.YTick(end)/length(hBar{i}(1).Parent.YTick)),'*k');
+            if hy{j,ii,1} == 1
+                if max(hBar{ii}(1).YData(j),hBar{ii}(2).YData(j)) > 0
+                    plot(j,max(hBar{ii}(1).YData(j)+psdTrls.event1.Std(j,ii),hBar{ii}(2).YData(j)+psdTrls.event2.Std(j,ii))+0.2*(hBar{ii}(1).Parent.YTick(end)/length(hBar{ii}(1).Parent.YTick)),'*k');
                 else
-                    plot(j,min(hBar{i}(1).YData(j)-psdTrls.event1.Std(j,i),hBar{i}(2).YData(j)-psdTrls.event2.Std(j,i))+0.2*(hBar{i}(1).Parent.YTick(1)/length(hBar{i}(1).Parent.YTick)),'*k');
+                    plot(j,min(hBar{ii}(1).YData(j)-psdTrls.event1.Std(j,ii),hBar{ii}(2).YData(j)-psdTrls.event2.Std(j,ii))+0.2*(hBar{ii}(1).Parent.YTick(1)/length(hBar{ii}(1).Parent.YTick)),'*k');
                 end
             end
-            if i == 1
+            if ii == 1
                 ylabel('Total Power (dBs)');
             end
         end

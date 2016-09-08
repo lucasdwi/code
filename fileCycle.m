@@ -41,8 +41,8 @@ if strcmp(fun,'scb')
     end
     % Run spectcompbase.m
     for i = 1:length(files)
-        [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,1.5,[1 2 150],0.5,{1,[0 0.005 3];2,[0 0.005 3];3,[0 0.005 3]},[3])
-        close all; clearvars -except files i sdir;
+        [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,[1 2 150],3,{1,'50%';2,'50%';3,'50%'},[3])
+        close all; clearvars -except files i sdir fun;
     end
 end
 %% Initialize files to be tabulated, then run through tabulateData.m

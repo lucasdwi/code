@@ -8,6 +8,27 @@ for s = 1:length(first)
     sub(s,:) = table2array(T.Base(second(s),8:end)) - table2array(T.Base(first(s),8:end));
 end
 absSub = abs(sub);
+%% Get NACL theta and NASR-NACR low gamma
+for s = 1:length(first)
+        theta_sub(s) = table2array(T.Base(second(s),18)) - table2array(T.Base(first(s),18));
+        lgamma_sub(s) = table2array(T.Base(second(s),51)) - table2array(T.Base(first(s),51));
+end
+%% Plot NACL Theta
+figure;
+plot(day,theta_sub.*100,'ks');
+ylim([-2 2]);
+lsline;
+thetMd = fitlm(day,theta_sub.*100);
+text(10,1.5,strcat('p = ',num2str(thetMd.Coefficients.pValue(2),2),' R^2 = ',num2str(thetMd.Rsquared.Ordinary,2)))
+title('Stability of NACL Theta Power over Time'); xlabel('Number of Days'); ylabel('Change in Percent Power');
+%% Plot NASR-NACR low gamma
+figure;
+plot(day,lgamma_sub,'ks');
+ylim([-.3 .3]);
+lsline;
+lgammaMd = fitlm(day,lgamma_sub);
+text(10,.2,strcat('p = ',num2str(lgammaMd.Coefficients.pValue(2),2),' R^2 = ',num2str(lgammaMd.Rsquared.Ordinary,2)))
+title('Stability of NASR-NACR Low Gamma Coherence over Time'); xlabel('Number of Days'); ylabel('Change in Coherence Index');
 %% Setup power and coherence indices
 % Gets indices of first entry of each channel or channel-pair
 powInd = [1:5:20];

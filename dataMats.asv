@@ -1,0 +1,20 @@
+%% Create data matrices for each condition
+% Initialize matrices
+% baseMat = []; dep24Mat = []; dep48Mat= []; regMat=[];
+% mats = {'baseMat','dep24Mat','dep48Mat','regMat'};
+conds = {'Reg'};
+cd('C:\Users\Lucas\Desktop\GreenLab\data\rest2');
+%%
+for c = 1:length(conds)
+    % Find all files of condition c
+    files = []; files = dir(strcat('*',conds{c},'*'));
+    for f = 1:size(files,1)
+        % Load file
+        load(files(f).name);
+        mats{c}(f,:)=horzcat(reshape(relPower,1,20),reshape(relCoh,1,30));
+        clear relPower psdTrls fds avgCoh relCoh
+    end
+end
+
+        
+

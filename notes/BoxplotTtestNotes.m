@@ -1,27 +1,27 @@
 %% Box plots and T-Tests of just models with significant p-values
-coreGroup = {'coreRespond','coreStrict'};
-shellGroup = {'shellRespond','shellStrict'};
-for i = 1:size(sigModels.Base,1)
-    % if all and shell, or either shellrespond/strict
-    if (strcmp(models.Base{2,sigModels.Base.ModelNumber(i)},'all') && strncmpi(models.Base{4,sigModels.Base.ModelNumber(i)},'s',1)) || strncmpi(models.Base{2,sigModels.Base.ModelNumber(i)},'s',1)
-        thisGroup = shellGroup;
-        % if all and core, or either corerespond/strict
-    else if (strcmp(models.Base{2,sigModels.Base.ModelNumber(i)},'all') && strncmpi(models.Base{4,sigModels.Base.ModelNumber(i)},'c',1)) || strncmpi(models.Base{2,sigModels.Base.ModelNumber(i)},'c',1)
-            thisGroup = coreGroup;
-        end
-    end        
-    thisVar = cellstr(models.Base(3,sigModels.Base.ModelNumber(i)));
-    % Setup data matrix
-    data{i} = [T.Base.(thisVar{1})(T.Base.(thisGroup{1}) ~= 1);T.Base.(thisVar{1})(T.Base.(thisGroup{1}) == 1);T.Base.(thisVar{1})(T.Base.(thisGroup{2}) == 1)];
-    len1 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{1}) ~= 1));
-    len2 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{1}) == 1));
-    len3 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{2}) == 1));
-    data{i}(1:len1,2) = 1; data{i}(len1+1:len1+len2,2) = 2; data{i}(len1+len2+1:len1+len2+len3,2) = 3;
-    % T-tests
-    [h{i,1},p{i,1}] = ttest2(data{i}(data{i}(:,2)==1,1),data{i}(data{i}(:,2)==2,1));       
-    [h{i,2},p{i,2}] = ttest2(data{i}(data{i}(:,2)==1,1),data{i}(data{i}(:,2)==3,1));
-    [h{i,3},p{i,3}] = ttest2(data{i}(data{i}(:,2)==2,1),data{i}(data{i}(:,2)==3,1));
-end
+% coreGroup = {'coreRespond','coreStrict'};
+% shellGroup = {'shellRespond','shellStrict'};
+% for i = 1:size(sigModels.Base,1)
+%     % if all and shell, or either shellrespond/strict
+%     if (strcmp(models.Base{2,sigModels.Base.ModelNumber(i)},'all') && strncmpi(models.Base{4,sigModels.Base.ModelNumber(i)},'s',1)) || strncmpi(models.Base{2,sigModels.Base.ModelNumber(i)},'s',1)
+%         thisGroup = shellGroup;
+%         % if all and core, or either corerespond/strict
+%     else if (strcmp(models.Base{2,sigModels.Base.ModelNumber(i)},'all') && strncmpi(models.Base{4,sigModels.Base.ModelNumber(i)},'c',1)) || strncmpi(models.Base{2,sigModels.Base.ModelNumber(i)},'c',1)
+%             thisGroup = coreGroup;
+%         end
+%     end        
+%     thisVar = cellstr(models.Base(3,sigModels.Base.ModelNumber(i)));
+%     % Setup data matrix
+%     data{i} = [T.Base.(thisVar{1})(T.Base.(thisGroup{1}) ~= 1);T.Base.(thisVar{1})(T.Base.(thisGroup{1}) == 1);T.Base.(thisVar{1})(T.Base.(thisGroup{2}) == 1)];
+%     len1 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{1}) ~= 1));
+%     len2 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{1}) == 1));
+%     len3 = length(T.Base.(thisVar{1})(T.Base.(thisGroup{2}) == 1));
+%     data{i}(1:len1,2) = 1; data{i}(len1+1:len1+len2,2) = 2; data{i}(len1+len2+1:len1+len2+len3,2) = 3;
+%     % T-tests
+%     [h{i,1},p{i,1}] = ttest2(data{i}(data{i}(:,2)==1,1),data{i}(data{i}(:,2)==2,1));       
+%     [h{i,2},p{i,2}] = ttest2(data{i}(data{i}(:,2)==1,1),data{i}(data{i}(:,2)==3,1));
+%     [h{i,3},p{i,3}] = ttest2(data{i}(data{i}(:,2)==2,1),data{i}(data{i}(:,2)==3,1));
+% end
 %% Boxplots and T-tests of all models
 coreGroup = {'coreRespond','coreStrict'};
 shellGroup = {'shellRespond','shellStrict'};

@@ -1,4 +1,5 @@
-function [LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
+function [LFPTs] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
+%function [LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
 %% Find indices of values > |thres| and NaN
 
 % Inputs:
@@ -88,20 +89,21 @@ if chk_empty ~= 0
     %% Check NaN distribution across channels
     % Creates nNaN matrix of number of NaNs per channel and standard deviations
     % from the mean, and vector of channels above cutoff
-    [nNaN,indSkp] = chkNaN(LFPTsNaN,chans,NaNcutoff);
+    %[nNaN,indSkp] = chkNaN(LFPTsNaN,chans,NaNcutoff);
     %% Find chunks of existing data
     % Sum each column across rows to get all channels to have the same number
     % of NaNed indices per channel
-    if isempty(indSkp)
-        LFPTsNaN.oneChan = sum(LFPTsNaN.data,1); 
-    end
-    % If channel was skipped, then don't include in sum to avoid NaNing all
-    % data
-    if ~isempty(indSkp)
-        c = (1:chans);
-        c = c(c~=indSkp);
-        LFPTsNaN.oneChan = sum(LFPTsNaN.data(c,:),1);
-    end
+    LFPTsNaN.oneChan = sum(LFPTsNaN.data,1);
+%     if isempty(indSkp)
+%         LFPTsNaN.oneChan = sum(LFPTsNaN.data,1); 
+%     end
+%     % If channel was skipped, then don't include in sum to avoid NaNing all
+%     % data
+%     if ~isempty(indSkp)
+%         c = (1:chans);
+%         c = c(c~=indSkp);
+%         LFPTsNaN.oneChan = sum(LFPTsNaN.data(c,:),1);
+%     end
     % Spread LFPTsNaN.oneChan across all channels
     LFPTsNaN.data(:,isnan(LFPTsNaN.oneChan)) = NaN; 
     % Find where data starts and stops
@@ -124,7 +126,7 @@ if chk_empty ~= 0
     end
     % Overwrite LFPTs with LFPTsNaN
     LFPTs = LFPTsNaN; 
-else
-    nNaN = [];
-    indSkp = [];
+% else
+%     nNaN = [];
+%     indSkp = [];
 end

@@ -1,7 +1,11 @@
-function [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,ftimwin,eventInfo,comp)
+function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,foi,cycles,ftimwin,eventInfo,overlap,comp)
+%function [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,cycles,eventInfo,comp)
 %% Used to compute and plot spectrogram of normalized EEG data 
 % Normalization to baseline (event2) within the same animal
 
+
+%% NOTE: COMMENTED OUT CHKNAN FROM THRESHFILT
+%%
 % Inputs: 
 % sdir = source directory path; format = string
 % file1 = data file with behavior of interest; format = 'filename'
@@ -22,11 +26,12 @@ function [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avg
 %   per channel at which to get rid of channel; format = integer (e.g. 1.5) 
 % foi = frequencies of interest; format = [first step last] in Hz 
 %   (e.g. [1 2 150] 
-% ftimwin = time window steps used for both spectrograms; format = seconds
+% cycles = number of cycles for each wavelet
+% ftimwin = size of time window for analysis
 % eventInfo = structure of information about events; format: row = event;
-%   column 1 = event tag (Approach = 1; Binge = 2; Rest = 3); column 2 = time
-%   range of interest [first step last] in seconds; N.B. last toi will
-%   usually = minInt 
+%   column 1 = event tag (Approach = 1; Binge = 2; Rest = 3); column 2 =
+%   vector [start:end]
+% overlap = percent overlap for windows; format = decimal form (.5 for 50%)
 % comp = events to analyze; format = integer or integer-pair of event tags
 %   in [] (Approach = 1; Binge = 2; Rest = 3)
 
@@ -81,12 +86,12 @@ if size(eventInfo,2) ~= 2
     pause
 end
 % Check last toi of eventInfo = minInt
-for e = 1:size(eventInfo,1)
-    if eventInfo{e,2}(3) ~= minInt
-        disp(strcat('Event ',num2str(e),' toi has a different length than minInt, press Ctrl+C to quit or any other key to continue.'));
-        pause
-    end
-end
+% for e = 1:size(eventInfo,1)
+%     if eventInfo{e,2}(3) ~= minInt
+%         disp(strcat('Event ',num2str(e),' toi has a different length than minInt, press Ctrl+C to quit or any other key to continue.'));
+%         pause
+%     end
+% end
 %% Determine indices for events and create 'Rest Middle'
 tic
 cd(sdir);
@@ -135,12 +140,10 @@ toc
 %% Threshold data
 tic
 disp('Thresholding data with threshFilt...')
-[LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
+% Got rid of nNaN and indSkp portion
+[LFPTs] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans);
+%[LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
 toc
-%% Check channel quality
-% tic
-%
-% toc
 %% Trialize around events
 disp('Trializing data with trialExtract.m')
 [clnTrls,clnEvents,trls] = trialExtract(eventInfo,eventInds,eventTs,LFPTs,adfreq,minInt,dsf,chans);
@@ -168,11 +171,15 @@ cfg.output       = 'powandcsd';
 cfg.method       = 'mtmconvol';
 cfg.taper        = 'hanning';
 cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
+%cfg.t_ftimwin    = cycles./cfg.foi; 
 cfg.t_ftimwin    = ones(size(cfg.foi)).*ftimwin; 
 cfg.keeptrials   = 'yes';
 cfg.channel      = LFPTs.label;
 cfg.channelcmb   = channelCmb;
-cfg.toi          = eventInfo{comp(1),2}(1):eventInfo{comp(1),2}(2):eventInfo{comp(1),2}(3);
+%minTWin = min(cfg.t_ftimwin)*overlap;
+%cfg.toi          = eventInfo{comp(1),2}(1):minTWin:eventInfo{comp(1),2}(2);
+cfg.toi          = eventInfo{comp(1),2}(1):ftimwin*overlap:eventInfo{comp(1),2}(2);
+
 
 TFRs{1} = ft_freqanalysis(cfg,trls{comp(1)});
 toc
@@ -187,14 +194,22 @@ if length(comp) == 2
     cfg.taper = 'hanning';
     cfg.foi = foi(1):foi(2):foi(3); % Frequencies of interest
     cfg.keeptrials = 'yes'; % For stastical comparison
-    cfg.t_ftimwin = ones(size(cfg.foi)).*ftimwin;
-    cfg.toi = eventInfo{comp(2),2}(1):eventInfo{comp(2),2}(2):eventInfo{comp(2),2}(3); % Times of interest
-    cfg.channelcmb   = channelCmb;
+    %cfg.t_ftimwin = cycles./cfg.foi; 
+    cfg.t_ftimwin = ones(size(cfg.foi)).*ftimwin; 
+    %minTWin = min(cfg.t_ftimwin)*overlap;
+    %cfg.toi = eventInfo{comp(1),2}(1):minTWin:eventInfo{comp(1),2}(2);
+    cfg.toi = eventInfo{comp(1),2}(1):ftimwin*overlap:eventInfo{comp(1),2}(2);
+    cfg.channelcmb = channelCmb;
 
     TFRs{2} = ft_freqanalysis(cfg,trls{comp(2)});
     toc
 end
 
+%% Compute power correlations - Michael Connerney
+tic
+disp('Running powerCorr...')
+[STDCorr,MeanCorr,powerCorr] = powerCorr(TFRs,foi);
+toc
 %% Plot spectrograms - Skipped for basic analysis
 % tic
 % [spectroPlots] = spectroComp(trl1,trl2,TFR_event1,TFR_event2,eventLabel);
@@ -220,7 +235,7 @@ disp('Saving plots...')
 % Set up directory and cd to it
 cond = {'approach','binge','rest'};
 if length(comp) == 1
-    mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',name,'_',cond{comp}));
+    mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\test2',name,'_',cond{comp}));
     cd(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',name,'_',cond{comp}));
 else if length(comp) == 2
         mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\Plots\',name,'_',cond{comp(1)},'_vs_',cond{comp(2)}));
@@ -248,7 +263,7 @@ toc
 %     savefig(spectroPlots{i},spectroPlotNames{i});
 % end
 
-%% Save variabless
+%% Save variables
 % Just save processed PSD and coherence data; skip actual TFR data
 % to save space.
 tic
@@ -256,15 +271,15 @@ disp('Saving data...')
 if length(comp) == 1
     % Check if folder to save in exists, if not make
     if exist(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp}),'file') ~= 7
-        makedir(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp}));
+        mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp}));
     end
-    save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp},'\',name,'_',cond{comp},'.mat'),'psdTrls','relPower','avgCoh','relCoh','fds');
+    save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp},'\',name,'_',cond{comp},'test2','.mat'),'psdTrls','relPower','avgCoh','relCoh','fds','bingeSize');
 end
 if length(comp) == 2
     % Check if folder to save in exists, if not make
     if exist(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp(1)},'_vs_',cond{comp(2)}),'file') ~= 7
-        makedir(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp(1)},'_vs_',cond{comp(2)}));
+        mkdir(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',cond{comp(1)},'_vs_',cond{comp(2)}));
     end
-    save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',name,'_',cond{comp(1)},'_vs_',cond{comp(2)},'.mat'),'psdTrls','relPower','avgCoh','relCoh','stdCoh','fds');
+    save(strcat('C:\Users\Lucas\Desktop\GreenLab\data\',name,'_',cond{comp(1)},'_vs_',cond{comp(2)},'.mat'),'psdTrls','relPower','avgCoh','relCoh','stdCoh','fds','bingeSize');
 end
 toc
