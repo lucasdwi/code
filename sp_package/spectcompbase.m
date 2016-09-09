@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,foi,cycles,ftimwin,eventInfo,overlap,comp)
+function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,eventInfo,overlap,comp)
 %function [LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,stdPower,stdCoh] = spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,NaNcutoff,foi,cycles,eventInfo,comp)
 %% Used to compute and plot spectrogram of normalized EEG data 
 % Normalization to baseline (event2) within the same animal
@@ -26,6 +26,7 @@ function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,s
 %   per channel at which to get rid of channel; format = integer (e.g. 1.5) 
 % foi = frequencies of interest; format = [first step last] in Hz 
 %   (e.g. [1 2 150] 
+% bands = definitions of frequency band; format = {'name', [start,stop];...}
 % cycles = number of cycles for each wavelet
 % ftimwin = size of time window for analysis
 % eventInfo = structure of information about events; format: row = event;
@@ -76,7 +77,7 @@ function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,s
 % Example:
 % [...] = spectcompbase('C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\','H10BaseSep27','y',5,2.5,5,17000,3,1.5,[1 2 150],0.5,{1,[0 0.005 3];2,[0 0.005 3];3,[0 0.005 3]},[3])
 % 
-% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';file1 = 'H10BaseSep27'; dsf=5;thresh=2.5;onset=5;offset=17000;minInt=3;NaNcutoff=1.5;foi=[1 2 150];ftimwin=0.5; eventInfo = {1,[0 0.005 3];2,[0 0.005 3];3,[0 0.005 3]};comp=[3]; filter = 'y';
+% sdir='C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';file1='H10BaseSep27';dsf=5;thresh=2.5;onset=5;offset=17000;minInt=3;foi=[1 2 150];eventInfo={1,[0 3];2,[0 3];3,[0 3]};comp=[3];filter='y';overlap=0.5;cycles=3;bands={'theta',[4,7];'alpha',[8,13];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 %% Initialize varargout
 stdPower = []; stdCoh = [];
 %% Checks
@@ -151,10 +152,10 @@ disp('Trializing data with trialExtract.m')
 tic
 disp('Calculating power spectra and plotting average total power with powerComp.m')
 if length(comp) == 1
-    [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,eventLabel,chans,comp);
+    [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,eventLabel,chans,comp,bands);
 end
 if length(comp) == 2
-    [psdTrls,relPower,powerPlots,varargout] = powerComp(trls,adfreq,eventLabel,chans,comp);
+    [psdTrls,relPower,powerPlots,varargout] = powerComp(trls,adfreq,eventLabel,chans,comp,bands);
     stdPower = varargout; clear varargout;
 end
 toc
@@ -206,10 +207,10 @@ if length(comp) == 2
 end
 
 %% Compute power correlations - Michael Connerney
-tic
-disp('Running powerCorr...')
-[STDCorr,MeanCorr,powerCorr] = powerCorr(TFRs,foi);
-toc
+% tic
+% disp('Running powerCorr...')
+% [STDCorr,MeanCorr,powerCorr] = powerCorr(TFRs,foi);
+% toc
 %% Plot spectrograms - Skipped for basic analysis
 % tic
 % [spectroPlots] = spectroComp(trl1,trl2,TFR_event1,TFR_event2,eventLabel);
@@ -217,10 +218,10 @@ toc
 %% Plot coherence
 tic
 if length(comp) == 1
-    [avgCoh,relCoh,cohPlots,fds] = cohComp(TFRs,eventLabel,comp);
+    [avgCoh,relCoh,cohPlots,fds] = cohComp(TFRs,eventLabel,comp,bands);
 end
 if length(comp) == 2
-    [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp);
+    [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp,bands);
     stdCoh = varargout;
     %varargout{2} = stdCoh;
 end

@@ -1,4 +1,4 @@
-function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,eventLabel,chans,comp)
+function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,eventLabel,chans,comp,bands)
 %% Uses pwelch to compute power and plots overall PSD per channel and 
 % either a distribution of power per frequency band for each channel or a 
 % relative change in each frequency band 
@@ -103,19 +103,16 @@ end
 % text(0.5,1,'\bf Power Spectral Densities','HorizontalAlignment','Center','VerticalAlignment','top');
 hold off;
 %% Calculate total power in frequency bands of interest
-% Set frequency band limits
-bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15 30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
-% Find indices corresponding to frequency bands
-bandNames = fieldnames(bands);
 for ii = 1:length(trls)
-    for j = 1:length(bandNames)
-        % Create frequency band intervals from indices in F
-        bands.(bandNames{j}).ind = [find(F>=bands.(bandNames{j}).limit(1),1),find(F<=bands.(bandNames{j}).limit(2),1,'last')];
+    for j = 1:size(bands,1)
+        % Get frequency band interval indices from indices in F
+        bandInd(j,1) = find(F>=bands{j,2}(1),1);
+        bandInd(j,2) = find(F<=bands{j,2}(2),1,'last');
         for k = 1:nTrials{ii}
             for c = 1:chans
                 % Integrates across frequency bands and puts in 5x4 matrix
                 % in second row;[theta; alpha; beta; low gamma; high gamma] 
-                psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2),psdTrls.(events{ii}).Pow{1,k}(c,bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
+                psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(psdTrls.(events{ii}).Pow{1,k}(c,bandInd(j,1):bandInd(j,2)));
                 % Removes values around notch filter
                 if j == 4
                     notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{ii}).Pow{1,k}(c,notchInd(1):notchInd(2)));
@@ -127,7 +124,7 @@ for ii = 1:length(trls)
 end
 %% Calculate absolute average PSD and standard deviation for each channel across frequency bands
 for ii = 1:length(events)
-    for j = 1:length(bandNames)
+    for j = 1:size(bands,1)
         for c = 1:chans
             psdTrls.(events{ii}).Avg = mean(cat(3,psdTrls.(events{ii}).Pow{2,:}),3);
             psdTrls.(events{ii}).Std = std(cat(3,psdTrls.(events{ii}).Pow{2,:}),0,3);
@@ -140,9 +137,9 @@ end
 % N.B.: the sum of each band's percent of total will NOT = 100; some data
 % falls outside of the bands
 if length(events) == 1
-    relPower = zeros(length(bandNames),chans);
+    relPower = zeros(size(bands,1),chans);
     for c = 1:chans
-        psdTrls.event1.totalPower(c) = trapz(bands.thet.ind(1):notchInd(1)-1,psdTrls.event1.Overall(c,bands.thet.ind(1):notchInd(1)-1))+trapz(notchInd(2)+1:bands.hgam.ind(2),psdTrls.event1.Overall(c,notchInd(2)+1:bands.hgam.ind(2)));
+        psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
         relPower(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
     end
 end
@@ -186,9 +183,11 @@ tightfig(powerPlots{1});
 if length(events) == 2
     powerArray1 = cat(3,psdTrls.event1.Pow{2,:});
     powerArray2 = cat(3,psdTrls.event2.Pow{2,:});
-    hy = cell(length(bandNames),chans); p = cell(length(bandNames),chans);
+    %hy = cell(length(bandNames),chans); p = cell(length(bandNames),chans);
+    hy = cell(size(bands,1),chans); p = cell(size(bands,1),chans);
     for ii = 1:chans
-        for j = 1:length(bandNames)
+        %for j = 1:length(bandNames)
+        for j = 1:size(bands,1)
             [hy{j,ii,1},p{j,ii,1}] = ttest2(powerArray1(j,ii,:),powerArray2(j,ii,:));
         end
     end
@@ -203,7 +202,8 @@ if length(events) == 2
         set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'})
         title([trls{1}.label{ii}],'FontSize',9);
         hold on
-        for j = 1:length(bandNames)
+        %for j = 1:length(bandNames)
+        for j = 1:size(bands,1)
             if hy{j,ii,1} == 1
                 if max(hBar{ii}(1).YData(j),hBar{ii}(2).YData(j)) > 0
                     plot(j,max(hBar{ii}(1).YData(j)+psdTrls.event1.Std(j,ii),hBar{ii}(2).YData(j)+psdTrls.event2.Std(j,ii))+0.2*(hBar{ii}(1).Parent.YTick(end)/length(hBar{ii}(1).Parent.YTick)),'*k');

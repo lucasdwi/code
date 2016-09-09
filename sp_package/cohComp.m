@@ -1,4 +1,4 @@
-function [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp)
+function [avgCoh,relCoh,cohPlots,fds,varargout] = cohComp(TFRs,eventLabel,comp,bands)
 %% Uses output of ft_freqanalysis.m to compute coherence from cross-spectral densities
 
 % Inputs:
@@ -77,35 +77,45 @@ end
 toc
 %% Calculate average coherence per frequency band
 % Set frequency band limits
-bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15,30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
+%bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15,30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
 % Find indices corresponding to frequency bands
-bandNames = fieldnames(bands);
+%bandNames = fieldnames(bands);
+
 for i = 1:length(TFRs)
-    for j = 1:length(bandNames)
+    %for j = 1:length(bandNames)
+    for j = 1:size(bands,1)
         % Create frequency band intervals from indices in freq
-        bands.(bandNames{j}).ind = [find(fd1.freq>=bands.(bandNames{j}).limit(1),1),find(fd1.freq<=bands.(bandNames{j}).limit(2),1,'last')];
+        bandInd(j,1) = find(fd1.freq>=bands{j,2}(1),1);
+        bandInd(j,2) = find(fd1.freq<=bands{j,2}(2),1,'last');
+        %bands.(bandNames{j}).ind = [find(fd1.freq>=bands.(bandNames{j}).limit(1),1),find(fd1.freq<=bands.(bandNames{j}).limit(2),1,'last')];
     end
-    for j = 1:length(bandNames)
+    %for j = 1:length(bandNames)
+    for j = 1:size(bands,1)
         for k = 1:length(fd1.labelcmb)
             tempMean = nanmean(sq(fds{i}.cohspctrm(k,:,:)),2);
             tempStd{i}(:,j,k) = std(sq(fds{i}.cohspctrm(k,:,:)),0,2,'omitnan');
             if j == 4
-                avgCoh(k,j,i) = nanmean([tempMean(bands.(bandNames{j}).ind(1):notchInd(1)-1);tempMean(notchInd(2)+1:bands.(bandNames{j}).ind(2))]);
+                %avgCoh(k,j,i) = nanmean([tempMean(bands.(bandNames{j}).ind(1):notchInd(1)-1);tempMean(notchInd(2)+1:bands.(bandNames{j}).ind(2))]);
+                avgCoh(k,j,i) = nanmean([tempMean(bandInd(j,1):notchInd(1)-1);tempMean(notchInd(2)+1:bandInd(j,2))]);
             else
-            avgCoh(k,j,i) = nanmean(tempMean(bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
+            %avgCoh(k,j,i) = nanmean(tempMean(bands.(bandNames{j}).ind(1):bands.(bandNames{j}).ind(2)));
+            avgCoh(k,j,i) = nanmean(tempMean(bandInd(j,1):bandInd(j,2)));
             end
             % Calculate average coherence in each band in each combo, not counting the
             % notch interval; creates matrix instead of column for easier
             % division later
-            totalCoh(k,j,i) = (nanmean(tempMean(bands.thet.ind(1):notchInd(1))) + nanmean(tempMean(notchInd(2):bands.hgam.ind(2))))./2;
+            %totalCoh(k,j,i) = (nanmean(tempMean(bands.thet.ind(1):notchInd(1))) + nanmean(tempMean(notchInd(2):bands.hgam.ind(2))))./2;
+            totalCoh(k,j,i) = (nanmean(tempMean(bandInd(1,1):notchInd(1))) + nanmean(tempMean(notchInd(2):bandInd(size(bands,1),2))))./2;
         end
     end
 end
 %% Get pooled std
 for i = 1:length(TFRs)
     for j = 1:length(fd1.labelcmb)
-        for k = 1:length(bandNames)
-            s{2,i}(j,k) = sqrt(sum((length(fd1.time)-1).*tempStd{i}(bands.(bandNames{k}).ind(1):bands.(bandNames{k}).ind(2),k,j).^2)/(length(fd1.time)*(bands.(bandNames{k}).ind(2) - bands.(bandNames{k}).ind(1) + 1)-(bands.(bandNames{k}).ind(2) - bands.(bandNames{k}).ind(1) +1)));
+        %for k = 1:length(bandNames)
+        for k = 1:size(bands,1)
+            %s{2,i}(j,k) = sqrt(sum((length(fd1.time)-1).*tempStd{i}(bands.(bandNames{k}).ind(1):bands.(bandNames{k}).ind(2),k,j).^2)/(length(fd1.time)*(bands.(bandNames{k}).ind(2) - bands.(bandNames{k}).ind(1) + 1)-(bands.(bandNames{k}).ind(2) - bands.(bandNames{k}).ind(1) +1)));
+            s{2,i}(j,k) = sqrt(sum((length(fd1.time)-1).*tempStd{i}(bandInd(k,1):bandInd(k,2),k,j).^2)/(length(fd1.time)*(bandInd(k,2) - bandInd(k,1) + 1)-(bandInd(k,2) - bandInd(k,1) +1)));
         end
     end
 end

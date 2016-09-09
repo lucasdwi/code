@@ -113,4 +113,4 @@ sd.ts = ts;
 sd.WBchan = WBchan;
 
 % Edited by LLD to not use data structure when saving 2016-7-29
-save(strcat(filenamein, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
+%save(strcat(filenamein, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
