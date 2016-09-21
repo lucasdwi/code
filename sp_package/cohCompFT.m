@@ -79,8 +79,7 @@ fd1 = ft_connectivityanalysis(cfg,TFRs{1});
 if size(eoi,1) == 2
     fd2 = ft_connectivityanalysis(cfg,TFRs{2});
 end
-
-%% Setup notch info
+% Combine fds into one structure
 if size(eoi,1) == 1
     fds = {fd1};
     %varargout{1} = fd1;
@@ -89,8 +88,21 @@ else if size(eoi,1) == 2
         %varargout{1} = fd1; varargout{2} = fd2;
     end
 end
+%% Setup notch info
 % N.B. fds freq axes need to be the same
 notchInd = [nearest_idx(59,fds{1}.freq);nearest_idx(61.5,fds{1}.freq)];
+% Average across trials and interpolate across notch filter
+for f = size(fds)
+    meanCoh = nanmean(fds{f}.cohspctrm(:,:,:),3);
+    sdCoh = std(fds{f}.cohspctrm(:,:,:),0,3,'omitnan');
+    % NaN notch filter
+    meanCoh(:,notchInd(1):notchInd(2)) = NaN; sdCoh(:,notchInd(1):notchInd(2)) = NaN;
+    % Interpolate
+    for c = 1:size(cmb,1)
+        meanCoh(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(meanCoh(c,:))),meanCoh(c,~isnan(meanCoh(c,:))),find(isnan(meanCoh(c,:))));
+        sdCoh(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(sdCoh(c,:))),sdCoh(c,~isnan(sdCoh(c,:))),find(isnan(sdCoh(c,:))));
+    end
+end
 %% Plot
 tic
 cohPlots {1} = figure('Position',[1 1 1500 500]);
@@ -101,19 +113,15 @@ s = {};
 
 for j = 1:size(eoi,1)
     s{j} = subplot(1,length(TFRs)+1,j);
-    
     for iCmb = 1:size(fds{j}.labelcmb,1)
         lbl{iCmb} = cat(2,fds{j}.labelcmb{iCmb,1},'-',fds{j}.labelcmb{iCmb,2});
-
-        temp = nanmean(sq(fds{j}.cohspctrm(iCmb,:,:)),2);
-        temp(notchInd(1):notchInd(2)) = NaN;
-        h{iCmb} = plot(fds{j}.freq,temp,'color',cols{iCmb});
-        % Fill NaN data in plot
+%         temp = nanmean(sq(fds{j}.cohspctrm(iCmb,:,:)),2);
+%         % NaN and interpolate notch filter
+%         temp(notchInd(1):notchInd(2)) = NaN;
+%         temp(notchInd(1):notchInd(2)) = interp1(find(~isnan(temp)),temp(~isnan(temp)),find(isnan(temp)),'linear');
+        % Plot
         hold on;
-        thisstart = [fds{j}.freq(notchInd(1)-1),fds{j}.freq(notchInd(2)+1)];
-        thisend = [temp(notchInd(1)-1),temp(notchInd(2)+1)];
-        plot(thisstart,thisend,'color',cols{iCmb});
-       
+        h{iCmb} = plot(fds{j}.freq,meanCoh(iCmb,:),'color',cols{iCmb});
         title(eoi{j,1});
         xlabel('Frequency (Hz)');
         if j == 1
@@ -217,3 +225,4 @@ end
 coh.avgCoh = avgCoh;
 coh.relCoh = relCoh;
 coh.fds = fds;
+coh.TFRs = TFRs;

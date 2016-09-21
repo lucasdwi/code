@@ -18,11 +18,14 @@ for iSess = 1:length(fd);
     [~, name, ~] = fileparts(fd{iSess});
     disp(iSess)
     disp(name)
-    if exist(strcat(fd{iSess},'.mat')) ==2;
+    if exist(strcat(fd{iSess},'.mat')) == 2;
         disp('matfile already exists...skipping')
     else
         %[~, ~] = Pl2tomvdm(fd{iSess});
-        [~, ~] = Pl2tomvdmGenFile(fd{iSess});
+        [~, sd] = Pl2tomvdmGenFile(fd{iSess});
+        ad = sd.ad; adfreq = sd.adfreq; eventTs = sd.eventTs; fn = sd.fn; lfpchan = sd.lfpchan; LFPTs = sd.LFPTs; n = sd.n; pl2 = sd.pl2; TimeSampEr = sd.TimeSampEr; ts = sd.ts; WBchan = sd.WBchan;
+        disp('Saving file...')
+        save(strcat(name, '.mat'),'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
     end
     popdir;
 end

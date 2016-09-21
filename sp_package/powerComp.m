@@ -1,4 +1,4 @@
-function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,eventLabel,chans,comp,bands)
+function [psdTrls,relPower,powerPlots,varargout] = powerComp(trlData,adfreq,chans,bands,filter,foi,eoi)
 %% Uses pwelch to compute power and plots overall PSD per channel and 
 % either a distribution of power per frequency band for each channel or a 
 % relative change in each frequency band 
@@ -30,16 +30,16 @@ clrs = {[0.2081 0.1663 0.5292];[0.0265 0.6137 0.8135];[0.6473 0.7456 0.4188];[0.
 % If only one value in comp, then will look at just one event; if two
 % values then will compare those two events
 nTrials = {};
-if length(comp) == 1
-    nTrials = {length(trlData{comp}.trial)};
-    trls = trlData(comp);
+if size(eoi,1) == 1
+    nTrials = {length(trlData{1}.trial)};
+    trls = trlData(1);
     events = {'event1'};
 end
 
-if length(comp) == 2
-   nTrials{1} = length(trlData{1,comp(1)}.trial);
-   nTrials{2} = length(trlData{1,comp(2)}.trial);
-   trls = {trlData{comp(1)},trlData{comp(2)}};
+if size(eoi,1) == 2
+   nTrials{1} = length(trlData{1,1}.trial);
+   nTrials{2} = length(trlData{1,2}.trial);
+   trls = {trlData{1,1},trlData{1,2}};
    events = {'event1','event2'};
 end
 %%
@@ -52,10 +52,19 @@ end
 % eventLabel{2} = behaviors{event2};
 %%
 psdTrls = {};
+% Determine hammSize from frequency step in foi as desired freq resolution
+hammSize = adfreq/foi(2);
+% Check hammSize vs. trial size
+%if hammSize > length(trls)
 for ii = 1:length(trls)
     for j = 1:nTrials{ii}
         for k = 1:chans
-            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(length(trls{ii}.trial{1,j}(k,:))),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
+            % Uses 1024 nfft
+            %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],1024,adfreq);
+            % Uses nfft of the next power of 2 of Hamming window size 
+            %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],2^nextpow2(hammSize),adfreq);
+            % Uses full trial length nfft
+            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
             % Convert PSD into dB and store
             psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
             %psdTrls.(events{ii}).Pow(k,:,j) = (10*log10(Pxx))';
@@ -64,16 +73,22 @@ for ii = 1:length(trls)
 end
 % Only need one of the frequency vectors
 psdTrls.F = F;
-%% Setup notch info
-notchInd = [nearest_idx3(59,F);nearest_idx3(61.5,F)];
 %% Plot PSDs
+% Setup notch info and interpolate over data
+notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
 % Find average overall PSD and plot
 powerPlots{1} = figure('Position',[1 1 1500 500]);
 ax = cell(1,length(events));
 for ii = 1:length(events)
     psdTrls.(events{ii}).Overall = mean(cat(3,psdTrls.(events{ii}).Pow{1,:}),3);
-    % NaN notch data
-    psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
+    psdTrls.(events{ii}).OverallStd = std(cat(3,psdTrls.(events{ii}).Pow{1,:}),0,3);
+    % NaN and interpolate over notch filter
+    if strcmpi(filter,'y')
+        psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
+        for c = 1:chans
+             psdTrls.(events{ii}).Overall(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Overall(c,:))),psdTrls.(events{ii}).Overall(c,~isnan(psdTrls.(events{ii}).Overall(c,:))),find(isnan(psdTrls.(events{ii}).Overall(c,:))),'linear');
+        end
+    end
     % Check number of events and set up subplots accordingly
     if length(events) == 1
         subplot(1,2,ii)
@@ -83,17 +98,19 @@ for ii = 1:length(events)
     end
     for j = 1:chans
         hold on; ax{ii} = plot(F,psdTrls.(events{ii}).Overall(j,:),'color',clrs{j});
-        % Fill NaN data in plot
-        thisstart = [F(notchInd(1)-1),F(notchInd(2)+1)];
-        thisend = [psdTrls.(events{ii}).Overall(j,notchInd(1)-1),psdTrls.(events{ii}).Overall(j,notchInd(2)+1)];
-        plot(thisstart,thisend,'color',clrs{j});
+%         % Fill NaN data in plot
+%         if strcmpi(filter,'y')
+%             thisstart = [F(notchInd(1)-1),F(notchInd(2)+1)];
+%             thisend = [psdTrls.(events{ii}).Overall(j,notchInd(1)-1),psdTrls.(events{ii}).Overall(j,notchInd(2)+1)];
+%             plot(thisstart,thisend,'color',clrs{j});
+%         end
     end 
     if ii == 1
         ylabel('Power (dB)');
     end
     xlim([0 150]);
     xlabel('Frequency (Hz)');
-    title(eventLabel{comp(ii)});
+    title(eoi(ii));
 end
 % Linkaxes of both event subplots
 if length(events) == 2
@@ -114,10 +131,10 @@ for ii = 1:length(trls)
                 % in second row;[theta; alpha; beta; low gamma; high gamma] 
                 psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(psdTrls.(events{ii}).Pow{1,k}(c,bandInd(j,1):bandInd(j,2)));
                 % Removes values around notch filter
-                if j == 4
-                    notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{ii}).Pow{1,k}(c,notchInd(1):notchInd(2)));
-                    psdTrls.(events{ii}).Pow{2,k}(j,c) = psdTrls.(events{ii}).Pow{2,k}(j,c) - notchOut;
-                end
+%                 if j == 4 && strcmpi(filter,'y')
+%                     notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{ii}).Pow{1,k}(c,notchInd(1):notchInd(2)));
+%                     psdTrls.(events{ii}).Pow{2,k}(j,c) = psdTrls.(events{ii}).Pow{2,k}(j,c) - notchOut;
+%                 end
             end
         end
     end
@@ -133,13 +150,14 @@ for ii = 1:length(events)
 end
 %% Normalize power in each band
 % If one event: compare power of each band to total power from theta to
-% high gamma minus notched data
+% high gamma 
 % N.B.: the sum of each band's percent of total will NOT = 100; some data
 % falls outside of the bands
 if length(events) == 1
     relPower = zeros(size(bands,1),chans);
     for c = 1:chans
-        psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
+        psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):bandInd(end,2)));
+        %psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
         relPower(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
     end
 end
@@ -168,10 +186,10 @@ if length(events) == 2
     subplot(1,3,3)
     h = barwitherr(stdPower.*100,relPower.*100);
     set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'});
-    l = legend(trls{comp(1)}.label);
+    l = legend(trls{1,1}.label);
     set(l,'Location','southeast');
-    title(['Percent change in ',eventLabel{comp(1)},' from ',eventLabel{comp(2)}]);
-    xlabel('Frequency Band'); ylabel(['Percent change from ',eventLabel{comp(2)}]);
+    title(['Percent change in ',eoi{1,1},' from ',eoi{2,1}]);
+    xlabel('Frequency Band'); ylabel(['Percent change from ',eoi{2,1}]);
     % Set color scheme
     for ii = 1:chans
          h(1,ii).FaceColor = clrs{ii};
@@ -216,7 +234,7 @@ if length(events) == 2
             end
         end
     end
-    l = legend({eventLabel{comp(1)};eventLabel{comp(2)}}); 
+    l = legend(eoi{:,1}); 
     set(l,'Position',[0.909 0.828 0.089 0.095]);
     axes('Position',[0 0 1 1],'Xlim',[0 1],'Ylim',[0 1],'Box','off','Visible','off','Units','normalized','clipping','off');
     text(0.5,1,'\bf Total average power','HorizontalAlignment','Center','VerticalAlignment','top');
