@@ -1,4 +1,4 @@
-function [coh,cohPlots,varargout] = cohCompFT(LFPTs,bands,cycles,ftimwin,overlap,foi,eoi)
+function [coh,cohPlots,varargout] = cohCompFT(LFPTs,trls,bands,chans,cycles,ftimwin,overlap,foi,eoi)
 %% Uses output of ft_freqanalysis.m to compute coherence from cross-spectral densities
 
 % Inputs:
@@ -187,6 +187,7 @@ end
 
 if size(eoi,1) == 1
     relCoh = avgCoh./totalCoh;
+    varargout{1} = [];
     %relCoh = avgCoh./maxCoh; For Matt
 end
 % If two conditions, find percent change from event 2 to event 1 in each

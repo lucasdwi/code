@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
+function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
 % ('C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\','N7_PreStim_9_8_16','y',5,2.5,5,17000,3,[1 2 150],{'theta',[4,7];'alpha',[8,13];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]},{'full',[0 3]})
 % INPUTS:
 % sdir = source directory of data; format = string
@@ -27,7 +27,7 @@ function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh] = s
 % eoi = events of interest, if one event then normalizes within that event,
 %   if two then compares events; format = structure {'tag1',[0 3];'tag2',[0 3]} 
 %   N.B.: if all the data use the tag 'full', otherwise use tags
-%   corresponding to event markers: 'app','binge','rest' 
+%   corresponding to event markers: 'app','binge','rest','sleepOut'/'sleepIn' 
 % saveParent = parent directory path to save plots and files; format =
 %   string N.B.: if directory/file exists will warn about overwritting
 
@@ -51,13 +51,13 @@ if isempty(cycles) && isempty(ftimwin)
 end
 % Checks the number of cycles at the lowest frequency band of interest
 % using ftimwin; especially needed for PowerCorr.mat
-if ~isempty(ftimwin)
-    cycFtimwin = ftimwin*bands{1,2}(1);
-    if cycFtimwin < 3
-       disp('Warning: With this ftimwin, your lowest frequency band will be computed with < 3 cycles; press Ctrl+c to quit and redefine or any other key to continue...')
-    pause
-    end
-end
+% if ~isempty(ftimwin)
+%     cycFtimwin = ftimwin*bands{1,2}(1);
+%     if cycFtimwin < 3
+%        disp('Warning: With this ftimwin, your lowest frequency band will be computed with < 3 cycles; press Ctrl+c to quit and redefine or any other key to continue...')
+%     pause
+%     end
+% end
 % Check for cohMethod
 if isempty(cohMethod) || (~strcmpi(cohMethod,'ft') && ~strcmpi(cohMethod,'mat')) 
     disp('Either cohMethod is empty or incorrectly entered, press Ctrl+c to quit and re-define')
@@ -106,10 +106,17 @@ toc
 %% Threshold data
 tic
 disp('Thresholding data with threshFilt...')
-% Got rid of nNaN and indSkp portion
-[LFPTs] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans);
+% Removed nNaN and indSkp portion
+[LFPTs,chk_nan] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans);
 %[LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
 toc
+
+%% NaN Sleep Intervals
+if exist('sleep')
+    for sind = 1:size(sleep.t{1,1},1)
+        LFPTs.data(:,nearest_idx2(sleep.t{1,1}(sind),LFPTs.tvec):nearest_idx2(sleep.t{1,2}(sind),LFPTs.tvec)) = NaN;
+    end
+end
 %% Trialize around events
 tic
 disp('Trializing data with trialize.m')
@@ -132,7 +139,7 @@ toc
 % end
 % for b = 1:size(bands,1)
 %     tic
-%     disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},'band...'])
+%     disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
 %     cfg              = [];
 %     cfg.output       = 'powandcsd';
 %     cfg.method       = 'mtmconvol';
@@ -156,11 +163,14 @@ toc
 % 
 %     powCorrTFR{b} = ft_freqanalysis(cfg,trls{1});
 %     toc
-% %     disp('Running PowerCorr.m...')
-% %     tic
-% %     
-% %     toc
 % end
+% % Run powerCorr
+% disp('Running powerCorr.m...')
+% tic
+% cfg.trialwindows = 'yes';
+% [STDCorr,MeanCorr,TWCorr,powerCorrSort,freqRange,notchInd,numCmb,varCmb] = powerCorr(powCorrTFR,bands,cfg);
+% toc
+STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
 %% Use inhouse/Matlab code for coherence
 if strcmpi(cohMethod,'mat')
     tic
@@ -173,7 +183,7 @@ if strcmpi(cohMethod,'mat')
             winSize = cycles/bands{1,2}(1)*adfreq;
         end
     end
-    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq);
+    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands);
     toc
 end
 %% Use Fieldtrip code for coherence
@@ -181,14 +191,25 @@ if strcmpi(cohMethod,'ft')
     tic
     disp('Using cohCompFT.mat for coherence...')
     if size(eoi,1) == 1
-        [coh,cohPlots] = cohCompFT(LFPTs,bands,cycles,ftimwin,overlap,foi,eoi);
+        [coh,cohPlots,~] = cohCompFT(LFPTs,trls,bands,chans,cycles,ftimwin,overlap,foi,eoi);
     end
     if size(eoi,1) == 2
-        [coh,cohPlots,stdCoh] = cohCompFT(LFPTs,bands,cycles,ftimwin,overlap,foi,eoi);
+        [coh,cohPlots,stdCoh] = cohCompFT(LFPTs,trls,bands,chans,cycles,ftimwin,overlap,foi,eoi);
         %stdCoh = varargout;
         %varargout{2} = stdCoh;
     end
     toc
+end
+%% Create history structure - Stores all inputs used and a few variables
+hist.sdir = sdir; hist.file = file; hist.filter = filter; hist.dsf = dsf;
+hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 
+hist.minInt = minInt; hist.foi = foi; hist.bands = bands; 
+hist.cycles = cycles; hist.ftimwin = ftimwin; hist.overlap = overlap;
+hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent;
+hist.adfreq = adfreq; hist.chk_nan = chk_nan;
+
+if exist('bingeSize')
+   hist.bingeSize = bingeSize; 
 end
 %% Save plots that exist
 tic
@@ -211,6 +232,12 @@ if ~isempty(powerPlots)
         savefig(powerPlots{i},powerPlotNames{i});
     end
 end
+% Save powerCorr plots
+if ~isempty(STDCorr) && ~isempty(MeanCorr) && ~isempty(TWCorr)
+    savefig(STDCorr,[name,'STDCorr']);
+    savefig(MeanCorr,[name,'MeanCorr']);
+    savefig(TWCorr,[name,'TWCorr']);
+end
 % Save coherence plots
 if ~isempty(cohPlots)
     cohPlotNames = {strcat(name,'Coh')};
@@ -231,7 +258,7 @@ if size(eoi,1) == 1
     end
     % Go to directory
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','relPower','coh');
+    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','relPower','coh','hist','trls','LFPTs','powerCorrSort');
     % Save input variables
 end
 if size(eoi,1) == 2
@@ -240,7 +267,7 @@ if size(eoi,1) == 2
         mkdir(saveParent);
     end
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','relPower','coh');
+    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','relPower','coh','hist','trls','LFPTs','powerCorrSort');
     % Save input variables
 end
 toc

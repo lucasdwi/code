@@ -61,21 +61,30 @@ for ii = 1:length(trls)
         for k = 1:chans
             % Uses 1024 nfft
             %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],1024,adfreq);
-            % Uses nfft of the next power of 2 of Hamming window size 
+            % Uses nfft of the next power of 2 of Hamming window size
             %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],2^nextpow2(hammSize),adfreq);
             % Uses full trial length nfft
-            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
+            %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
+            % Returns two-sided Welch PSD estimate at fois
+            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],(foi(1):foi(2):foi(3)),adfreq);
             % Convert PSD into dB and store
             psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
-            %psdTrls.(events{ii}).Pow(k,:,j) = (10*log10(Pxx))';
+        end
+        if strcmpi(filter,'y')
+            notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
+            psdTrls.(events{ii}).Pow{1,j}(:,notchInd(1):notchInd(2)) = NaN;
+            for c = 1:chans
+                psdTrls.(events{ii}).Pow{1,j}(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),psdTrls.(events{ii}).Pow{1,j}(c,~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),find(isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),'linear');
+            end
         end
     end
 end
 % Only need one of the frequency vectors
 psdTrls.F = F;
+psdTrls.hammSize = hammSize;
 %% Plot PSDs
 % Setup notch info and interpolate over data
-notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
+% notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
 % Find average overall PSD and plot
 powerPlots{1} = figure('Position',[1 1 1500 500]);
 ax = cell(1,length(events));
@@ -83,12 +92,12 @@ for ii = 1:length(events)
     psdTrls.(events{ii}).Overall = mean(cat(3,psdTrls.(events{ii}).Pow{1,:}),3);
     psdTrls.(events{ii}).OverallStd = std(cat(3,psdTrls.(events{ii}).Pow{1,:}),0,3);
     % NaN and interpolate over notch filter
-    if strcmpi(filter,'y')
-        psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
-        for c = 1:chans
-             psdTrls.(events{ii}).Overall(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Overall(c,:))),psdTrls.(events{ii}).Overall(c,~isnan(psdTrls.(events{ii}).Overall(c,:))),find(isnan(psdTrls.(events{ii}).Overall(c,:))),'linear');
-        end
-    end
+%     if strcmpi(filter,'y')
+%         psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
+%         for c = 1:chans
+%              psdTrls.(events{ii}).Overall(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Overall(c,:))),psdTrls.(events{ii}).Overall(c,~isnan(psdTrls.(events{ii}).Overall(c,:))),find(isnan(psdTrls.(events{ii}).Overall(c,:))),'linear');
+%         end
+%     end
     % Check number of events and set up subplots accordingly
     if length(events) == 1
         subplot(1,2,ii)
@@ -108,7 +117,7 @@ for ii = 1:length(events)
     if ii == 1
         ylabel('Power (dB)');
     end
-    xlim([0 150]);
+    xlim([0 foi(3)]);
     xlabel('Frequency (Hz)');
     title(eoi(ii));
 end

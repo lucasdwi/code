@@ -4,7 +4,7 @@ function [varargout] = fileCycle(fun,fType,files,sdir)
 
 % Inputs (pick one from fType and files, set the other to []):
 % fun = function group to run; options = 'scb' for spectcompbase.m; 'tab'
-%   for tabulateData.m 
+%   for tabulateData.m; 'sleep' for sleepDetect.m
 % fType = wildcard(s) to search for in order to populate list of files to
 %   be processed; format = string array
 %   N.B.: not case sensitive, but use best practice to avoid problems
@@ -71,6 +71,36 @@ if strcmp(fun,'tab')
     toc
     % Set up varargout options
     varargout{1} = T; varargout{2} = allPredict; varargout{3} = allResponse; varargout{4} = allGroups;
+end
+%% Run prep data for sleepGUI
+if strcmp(fun,'sleep')
+    % First sefup files to be processed if 'fType' rather than 'files' is
+    % used
+    cd(sdir);
+    if ~isempty(fType)
+        % Creates data structure with information on files with wildcard fType
+        % in name; if >1 fType, then concatentates together
+        files = [];
+        for f = 1:length(fType)
+            thisF = dir(strcat('*',fType{f},'*'));
+            % Just pull out 'name' field and concatenate to 'files'
+            files = vertcat(files,extractfield(thisF,'name')');
+        end
+    end
+    % Run sleepDetect.m
+    for i = 1:length(files)
+        tic
+        disp(['Running sleepDetect on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
+        load(files{i})
+        p = 95; minInt = 30; thresh = 2; onset = 50; offset = 17000; smMethod = 'g';
+        [smInstAmp,LFPTs] = sleepDetect(LFPTs,minInt,thresh,onset,offset,adfreq,smMethod);
+        % Save outputs
+        thisSave = strcat('C:\Users\Lucas\Desktop\GreenLab\data\TwoSiteStim\smoothed2\',files(i),'InstAmp.mat');
+        save(thisSave{1},'smInstAmp','LFPTs')
+        close all; clearvars -except files i sdir fun;
+        toc
+    end
+    
 end
 %%
 % [models] = lineReg(T,allVars);

@@ -2,7 +2,7 @@ function [eventTs,eventLabel,clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPT
 %% Uses behavior marker to trialize data
 % INPUTS:
 % behavior = string corresponding to behavior(s) of interest; possible
-%   inputs: 'full','app','binge','rest'
+%   inputs: 'full','app','binge','rest','sleepOut','sleepIn'
 % eventInds = 
 
 % If behavior of interest is entire file, 'full', create new events/times
@@ -59,17 +59,16 @@ for i = 1:size(markers,1)
             if ~isnan(intTime{i,j}(k,end))
                 dataStop = horzcat(dataStop,length(intTime{i,j}));
             end
-            
-            if ~isnan(sum(intTime{i,j}(k,:))) && LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)) >= (minInt + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
-                numTrls = floor((LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)))/(minInt + 1/adfreq));
+            if ~isnan(sum(intTime{i,j}(k,:))) && LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
+                numTrls = floor((LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)))/(minInt*adfreq + 1/adfreq));
                 thisTrls = intTime{i,j}(k,1:((minInt*adfreq)*numTrls));
                 %thisTrls = intTime{i,j}(k,1:((minInt*adfreq+1)*numTrls));
                 clnTrls{i,j}(k,:) = thisTrls;
-            else for intInd = 1:length(dataStart) %Run through data intervals
-                    intLen = LFPTs.tvec(dataStop(intInd)) - LFPTs.tvec(dataStart(intInd));
-                    thisTrls = [];
-                    if intLen >= (minInt + 1/adfreq) %Keep if big enough
-                        numTrls = floor(intLen/(minInt + 1/adfreq));
+            else thisTrls = [];
+                for intInd = 1:length(dataStart) %Run through data intervals
+                    intLen = dataStop(intInd) - dataStart(intInd);
+                    if intLen >= (minInt*adfreq + 1/adfreq) %Keep if big enough
+                        numTrls = floor(intLen/(minInt*adfreq + 1/adfreq));
                         thisTrls = horzcat(thisTrls,intTime{i,j}(k,dataStart(intInd):(dataStart(intInd)+((minInt*adfreq)*numTrls))-1));
                         %thisTrls = horzcat(thisTrls,intTime{i,j}(k,dataStart(intInd):(dataStart(intInd)+((minInt*adfreq+1)*numTrls))-1));
                     end

@@ -49,7 +49,7 @@ for c = 1:length(cond)
             PSDs.(cond{c}).Overall{i,j} = psdTrls.(events{j}).Overall;
             PSDs.(cond{c}).Bands{i,j} = psdTrls.(events{j}).Avg;
             ntrials.(cond{c}){i,j} = length(psdTrls.(events{j}).Pow);
-            Cohs.rel.(cond{c}){i,1} = relCoh';
+            Cohs.rel.(cond{c}){i,1} = coh.relCoh';
             if length(comp) == 1
                 PSDs.(cond{c}).Bands{i,length(events)+1} = relPower;
             end

@@ -5,13 +5,13 @@ day = [18,46,16,12,1,13,14,34,2,71,67,36];
 first = [1:2:size(T.Base,1)];
 second = [2:2:size(T.Base,1)];
 for s = 1:length(first)
-    sub(s,:) = table2array(T.Base(second(s),8:end)) - table2array(T.Base(first(s),8:end));
+    sub(s,:) = table2array(T.Base(second(s),5:end)) - table2array(T.Base(first(s),5:end));
 end
 absSub = abs(sub);
 %% Get NACL theta and NASR-NACR low gamma
 for s = 1:length(first)
-        theta_sub(s) = table2array(T.Base(second(s),18)) - table2array(T.Base(first(s),18));
-        lgamma_sub(s) = table2array(T.Base(second(s),51)) - table2array(T.Base(first(s),51));
+        theta_sub(s) = table2array(T.Base(second(s),15)) - table2array(T.Base(first(s),15));
+        lgamma_sub(s) = table2array(T.Base(second(s),48)) - table2array(T.Base(first(s),48));
 end
 %% Plot NACL Theta
 figure;

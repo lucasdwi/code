@@ -1,4 +1,4 @@
-function [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq)
+function [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands)
 %% Cycle through trials and calculate coherence
 cmb = nchoosek(1:chans,2);
 % Create foi vector
@@ -15,7 +15,7 @@ for c = 1:size(cmb,1)
         Cxy(c,notchInd(1):notchInd(2),t) = interp1(find(~isnan(Cxy(c,:,t))),Cxy(c,~isnan(Cxy(c,:,t)),t),find(isnan(Cxy(c,:,t))),'linear');
     end
     % Whole data set
-    % Check for completness of signal, if NaN exists, skip full-coherence
+    % Check for completeness of signal, if NaN exists, skip full-coherence
     nanChk = sum(sum(LFPTs.data));
     if ~isnan(nanChk)
         [CxyFull(c,:),F1] = mscohere(LFPTs.data(cmb(c,1),:),LFPTs.data(cmb(c,2),:),hanning(winSize),winSize*overlap,foiV,adfreq);
@@ -29,6 +29,19 @@ end
 %% Get population statistics for all trial coherence
 mCxy = sq(mean(Cxy,3));
 sdCxy = sq(std(Cxy,0,3));
+%% Calculate average coherence per frequency band
+% Set frequency band limits
+%bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15,30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
+% Find indices corresponding to frequency bands
+for j = 1:size(bands,1)
+    % Create frequency band intervals from indices in freq
+    bandInd(j,1) = find(F1>=bands{j,2}(1),1);
+    bandInd(j,2) = find(F1<=bands{j,2}(2),1,'last');
+    for k = 1:size(cmb,1)
+        bandCoh(j,k) = mean(mCxy(k,bandInd(j,1):bandInd(j,2),:));
+        relCoh(j,k) = bandCoh(j,k)./mean(mCxy(k,:,:));
+    end
+end
 %% Plot full and mean with error coherence, if full exists
     cols = {[0 1 1];[1 0 0];[0 1 0]; [0 0 1]; [0 0 0]; [1 0 1]};
     cohPlots{1} = figure;
@@ -52,7 +65,6 @@ else
     end
     title('Average Trialized Coherence'); xlabel('Frequency (Hz)'); ylabel('Coherence');
 end
-
 %% Setup output structure 'coh'
 coh.Cxy = Cxy;
 if ~isnan(nanChk)
@@ -60,3 +72,7 @@ if ~isnan(nanChk)
 end
 coh.mCxy = mCxy;
 coh.sdCxy = sdCxy;
+coh.rel = relCoh;
+coh.band = bandCoh;
+coh.freq = F1;
+coh.winSize = winSize;

@@ -1,4 +1,4 @@
-function [LFPTs] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
+function [LFPTs,chk_nan] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
 %function [LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
 %% Find indices of values > |thres| and NaN
 
@@ -28,15 +28,14 @@ function [LFPTs] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
 
 %% Create threshInd structure; 1 = above threshhold, 0 = not
 threshInd = cell(1,chans); % Columns = channels; {1,:} = indices above thresh; {2,:} = onset indices; {3,:} = offset indices
-chk_empty = 0;
+chk_nan = 0;
 for i=1:chans
     threshInd{i} = find(abs(LFPTs.data(i,:))>thresh);
     % Checks if none of the channels exceed threshold
-    chk_empty = chk_empty + numel(threshInd{i});
+    chk_nan = chk_nan + numel(threshInd{i});
 end
-
 %%
-if chk_empty ~= 0
+if chk_nan ~= 0
     %% Find onset and offset cuttoff
     % If downsampled, reset offset relative to downsampling; onset stays that
     % same due to being so low
@@ -128,5 +127,5 @@ if chk_empty ~= 0
     LFPTs = LFPTsNaN; 
 % else
 %     nNaN = [];
-%     indSkp = [];
+%     indSkp = []
 end
