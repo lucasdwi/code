@@ -6,6 +6,8 @@ function [] = collateData(sdir,searchStr)
 for fsi = 1:numel(fileStruct)
     for fi = 1:size(fileStruct{fsi})
         load([sdir{1},fileStruct{fsi}(fi).name],'coh','psdTrls','relPower','powerCorrSort','LFPTs');
+        % Get n% of time
+        nPerc = LFPTs.tvec(end)*.10;
         % Stack overall PSD and PSD distributions
         PSD{fsi}(:,:,fi) = psdTrls.event1.Overall;
         relPSD{fsi}(:,:,fi) = relPower;

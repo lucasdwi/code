@@ -148,7 +148,7 @@ for f = 1:size(postFiles,1)
     end
 end
 %% Plot change in power
-for f = 1:size(postFiles,1)
+for f = 1:2%size(postFiles,1)
     figure; hold on;
     for c = 1:size(powChange{1},1)
         subplot(2,2,c)
@@ -165,14 +165,14 @@ end
 %% Plot change in coherence
 % Get channel combinations
 cmb = nchoosek(1:4,2);
-for f = 1:size(postFiles,1)
+for f = 1:2%size(postFiles,1)
     for c = 1:size(cmb,1)
     channelCmb(c,:) = labels{f}(cmb(c,:));
     end
     figure; hold on;
     for c = 1:size(cohChange{1},1)
         subplot(3,2,c)
-        uimagesc(postTrialTimes{f}(:,2)./(60*fs),cohFreq1,sq(cohChange{f}(c,:,:)));
+        uimagesc(postTrialTimes{f}(:,1)./(60*fs),cohFreq1,sq(cohChange{f}(c,:,:)));
         ylim([1 100])
         xlabel('Time (min)'); ylabel('Frequency (Hz)');
         title([channelCmb{c,1},' - ',channelCmb{c,2},' Coherence'])

@@ -1,3 +1,4 @@
+%% Plots beta values
 ys = T.Base.Properties.VariableNames(8:57);
 for iy = 1:length(ys)
     ys{iy} = strrep(ys{iy},'_',' ');

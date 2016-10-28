@@ -1,25 +1,26 @@
 coreGroup = {'coreRespond','coreStrict'};
-nonCI = logicFind(0,T2.Base.coreRespond,'==');
-respCI = logicFind(1,T2.Base.coreRespond,'==');
-strictCI = logicFind(1,T2.Base.coreStrict,'==');
+nonCI = logicFind(0,T.Base.coreRespond,'==');
+respCI = logicFind(1,T.Base.coreRespond,'==');
+strictCI = logicFind(1,T.Base.coreStrict,'==');
 shellGroup = {'shellRespond','shellStrict'};
-nonSI = logicFind(0,T2.Base.shellRespond,'==');
-respSI = logicFind(1,T2.Base.shellRespond,'==');
-strictSI = logicFind(1,T2.Base.shellStrict,'==');
+nonSI = logicFind(0,T.Base.shellRespond,'==');
+respSI = logicFind(1,T.Base.shellRespond,'==');
+strictSI = logicFind(1,T.Base.shellStrict,'==');
 %%
 % T-tests
-for ii = 6:55;
-    [h{ii,1},p{ii,1}] = ttest2(table2array(T2.Base(nonCI,ii)),table2array(T2.Base(respCI,ii)));
-    [h{ii,2},p{ii,2}] = ttest2(table2array(T2.Base(nonCI,ii)),table2array(T2.Base(strictCI,ii)));
-    [h{ii,3},p{ii,3}] = ttest2(table2array(T2.Base(respCI,ii)),table2array(T2.Base(strictCI,ii)));
+vari = 5:9;
+for ii = vari;
+    [h{ii,1},p{ii,1}] = ttest2(table2array(T.Base(nonCI,ii)),table2array(T.Base(respCI,ii)));
+    [h{ii,2},p{ii,2}] = ttest2(table2array(T.Base(nonCI,ii)),table2array(T.Base(strictCI,ii)));
+    [h{ii,3},p{ii,3}] = ttest2(table2array(T.Base(respCI,ii)),table2array(T.Base(strictCI,ii)));
 end
-ch = h(6:55,:); cp = p(6:55,:);
-for ii = 6:55;
-    [h{ii,1},p{ii,1}] = ttest2(table2array(T2.Base(nonSI,ii)),table2array(T2.Base(respSI,ii)));
-    [h{ii,2},p{ii,2}] = ttest2(table2array(T2.Base(nonSI,ii)),table2array(T2.Base(strictSI,ii)));
-    [h{ii,3},p{ii,3}] = ttest2(table2array(T2.Base(respSI,ii)),table2array(T2.Base(strictSI,ii)));
+ch = h(vari,:); cp = p(vari,:);
+for ii = vari;
+    [h{ii,1},p{ii,1}] = ttest2(table2array(T.Base(nonSI,ii)),table2array(T.Base(respSI,ii)));
+    [h{ii,2},p{ii,2}] = ttest2(table2array(T.Base(nonSI,ii)),table2array(T.Base(strictSI,ii)));
+    [h{ii,3},p{ii,3}] = ttest2(table2array(T.Base(respSI,ii)),table2array(T.Base(strictSI,ii)));
 end
-sh = h(6:55,:); sp = p(6:55,:);
+sh = h(vari,:); sp = p(vari,:);
 
 ps = {cp,sp};
 %% Plots
@@ -27,10 +28,10 @@ for thisp = 1:2
     for ii = 1:size(ps{thisp},1)
         if ((ps{thisp}{ii,1}<=0.05) + (ps{thisp}{ii,2}<=0.05) + (ps{thisp}{ii,3}<=0.05)) >= 1
             if thisp == 1
-                data(:,1) = [table2array(T2.Base(nonCI,ii+5));table2array(T2.Base(respCI,ii+5));table2array(T2.Base(strictCI,ii+5))];
+                data(:,1) = [table2array(T.Base(nonCI,ii+4));table2array(T.Base(respCI,ii+4));table2array(T.Base(strictCI,ii+4))];
                 len1 = length(nonCI); len2 = length(respCI); len3 = length(strictCI);
             else if thisp == 2
-                    data(:,1) = [table2array(T2.Base(nonSI,ii+5));table2array(T2.Base(respSI,ii+5));table2array(T2.Base(strictSI,ii+5))];
+                    data(:,1) = [table2array(T.Base(nonSI,ii+4));table2array(T.Base(respSI,ii+4));table2array(T.Base(strictSI,ii+4))];
                     len1 = length(nonSI); len2 = length(respSI); len3 = length(strictSI);
                 end
             end
@@ -60,9 +61,9 @@ for thisp = 1:2
                 ylim([lim(1) lim(2)+yTick*1.5]);
             end
             if thisp == 1
-                title([strrep(T2.Base.Properties.VariableNames{ii+4},'_',' '),': Core']);
+                title([strrep(T.Base.Properties.VariableNames{ii+4},'_',' '),': Core']);
             else if thisp == 2
-                    title([strrep(T2.Base.Properties.VariableNames{ii+4},'_',' '),': Shell']);
+                    title([strrep(T.Base.Properties.VariableNames{ii+4},'_',' '),': Shell']);
                 end
             end
         end

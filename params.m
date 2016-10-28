@@ -1,6 +1,6 @@
-function [masterDev,masterLam,masterBeta,masterMinLam,masterSurvBeta,masterMeanBeta,masterOR,masterStdBeta,TOrig,betaNames] = params(T,z,m,r,method,resps,surv,k)
+function [masterDev,masterLam,masterBeta,masterMinLam,masterSurvBeta,masterMeanBeta,masterOR,masterStdBeta,TOrig,betaNames,hist] = params(T,z,m,rand,method,resps,surv,k,foldGen,alph)
 %% Tunes and runs elasticnet 
-% Inputs:
+% INPUTS:
 % T = data table to run elastic net on; format = table (from
 %   tabulateData.m)
 %   N.B.: reponses variables MUST be the first n columns
@@ -10,9 +10,28 @@ function [masterDev,masterLam,masterBeta,masterMinLam,masterSurvBeta,masterMeanB
 % method = type of regression to run; format = either 'binom' or 'gauss'
 % resps = columns of responses; format = vector i.e. [1:2]
 % surv = survival percent required
+% k = k-fold
+% foldGen = generate folds manually; format = string, 'y' or 'n'
+% alph = range of alpha values to use; either 1 for lasso or range for enet
+%   (0.001:0.001:1)
+
+% OUTPUTS:
+% masterDev = array of deviance values from tuning
+% masterLam = array of lambda values from tuning 
+% masterBeta = array of beta coefficients from tuning
+% masterMinLam = array of minimum lambda values 
+% masterSurvBeta = array of betas which survive in x% of iterations (surv)
+% masterMeanBeta = array of mean beta values
+% masterOR = array of odds ratios (e^beta)
+% masterStdBeta = array of standard deviations of beta values
+% TOrig = original table, useful for when randomized
+% betaNames =  names of survived beta values
+% hist = history structure with randomized repsonse vectors and information
+%   on any issues of lambda_1se not existing and being replaced by 
+%   min_lambda
 %% Initialize
 % Set up alpha range to test
-alph = (.001:.001:1);
+% alph = (.001:.001:1);
 % Save original T (for randomization purposes)
 TOrig = T;
 % Check method
@@ -21,12 +40,14 @@ if ~strcmpi(method,'binom') && ~strcmpi(method,'gauss')
 end
 %% Run optimizing and testing m times
 for mi = 1:m
-    % Randomize
-    if strcmp(r,'y')
-        for c = resps(end)+1:width(T.Base)
-            thisPerm = randperm(height(T.Base))';
-            T.Base(:,c) = TOrig.Base(thisPerm',c);
-        end
+    % Randomize response columns together
+    if strcmp(rand,'y')
+        thisPerm = randperm(height(T.Base));
+        T.Base(:,1:resps(end)) = TOrig.Base(thisPerm',1:resps(end));
+%         for c = resps(end)+1:width(T.Base)
+%             thisPerm = randperm(height(T.Base))';
+%             T.Base(:,c) = TOrig.Base(thisPerm',c);
+%         end
     end        
     %% Tune alphas
     % Extract predictors and normalize if wanted
@@ -38,7 +59,6 @@ for mi = 1:m
     end
     %%
     % PA allDev; columns = number of models (responses)
-    %allDev = cell(4,4);
     allDev = cell(4,length(resps));
     % Columns of response variables
     for j = resps
@@ -50,13 +70,23 @@ for mi = 1:m
             % Setup 'opts' structure with alpha value
             opts.alpha = alph(ii);
             for r = 1:20
-                % Fit cross validated (5-fold due to size) logistic regression
+                % Fit cross validated (k-fold due to size) logistic regression
                 if strcmpi(method,'binom')
-                    CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
+                    if strcmpi(foldGen,'y')
+                        foldid = foldPerm(k,response);
+                        CVerr = cvglmnet(predict,response,'binomial','opts','class',[],foldid);
+                    else
+                        CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
+                    end
                 else
                     % Fit cross validated (k-fold) regression
                     if strcmpi(method,'gauss')
-                        CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                        if strcmpi(foldGen,'y')
+                            foldid = foldPerm(k,response);
+                            CVerr = cvglmnet(predict,response,'gaussian','opts','mse',[],foldid);
+                        else
+                            CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                        end
                     end
                 end
                 % Get index of lambda with lowest misclassification error
@@ -85,18 +115,34 @@ for mi = 1:m
         tic
         for ii = 1:1000
             if strcmpi(method,'binom')
-                CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
+                if strcmpi(foldGen,'y')
+                    foldid = foldPerm(k,response);
+                    CVerr = cvglmnet(predict,response,'binomial','opts','class',[],foldid);
+                else
+                    CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
+                end
             else
                 if strcmpi(method,'gauss')
-                    CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                    if strcmpi(foldGen,'y')
+                        foldid = foldPerm(k,response);
+                        CVerr = cvglmnet(predict,response,'gaussian','opts','mse',[],foldid);
+                    else
+                        CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                    end
                 end
             end
             % Save minimum lambda
             allLam{c}(ii,1) = CVerr.lambda_min;
             % Save lamba +1 SE from min
-            allLam{c}(ii,2) = CVerr.lambda_1se;
+            if ~isempty(CVerr.lambda_1se)
+                allLam{c}(ii,2) = CVerr.lambda_1se;
+            else
+                allLam{c}(ii,2) = CVerr.lambda_min;
+                hist.lambda1se = [mi;c;ii];
+            end
             % Save index of +1SE lambda
-            allLam{c}(ii,3) = find(CVerr.lambda == CVerr.lambda_1se);
+            allLam{c}(ii,3) = find(CVerr.lambda == allLam{c}(ii,2));
+            %allLam{c}(ii,3) = find(CVerr.lambda == CVerr.lambda_1se);
             % Save misclassification error for +1SE lambda
             allLam{c}(ii,4) = CVerr.cvm(allLam{c}(ii,3));
             % Save betas at lambda +1 SE from min
@@ -146,6 +192,7 @@ for mi = 1:m
     masterMeanBeta{mi} = mBeta;
     masterOR{mi} = mOR;
     masterStdBeta{mi} = stdBeta;
+    hist.responses{mi} = response;
     disp(mi)
     for ii = 1:size(masterSurvBeta{mi},1)
         inds{mi,ii} = logicFind(0,masterSurvBeta{mi}(ii,:),'~=');

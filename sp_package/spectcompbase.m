@@ -50,14 +50,14 @@ if isempty(cycles) && isempty(ftimwin)
     pause
 end
 % Checks the number of cycles at the lowest frequency band of interest
-% using ftimwin; especially needed for PowerCorr.mat
-% if ~isempty(ftimwin)
-%     cycFtimwin = ftimwin*bands{1,2}(1);
-%     if cycFtimwin < 3
-%        disp('Warning: With this ftimwin, your lowest frequency band will be computed with < 3 cycles; press Ctrl+c to quit and redefine or any other key to continue...')
-%     pause
-%     end
-% end
+using ftimwin; especially needed for PowerCorr.mat
+if ~isempty(ftimwin)
+    cycFtimwin = ftimwin*bands{1,2}(1);
+    if cycFtimwin < 3
+       disp('Warning: With this ftimwin, your lowest frequency band will be computed with < 3 cycles; press Ctrl+c to quit and redefine or any other key to continue...')
+    pause
+    end
+end
 % Check for cohMethod
 if isempty(cohMethod) || (~strcmpi(cohMethod,'ft') && ~strcmpi(cohMethod,'mat')) 
     disp('Either cohMethod is empty or incorrectly entered, press Ctrl+c to quit and re-define')
@@ -133,44 +133,44 @@ if size(eoi,1) == 2
 end
 toc
 %% Create n windows (per band) and run freqanalysis for each --> powerCorr
-% cmb = nchoosek(1:chans,2);
-% for c = 1:size(cmb,1)
-%     channelCmb(c,:) = LFPTs.label(cmb(c,:));
-% end
-% for b = 1:size(bands,1)
-%     tic
-%     disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
-%     cfg              = [];
-%     cfg.output       = 'powandcsd';
-%     cfg.method       = 'mtmconvol';
-%     cfg.taper        = 'hanning';
-%     cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
-%     % Use frequency dependent windows (n cycles per window, computed at
-%     % start, 'cycFtimwin') with (x%) overlap
-%     if ~isempty(cycles)
-%         cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
-%         minTWin          = min(cfg.t_ftimwin)*overlap;
-%         cfg.toi          = eoi{1,2}(1):minTWin:eoi{1,2}(2);
-%     % Or use a constant size for windows with (x%) overlap to compute
-%     % cycles and apply forward
-%     else
-%         cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
-%         cfg.toi          = eoi{1,2}(1):ftimwin*overlap:eoi{1,2}(2);
-%     end
-%     cfg.keeptrials   = 'yes';
-%     cfg.channel      = LFPTs.label;
-%     cfg.channelcmb   = channelCmb;
-% 
-%     powCorrTFR{b} = ft_freqanalysis(cfg,trls{1});
-%     toc
-% end
-% % Run powerCorr
-% disp('Running powerCorr.m...')
-% tic
-% cfg.trialwindows = 'yes';
-% [STDCorr,MeanCorr,TWCorr,powerCorrSort,freqRange,notchInd,numCmb,varCmb] = powerCorr(powCorrTFR,bands,cfg);
-% toc
-STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
+cmb = nchoosek(1:chans,2);
+for c = 1:size(cmb,1)
+    channelCmb(c,:) = LFPTs.label(cmb(c,:));
+end
+for b = 1:size(bands,1)
+    tic
+    disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
+    cfg              = [];
+    cfg.output       = 'powandcsd';
+    cfg.method       = 'mtmconvol';
+    cfg.taper        = 'hanning';
+    cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
+    % Use frequency dependent windows (n cycles per window, computed at
+    % start, 'cycFtimwin') with (x%) overlap
+    if ~isempty(cycles)
+        cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
+        minTWin          = min(cfg.t_ftimwin)*overlap;
+        cfg.toi          = eoi{1,2}(1):minTWin:eoi{1,2}(2);
+    % Or use a constant size for windows with (x%) overlap to compute
+    % cycles and apply forward
+    else
+        cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
+        cfg.toi          = eoi{1,2}(1):ftimwin*overlap:eoi{1,2}(2);
+    end
+    cfg.keeptrials   = 'yes';
+    cfg.channel      = LFPTs.label;
+    cfg.channelcmb   = channelCmb;
+
+    powCorrTFR{b} = ft_freqanalysis(cfg,trls{1});
+    toc
+end
+% Run powerCorr
+disp('Running powerCorr.m...')
+tic
+cfg.trialwindows = 'yes';
+[STDCorr,MeanCorr,TWCorr,powerCorrSort,freqRange,notchInd,numCmb,varCmb] = powerCorr(powCorrTFR,bands,cfg);
+toc
+%STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
 %% Use inhouse/Matlab code for coherence
 if strcmpi(cohMethod,'mat')
     tic

@@ -1,17 +1,20 @@
 function [] = eventCollate(sdir,searchStr)
 %% Get file structure for each searchStr
 [fileStruct] = fileSearch(sdir,searchStr);
-eventLabel = [];
+%eventLabel = [];
+eventTimes = cell(numel(fileStruct));
+timeMin = cell(numel(fileStruct));
+timeMax = cell(numel(fileStruct));
 for fsi = 1:numel(fileStruct)
     for fi = 1:size(fileStruct{fsi})
         load([sdir{1},fileStruct{fsi}(fi).name],'eventTs','LFPTs');
-        indO = find(not(cellfun('isempty',strfind(eventTs.label,'Orientation'))));
-        indRs = find(not(cellfun('isempty',strfind(eventTs.label,'Rest (Start)'))));
-        indRe = find(not(cellfun('isempty',strfind(eventTs.label,'Rest (End)'))));
-        indAs = find(not(cellfun('isempty',strfind(eventTs.label,'Approach (Start)'))));
-        indAe = find(not(cellfun('isempty',strfind(eventTs.label,'Approach (End)'))));
-        indBs = find(not(cellfun('isempty',strfind(eventTs.label,'Binge (Start)'))));
-        indBe = find(not(cellfun('isempty',strfind(eventTs.label,'Binge (End)'))));
+        indO = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Orientation')),'==');
+        indRs = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Rest (Start)')),'==');
+        indRe = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Rest (End)')),'==');
+        indAs = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Approach (Start)')),'==');
+        indAe = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Approach (End)')),'==');
+        indBs = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Binge (Start)')),'==');
+        indBe = logicFind(0,cellfun('isempty',strfind(eventTs.label,'Binge (End)')),'==');
         eventTimes{fsi}{fi,1} = eventTs.t{1,indO};
         eventTimes{fsi}{fi,2} = eventTs.t{1,indAs};
         eventTimes{fsi}{fi,3} = eventTs.t{1,indAe};
@@ -21,8 +24,14 @@ for fsi = 1:numel(fileStruct)
         eventTimes{fsi}{fi,7} = eventTs.t{1,indRe};
         timeMin{fsi}(fi) = LFPTs.tvec(1);
         timeMax{fsi}(fi) = LFPTs.tvec(end);
-        timeStep{fsi}(fi) = abs(0.0005-timeMin{fsi}(fi))/(timeMax{fsi}(fi)-timeMin{fsi}(fi));
-        tvec{fsi,fi} = LFPTs.tvec;
+        %timeStep{fsi}(fi) = abs(0.0005-timeMin{fsi}(fi))/(timeMax{fsi}(fi)-timeMin{fsi}(fi));
+        %tvec{fsi,fi} = LFPTs.tvec;
+    end
+end
+%% Get percent of time at rest
+for fsi = 1:numel(fileStruct)
+    for fi = 1:size(fileStruct{fsi})
+        restPerc(fsi,fi) = sum(eventTimes{fsi}{fi,7}-eventTimes{fsi}{fi,6})/(timeMax{fsi}(fi)-timeMin{fsi}(fi));
     end
 end
 %% Normalize and plot approach, binge, and rests
