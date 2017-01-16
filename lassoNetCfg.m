@@ -1,0 +1,6 @@
+function [cfg] = lassoNetCfg(naive,rand,normalize,foldGen,cvIterations)
+cfg.naive = naive;
+cfg.rand = rand;
+cfg.normalize = normalize;
+cfg.foldGen = foldGen;
+cfg.cvIterations = cvIterations;
