@@ -50,7 +50,7 @@ if isempty(cycles) && isempty(ftimwin)
     pause
 end
 % Checks the number of cycles at the lowest frequency band of interest
-using ftimwin; especially needed for PowerCorr.mat
+% using ftimwin; especially needed for PowerCorr.mat
 if ~isempty(ftimwin)
     cycFtimwin = ftimwin*bands{1,2}(1);
     if cycFtimwin < 3
@@ -129,7 +129,7 @@ if size(eoi,1) == 1
     [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
 end
 if size(eoi,1) == 2
-    [psdTrls,relPower,powerPlots,stdPower] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
+    [psdTrls,relPower,powerPlots,powerEventComp,stdPower] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
 end
 toc
 %% Create n windows (per band) and run freqanalysis for each --> powerCorr
@@ -137,39 +137,41 @@ cmb = nchoosek(1:chans,2);
 for c = 1:size(cmb,1)
     channelCmb(c,:) = LFPTs.label(cmb(c,:));
 end
-for b = 1:size(bands,1)
-    tic
-    disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
-    cfg              = [];
-    cfg.output       = 'powandcsd';
-    cfg.method       = 'mtmconvol';
-    cfg.taper        = 'hanning';
-    cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
-    % Use frequency dependent windows (n cycles per window, computed at
-    % start, 'cycFtimwin') with (x%) overlap
-    if ~isempty(cycles)
-        cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
-        minTWin          = min(cfg.t_ftimwin)*overlap;
-        cfg.toi          = eoi{1,2}(1):minTWin:eoi{1,2}(2);
-    % Or use a constant size for windows with (x%) overlap to compute
-    % cycles and apply forward
-    else
-        cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
-        cfg.toi          = eoi{1,2}(1):ftimwin*overlap:eoi{1,2}(2);
+for e = 1:size(eoi,1)
+    for b = 1:size(bands,1)
+        tic
+        disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
+        cfg              = [];
+        cfg.output       = 'powandcsd';
+        cfg.method       = 'mtmconvol';
+        cfg.taper        = 'hanning';
+        cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
+        % Use frequency dependent windows (n cycles per window, computed at
+        % start, 'cycFtimwin') with (x%) overlap
+        if ~isempty(cycles)
+            cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
+            minTWin          = min(cfg.t_ftimwin)*overlap;
+            cfg.toi          = eoi{e,2}(1):minTWin:eoi{e,2}(2);
+            % Or use a constant size for windows with (x%) overlap to compute
+            % cycles and apply forward
+        else
+            cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
+            cfg.toi          = eoi{e,2}(1):ftimwin*overlap:eoi{e,2}(2);
+        end
+        cfg.keeptrials   = 'yes';
+        cfg.channel      = LFPTs.label;
+        cfg.channelcmb   = channelCmb;
+        
+        powCorrTFR{b} = ft_freqanalysis(cfg,trls{1,e});
+        toc
     end
-    cfg.keeptrials   = 'yes';
-    cfg.channel      = LFPTs.label;
-    cfg.channelcmb   = channelCmb;
-
-    powCorrTFR{b} = ft_freqanalysis(cfg,trls{1});
+    % Run powerCorr
+    disp('Running powerCorr.m...')
+    tic
+    cfg.trialwindows = 'yes';
+    [STDCorr{e},MeanCorr{e},TWCorr{e},powerCorrSort{e},~,~,~,~] = powerCorr(powCorrTFR,bands,cfg);
     toc
 end
-% Run powerCorr
-disp('Running powerCorr.m...')
-tic
-cfg.trialwindows = 'yes';
-[STDCorr,MeanCorr,TWCorr,powerCorrSort,freqRange,notchInd,numCmb,varCmb] = powerCorr(powCorrTFR,bands,cfg);
-toc
 %STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
 %% Use inhouse/Matlab code for coherence
 if strcmpi(cohMethod,'mat')
@@ -183,7 +185,7 @@ if strcmpi(cohMethod,'mat')
             winSize = cycles/bands{1,2}(1)*adfreq;
         end
     end
-    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands);
+    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,eoi);
     toc
 end
 %% Use Fieldtrip code for coherence
@@ -234,9 +236,11 @@ if ~isempty(powerPlots)
 end
 % Save powerCorr plots
 if ~isempty(STDCorr) && ~isempty(MeanCorr) && ~isempty(TWCorr)
-    savefig(STDCorr,[name,'STDCorr']);
-    savefig(MeanCorr,[name,'MeanCorr']);
-    savefig(TWCorr,[name,'TWCorr']);
+    for e = 1:size(eoi,1)
+        savefig(STDCorr{e},[name,'STDCorr_',eoi{e,1}]);
+        savefig(MeanCorr{e},[name,'MeanCorr_',eoi{e,1}]);
+        savefig(TWCorr{e},[name,'TWCorr_',eoi{e,1}]);
+    end
 end
 % Save coherence plots
 if ~isempty(cohPlots)
@@ -267,7 +271,7 @@ if size(eoi,1) == 2
         mkdir(saveParent);
     end
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','relPower','coh','hist','trls','LFPTs','powerCorrSort');
+    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','relPower','powerEventComp','stdPower','coh','hist','trls','LFPTs','powerCorrSort');
     % Save input variables
 end
 toc

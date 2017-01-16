@@ -1,6 +1,7 @@
 function [inds] = logicFind(x,data,op)
 %% Uses logical indexing to find values within data that have the
 % relationship to x defined by op. Requires data to be a row vector
+% Can also be used on strings in cells using strcmp as operator
 %% INPUTS
 % x = value in reference to which to look for
 % data = row vector through which to look
@@ -11,7 +12,11 @@ function [inds] = logicFind(x,data,op)
 
 allIdx = 1:numel(data);
 if strcmp(op,'==')
-    inds = allIdx(data == x);
+    if isa(data,'cell')
+       inds = allIdx(strcmp(x,data)); 
+    else
+        inds = allIdx(data == x);
+    end
 end
 if strcmp(op,'<=')
     inds = allIdx(data <= x);
@@ -20,5 +25,9 @@ if strcmp(op,'>=')
     inds = allIdx(data >= x);
 end
 if strcmp(op,'~=')
-    inds = allIdx(data ~= x);
+    if isa(data,'cell')
+       inds = allIdx(~strcmp(x,data)); 
+    else
+        inds = allIdx(data ~= x);
+    end
 end

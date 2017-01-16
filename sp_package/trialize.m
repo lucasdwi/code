@@ -13,7 +13,12 @@ if strcmpi(eoi(:,1),'full')
     eventLabel = {'All Data'};
 % Otherwise run eventInd to find correct indices for events
 else if sum(strcmpi(eoi(:,1),'app')) || sum(strcmpi(eoi(:,1),'binge')) || sum(strcmpi(eoi(:,1),'rest'))
-       [eventInds,eventTs,eventLabel,markers] = eventInd(eventTs,eoi);
+       % If looking at 'notbinge' then remove it for eventInd to run
+        if strcmpi(eoi(2,1),'notbinge')
+            [eventInds,eventTs,eventLabel,markers] = eventInd(eventTs,eoi(1,:));  
+        else
+            [eventInds,eventTs,eventLabel,markers] = eventInd(eventTs,eoi);
+        end
     end
 end
 %%
@@ -35,9 +40,23 @@ for i = 1:size(markers,1)
     end
     toc
 end
+%%
+% If looking at 'notbinge' then uses time stamps for the end of one binge
+% and the beginning of the next as start and stops.
+% N.B.: ASSUMES THAT THE RECORDING DOES NOT START OR STOP DURING A BINGE
+if strcmpi(eoi(2,1),'notbinge')
+   intTime{2,1} = repmat((1:(intTime{1,1}(1,1)-1)),4,1);
+   for j = 2:size(intTime(1,:),2)+1
+      if j == size(intTime(1,:),2)+1
+          intTime{2,j} = repmat(((intTime{1,j-1}(1,end)+1):size(LFPTs.tvec,2)),4,1);
+      else
+          intTime{2,j} = repmat((intTime{1,j-1}(1,end)+1):(intTime{1,j}(1,1)-1),4,1);
+      end
+   end
+end
 %% NaN timestamps corresponding to NaNed LFPTs data
-for i = 1:size(markers,1)
-    for j = 1:numel(eventTs.t{markers(i,2)})
+for i = 1:size(intTime,1)
+    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))%numel(eventTs.t{markers(i,2)})
         for k = 1:chans
             intTime{i,j}(k,isnan(LFPTs.data(i,intTime{i,j}(k,:)))) = NaN;
         end
@@ -47,8 +66,8 @@ end
 tic
 clnTrls = cell(size(markers,1),largest); %Preallocate clnTrls
 thisTrls = [];
-for i = 1:size(markers,1)
-    for j = 1:numel(eventTs.t{markers(i,2)})
+for i = 1:size(intTime,1)
+    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))%numel(eventTs.t{markers(i,2)})
         for k = 1:chans
             A = intTime{i,j}(k,:); A(~isnan(A)) = 1; A(isnan(A)) = 0;
             dataStart = find(diff(A)==1)+1;
@@ -59,8 +78,10 @@ for i = 1:size(markers,1)
             if ~isnan(intTime{i,j}(k,end))
                 dataStop = horzcat(dataStop,length(intTime{i,j}));
             end
-            if ~isnan(sum(intTime{i,j}(k,:))) && LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
-                numTrls = floor((LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)))/(minInt*adfreq + 1/adfreq));
+            if ~isnan(sum(intTime{i,j}(k,:))) && intTime{i,j}(k,end)-intTime{i,j}(k,1) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
+            %if ~isnan(sum(intTime{i,j}(k,:))) && LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
+                numTrls = floor((intTime{i,j}(k,end)-intTime{i,j}(k,1))/(minInt*adfreq + 1/adfreq));    
+                %numTrls = floor((LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)))/(minInt*adfreq + 1/adfreq));
                 thisTrls = intTime{i,j}(k,1:((minInt*adfreq)*numTrls));
                 %thisTrls = intTime{i,j}(k,1:((minInt*adfreq+1)*numTrls));
                 clnTrls{i,j}(k,:) = thisTrls;
@@ -82,9 +103,9 @@ for i = 1:size(markers,1)
 end
 toc      
 %% Collapse data across behavior
-clnEvents = cell(size(markers,1),1);
-for i = 1:size(markers,1)
-    for j = 1:largest
+clnEvents = cell(size(clnTrls,1),1);
+for i = 1:size(clnTrls,1)
+    for j = 1:size(clnTrls,2)
         clnEvents{i} = horzcat(clnEvents{i},clnTrls{i,j});
     end
 end

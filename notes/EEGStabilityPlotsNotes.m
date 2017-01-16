@@ -1,17 +1,14 @@
-%% Setup day information and perform subtractions
-% Days between recordings of H10, H13, H14, H15, I11, I12, I1, I2, I3, I4, I6, I8
-day = [18,46,16,12,1,13,14,34,2,71,67,36];
-% Get every other row index for subtraction
-first = [1:2:size(T.Base,1)];
-second = [2:2:size(T.Base,1)];
-for s = 1:length(first)
-    sub(s,:) = table2array(T.Base(second(s),5:end)) - table2array(T.Base(first(s),5:end));
+
+%% Get differnce between variables of different response groups
+for r = 1:4
+    for ii = 1:50
+        
+    end
 end
-absSub = abs(sub);
-%% Get NACL theta and NASR-NACR low gamma
+%% Get NACL theta and NASR-NACR high gamma
 for s = 1:length(first)
         theta_sub(s) = table2array(T.Base(second(s),15)) - table2array(T.Base(first(s),15));
-        lgamma_sub(s) = table2array(T.Base(second(s),48)) - table2array(T.Base(first(s),48));
+        hgamma_sub(s) = table2array(T.Base(second(s),49)) - table2array(T.Base(first(s),49));
 end
 %% Plot NACL Theta
 figure;
@@ -21,14 +18,14 @@ lsline;
 thetMd = fitlm(day,theta_sub.*100);
 text(10,1.5,strcat('p = ',num2str(thetMd.Coefficients.pValue(2),2),' R^2 = ',num2str(thetMd.Rsquared.Ordinary,2)))
 title('Stability of NACL Theta Power over Time'); xlabel('Number of Days'); ylabel('Change in Percent Power');
-%% Plot NASR-NACR low gamma
+%% Plot NASR-NACR high gamma
 figure;
-plot(day,lgamma_sub,'ks');
+plot(day,hgamma_sub,'ks');
 ylim([-.3 .3]);
 lsline;
-lgammaMd = fitlm(day,lgamma_sub);
+lgammaMd = fitlm(day,hgamma_sub);
 text(10,.2,strcat('p = ',num2str(lgammaMd.Coefficients.pValue(2),2),' R^2 = ',num2str(lgammaMd.Rsquared.Ordinary,2)))
-title('Stability of NASR-NACR Low Gamma Coherence over Time'); xlabel('Number of Days'); ylabel('Change in Coherence Index');
+title('Stability of NASR-NACR High Gamma Coherence over Time'); xlabel('Number of Days'); ylabel('Change in Coherence Index');
 %% Setup power and coherence indices
 % Gets indices of first entry of each channel or channel-pair
 powInd = [1:5:20];

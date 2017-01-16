@@ -1,4 +1,4 @@
-function [masterDev,masterLam,masterBeta,masterMinLam,masterSurvBeta,masterMeanBeta,masterOR,masterStdBeta,TOrig,betaNames,hist] = params(T,z,m,rand,method,resps,surv,k,foldGen,alph)
+function [masterDev,masterLam,masterBeta,masterMinLam,masterSurvBeta,masterMeanBeta,masterOR,masterStdBeta,TOrig,betaNames,hist] = params(T,z,m,rand,method,resps,surv,k,foldGen,alph,nameVect)
 %% Tunes and runs elasticnet 
 % INPUTS:
 % T = data table to run elastic net on; format = table (from
@@ -42,76 +42,88 @@ end
 for mi = 1:m
     % Randomize response columns together
     if strcmp(rand,'y')
-        thisPerm = randperm(height(T.Base));
-        T.Base(:,1:resps(end)) = TOrig.Base(thisPerm',1:resps(end));
-%         for c = resps(end)+1:width(T.Base)
-%             thisPerm = randperm(height(T.Base))';
-%             T.Base(:,c) = TOrig.Base(thisPerm',c);
+        thisPerm = randperm(size(T,1));
+        T(:,1:resps(end)) = TOrig(thisPerm',1:resps(end));
+%         for c = resps(end)+1:width(T)
+%             thisPerm = randperm(height(T))';
+%             T(:,c) = TOrig(thisPerm',c);
 %         end
     end        
     %% Tune alphas
     % Extract predictors and normalize if wanted
     if strcmp(z,'y')
-        predict = zscore(table2array(T.Base(:,resps(end)+1:end)));
+        predict = zscore(T(:,resps(end)+1:end));
     else if strcmp(z,'n')
-            predict = table2array(T.Base(:,resps(end)+1:end));
+            predict = T(:,resps(end)+1:end);
         end
     end
     %%
     % PA allDev; columns = number of models (responses)
     allDev = cell(4,length(resps));
-    % Columns of response variables
-    for j = resps
-        % Extract response
-        response = table2array(T.Base(:,j));
-        % Cycle through alphas
-        tic
-        for ii = 1:length(alph)
-            % Setup 'opts' structure with alpha value
-            opts.alpha = alph(ii);
-            for r = 1:20
-                % Fit cross validated (k-fold due to size) logistic regression
-                if strcmpi(method,'binom')
-                    if strcmpi(foldGen,'y')
-                        foldid = foldPerm(k,response);
-                        CVerr = cvglmnet(predict,response,'binomial','opts','class',[],foldid);
-                    else
-                        CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
-                    end
-                else
-                    % Fit cross validated (k-fold) regression
-                    if strcmpi(method,'gauss')
+    % Only do if alpha is range
+    if length(alph) ~= 1
+        % Columns of response variables
+        for j = resps
+            % Extract response
+            response = T(:,j);
+            % Cycle through alphas
+            tic
+            for ii = 1:length(alph)
+                % Setup 'opts' structure with alpha value
+                opts.alpha = alph(ii);
+                disp('Cross-validating alpha...')
+                for r = 1:100
+                    disp([num2str(r),' out of 20'])
+                    % Fit cross validated (k-fold due to size) logistic regression
+                    if strcmpi(method,'binom')
                         if strcmpi(foldGen,'y')
                             foldid = foldPerm(k,response);
-                            CVerr = cvglmnet(predict,response,'gaussian','opts','mse',[],foldid);
+                            testfold(r,:,)
+                            CVerr = cvglmnet(predict,response,'binomial','opts','class',[],foldid);
                         else
-                            CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                            CVerr = cvglmnet(predict,response,'binomial','opts','class',k);
+                        end
+                    else
+                        % Fit cross validated (k-fold) regression
+                        if strcmpi(method,'gauss')
+                            if strcmpi(foldGen,'y')
+                                foldid = foldPerm(k,response);
+                                CVerr = cvglmnet(predict,response,'gaussian','opts','mse',[],foldid);
+                            else
+                                CVerr = cvglmnet(predict,response,'gaussian','opts','mse',k);
+                            end
                         end
                     end
+                    % Get index of lambda with lowest misclassification error
+                    ind = find(CVerr.lambda == CVerr.lambda_min);
+                    % Store each minimum error in matrix of cell array
+                    %allDev{1,j-1}(ii,r) = CVerr.cvm(ind);
+                    allDev{1,j}(ii,r) = CVerr.cvm(ind);
                 end
-                % Get index of lambda with lowest misclassification error
-                ind = find(CVerr.lambda == CVerr.lambda_min);
-                % Store each minimum error in matrix of cell array
-                %allDev{1,j-1}(ii,r) = CVerr.cvm(ind);
-                allDev{1,j}(ii,r) = CVerr.cvm(ind);
             end
+            toc
         end
-        toc            
-    end
-    %% Get average for each alpha (row 2), find minimum (row 3) and use index to get first best alpha value (row 4)
-    for r = 1:size(allDev,2)
-        allDev{2,r} = mean(allDev{1,r},2);
-        allDev{3,r} = min(allDev{2,r});
-        allDev{4,r} = alph(find(allDev{2,r} == allDev{3,r},1));
+        %% Get average for each alpha (row 2), find minimum (row 3) and use index to get first best alpha value (row 4)
+        for r = 1:size(allDev,2)
+            allDev{2,r} = mean(allDev{1,r},2);
+            allDev{3,r} = min(allDev{2,r});
+            allDev{4,r} = alph(find(allDev{2,r} == allDev{3,r},1));
+        end
     end
     %% Use alpha found above to tune lambda
     % PA allLam, allBeta, and minLam
     allLam = cell(1,size(allDev,2)); allBeta = cell(1,size(allDev,2)); minLam = zeros(size(allDev,2),3);
+    disp('Using alpha to tune lambda...')
     for c = 1:size(allDev,2)
-        opts.alpha = allDev{4,c};
+        disp([num2str(c),' out of ',num2str(size(allDev,2))])
+        if size(alph) ~= 1
+            opts.alpha = allDev{4,c};
+        else
+            opts.alpha = alph;
+        end
         %response = table2array(T.Base(:,c+1)); %Weird case because of
         %non-used first column
-        response = table2array(T.Base(:,c));
+        response = T(:,c);
         tic
         for ii = 1:1000
             if strcmpi(method,'binom')
@@ -176,8 +188,8 @@ for mi = 1:m
         stdBeta = vertcat(stdBeta,allBeta{2,c}(2,:));
     end
     %%
-    % Set survivals <= surv to zero
-    survBeta(survBeta <= surv) = 0;
+    % Set survivals < surv to zero
+    survBeta(survBeta < surv) = 0;
     % Set means and STD with 0 survival to NaN
     mBeta(survBeta == 0) = NaN;
     stdBeta(survBeta ==0) = NaN;
@@ -196,8 +208,8 @@ for mi = 1:m
     disp(mi)
     for ii = 1:size(masterSurvBeta{mi},1)
         inds{mi,ii} = logicFind(0,masterSurvBeta{mi}(ii,:),'~=');
-        inds{mi,ii} = inds{mi,ii}+length(resps);
-        betaNames{mi,ii} = T.Base.Properties.VariableNames(inds{mi,ii});
+        %inds{mi,ii} = inds{mi,ii}+length(resps);
+        betaNames{mi,ii} = nameVect(inds{mi,ii});
     end
 end
 

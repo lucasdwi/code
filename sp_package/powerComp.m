@@ -162,22 +162,23 @@ end
 % high gamma 
 % N.B.: the sum of each band's percent of total will NOT = 100; some data
 % falls outside of the bands
-if length(events) == 1
-    relPower = zeros(size(bands,1),chans);
-    for c = 1:chans
-        psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):bandInd(end,2)));
-        %psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
-        relPower(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
+%relPower = cell(size(bands,1),chans);
+for c = 1:chans
+    psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):bandInd(end,2)));
+    %psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
+    relPower.event1(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
+    if length(events) == 2
+        psdTrls.event2.totalPower(c) = trapz(psdTrls.event2.Overall(c,bandInd(1,1):bandInd(end,2)));
+        relPower.event2(:,c) = psdTrls.event2.Avg(:,c)./psdTrls.event2.totalPower(c);
     end
 end
-
 % If two events: compare relative change from baseline in total power in each band
 % Use absolute power to compute percent change; represents a reduction in
 % negative power as an increase
 if length(events) == 2
-relPower = (psdTrls.event1.Avg-psdTrls.event2.Avg)./abs(psdTrls.event2.Avg);
-stdPower = relPower.*(psdTrls.event1.Std./psdTrls.event1.Avg + psdTrls.event2.Std./psdTrls.event2.Avg);
-varargout{1} = stdPower;
+    powerEventComp = (psdTrls.event1.Avg-psdTrls.event2.Avg)./abs(psdTrls.event2.Avg);
+    stdPower = powerEventComp.*(psdTrls.event1.Std./psdTrls.event1.Avg + psdTrls.event2.Std./psdTrls.event2.Avg);
+    varargout{1} = powerEventComp; varargout{2} = stdPower;
 end
 
 %% Plot average power differences
@@ -193,7 +194,7 @@ end
 % Plot average percent change from event 2 to event 1 with 2 sigma confidence bars
 if length(events) == 2
     subplot(1,3,3)
-    h = barwitherr(stdPower.*100,relPower.*100);
+    h = barwitherr(stdPower.*100,powerEventComp.*100);
     set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'});
     l = legend(trls{1,1}.label);
     set(l,'Location','southeast');
