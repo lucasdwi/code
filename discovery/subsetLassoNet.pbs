@@ -1,0 +1,11 @@
+#!/bin/bash -l
+#PBS -N enet
+#PBS -q default
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=30:00:00
+#PBS -M lucasdwi@gmail.com
+#PBS -m ea
+#PBS -t 1-9
+cd /ihome/ldwiel/code/
+module load matlab/r2015a
+matlab -r "runSubsetLassoNet(${PBS_ARRAYID})"
