@@ -25,6 +25,8 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 %                 is 'n'
 %       cvIterations = number of iterations for cross-validating alpha and
 %                      lambda; format = integer, default is 100
+%       minTerm = which lambda term to use for optimization; either 'min'
+%                 or '1se'
 %% OUTPUTS
 % allAlpha = structure of alpha tuning data
 %          bestAlpha = 
@@ -190,13 +192,23 @@ for rep = 1:repeats
         end
     end
     % Go through CVfits and extract errors
-    lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_1se,exMinErr.lambda,'==')),CVfits);
+    if strcmpi(cfg.minTerm,'1se')
+        lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_1se,exMinErr.lambda,'==')),CVfits);
+    else if strcmpi(cfg.minTerm,'min')
+            lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_min,exMinErr.lambda,'==')),CVfits);
+        end
+    end
     % Get average and standard deviation of min error for each model
     lamErrAvg = mean(lamErr,1);
     lamErrSd = std(lamErr,[],1);
     % Go though CVfits and extract lamda_1se with lowest misclassification
     % error for naive prediction
-    minLam = cellfun(@(exLam) exLam.lambda_1se,CVfits);
+    if strcmpi(cfg.minTerm,'1se')
+        minLam = cellfun(@(exLam) exLam.lambda_1se,CVfits);
+    else if strcmpi(cfg.minTerm,'min')
+            minLam = cellfun(@(exLam) exLam.lambda_min,CVfits);
+        end
+    end
     % Go through CVfits and extract mean of all error - cvm
     allErr = cellfun(@(exAllErr) mean(exAllErr.cvm),CVfits);
     % Get average and standard deviation of all errors for each model

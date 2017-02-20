@@ -1,5 +1,6 @@
 function [h,p,pAdj] = bulkT(data1,data2,mcc)
-% Run bulk t-tests comparing dataset 1 and dataset 2 or dataset 1 and 0
+% Run bulk t-tests comparing dataset 1 and dataset 2, dataset 1 and 0, or
+% between columns in dataset 1
 % INPUTS:
 % data1 = dataset 1, where rows = subjects and columns = variables
 % data2 = dataset 2, where rows = subjects and columns = variables, or 0
@@ -13,19 +14,28 @@ function [h,p,pAdj] = bulkT(data1,data2,mcc)
 % p = p-value of significance testing
 % power = power of test
 %% Check that number of columns in data1 and data2 are the same
-if size(data1,2) ~= size(data2,2) && data2 ~= 0
-   error('The number of colums of data to be compared are not equal.') 
+if ~isempty(data2)
+    if size(data1,2) ~= size(data2,2) && data2 ~= 0
+        error('The number of colums of data to be compared are not equal.') 
+    end
 end
 %% Run t-tests through columns and get power of test
-for c = 1:size(data1,2)
-    if data2 == 0
-        % One-sample t-test
-        [h(:,c),p(:,c)] = ttest(data1(:,c));
-    else
-        % Two-sample t-test
-        [h(:,c),p(:,c)] = ttest(data1(:,c),data2(:,c));
+if isempty(data2)
+    % Within dataset two-sample t-test
+    pairs = nchoosek(1:size(data1,2),2);
+    for c = 1:size(pairs,1)
+        [h(:,c),p(:,c)] = ttest(data1(:,pairs(c,1)),data1(:,pairs(c,2)));
     end
-    %power(:,c) = sampsizepwr();
+else
+    for c = 1:size(data1,2)
+        if data2 == 0
+            % One-sample t-test
+            [h(:,c),p(:,c)] = ttest(data1(:,c));
+        else         
+            % Across datasets two-sample t-test
+            [h(:,c),p(:,c)] = ttest2(data1(:,c),data2(:,c));
+        end
+    end
 end
 %% Apply multiple comparisons correction
 % FDR

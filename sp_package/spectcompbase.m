@@ -23,7 +23,7 @@ function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh,hist
 %   number of cycles at the lowest frequency band of interest and will warn
 %   if less than 3
 % overlap = amount of overlap to use with sliding windows; format = percent
-%   in decimal form
+%   in decimal form (1-percent; e.g. 90% overlap = 0.1)
 % eoi = events of interest, if one event then normalizes within that event,
 %   if two then compares events; format = structure {'tag1',[0 3];'tag2',[0 3]} 
 %   N.B.: if all the data use the tag 'full', otherwise use tags
@@ -65,6 +65,8 @@ if isempty(cohMethod) || (~strcmpi(cohMethod,'ft') && ~strcmpi(cohMethod,'mat'))
 end
 % Initialize varargout with placeholders 
 stdPower = []; stdCoh = [];
+% Convert overlap
+overlap = 1-overlap;
 %% Load file
 tic
 cd(sdir);
@@ -94,6 +96,7 @@ if filter == 'y'
 else
     disp('Skipping filter...')
 end
+
 %% Downsample data
 tic
 if dsf > 1
@@ -107,10 +110,9 @@ toc
 tic
 disp('Thresholding data with threshFilt...')
 % Removed nNaN and indSkp portion
-[LFPTs,chk_nan] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans);
+[LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans);
 %[LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans);
 toc
-
 %% NaN Sleep Intervals
 if exist('sleep')
     for sind = 1:size(sleep.t{1,1},1)
@@ -120,7 +122,7 @@ end
 %% Trialize around events
 tic
 disp('Trializing data with trialize.m')
-[eventTs,eventLabel,clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq,minInt,chans);
+[~,~,clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq,minInt,chans);
 toc
 %% Calculate power spectra and plot 
 tic
@@ -133,46 +135,46 @@ if size(eoi,1) == 2
 end
 toc
 %% Create n windows (per band) and run freqanalysis for each --> powerCorr
-cmb = nchoosek(1:chans,2);
-for c = 1:size(cmb,1)
-    channelCmb(c,:) = LFPTs.label(cmb(c,:));
-end
-for e = 1:size(eoi,1)
-    for b = 1:size(bands,1)
-        tic
-        disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
-        cfg              = [];
-        cfg.output       = 'powandcsd';
-        cfg.method       = 'mtmconvol';
-        cfg.taper        = 'hanning';
-        cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
-        % Use frequency dependent windows (n cycles per window, computed at
-        % start, 'cycFtimwin') with (x%) overlap
-        if ~isempty(cycles)
-            cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
-            minTWin          = min(cfg.t_ftimwin)*overlap;
-            cfg.toi          = eoi{e,2}(1):minTWin:eoi{e,2}(2);
-            % Or use a constant size for windows with (x%) overlap to compute
-            % cycles and apply forward
-        else
-            cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
-            cfg.toi          = eoi{e,2}(1):ftimwin*overlap:eoi{e,2}(2);
-        end
-        cfg.keeptrials   = 'yes';
-        cfg.channel      = LFPTs.label;
-        cfg.channelcmb   = channelCmb;
-        
-        powCorrTFR{b} = ft_freqanalysis(cfg,trls{1,e});
-        toc
-    end
-    % Run powerCorr
-    disp('Running powerCorr.m...')
-    tic
-    cfg.trialwindows = 'yes';
-    [STDCorr{e},MeanCorr{e},TWCorr{e},powerCorrSort{e},~,~,~,~] = powerCorr(powCorrTFR,bands,cfg);
-    toc
-end
-%STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
+% cmb = nchoosek(1:chans,2);
+% for c = 1:size(cmb,1)
+%     channelCmb(c,:) = LFPTs.label(cmb(c,:));
+% end
+% for e = 1:size(eoi,1)
+%     for b = 1:size(bands,1)
+%         tic
+%         disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
+%         cfg              = [];
+%         cfg.output       = 'powandcsd';
+%         cfg.method       = 'mtmconvol';
+%         cfg.taper        = 'hanning';
+%         cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
+%         % Use frequency dependent windows (n cycles per window, computed at
+%         % start, 'cycFtimwin') with (x%) overlap
+%         if ~isempty(cycles)
+%             cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
+%             minTWin          = min(cfg.t_ftimwin)*overlap;
+%             cfg.toi          = eoi{e,2}(1):minTWin:eoi{e,2}(2);
+%             % Or use a constant size for windows with (x%) overlap to compute
+%             % cycles and apply forward
+%         else
+%             cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
+%             cfg.toi          = eoi{e,2}(1):ftimwin*overlap:eoi{e,2}(2);
+%         end
+%         cfg.keeptrials   = 'yes';
+%         cfg.channel      = LFPTs.label;
+%         cfg.channelcmb   = channelCmb;
+%         
+%         powCorrTFR{b} = ft_freqanalysis(cfg,trls{1,e});
+%         toc
+%     end
+%     % Run powerCorr
+%     disp('Running powerCorr.m...')
+%     tic
+%     cfg.trialwindows = 'yes';
+%     [STDCorr{e},MeanCorr{e},TWCorr{e},powerCorrSort{e},~,~,~,~] = powerCorr(powCorrTFR,bands,cfg);
+%     toc
+% end
+STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
 %% Use inhouse/Matlab code for coherence
 if strcmpi(cohMethod,'mat')
     tic
@@ -185,7 +187,8 @@ if strcmpi(cohMethod,'mat')
             winSize = cycles/bands{1,2}(1)*adfreq;
         end
     end
-    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,eoi);
+%     [~,winSize] = nearestPow2(winSize);
+    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,zeroedChannel,eoi);
     toc
 end
 %% Use Fieldtrip code for coherence
@@ -206,7 +209,7 @@ end
 hist.sdir = sdir; hist.file = file; hist.filter = filter; hist.dsf = dsf;
 hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 
 hist.minInt = minInt; hist.foi = foi; hist.bands = bands; 
-hist.cycles = cycles; hist.ftimwin = ftimwin; hist.overlap = overlap;
+hist.cycles = cycles; hist.ftimwin = ftimwin; hist.overlap = 1-overlap;
 hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent;
 hist.adfreq = adfreq; hist.chk_nan = chk_nan;
 

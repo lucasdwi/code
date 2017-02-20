@@ -1,4 +1,4 @@
-function [LFPTs,chk_nan] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
+function [LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,dsf,chans)
 %function [LFPTs,nNaN,indSkp] = threshFilt(LFPTs,thresh,onset,offset,minInt,NaNcutoff,adfreq,dsf,chans)
 %% Find indices of values > |thres| and NaN
 
@@ -28,9 +28,19 @@ function [LFPTs,chk_nan] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,ds
 
 %% Create threshInd structure; 1 = above threshhold, 0 = not
 threshInd = cell(1,chans); % Columns = channels; {1,:} = indices above thresh; {2,:} = onset indices; {3,:} = offset indices
+zeroedChannel = [];
 chk_nan = 0;
 for i=1:chans
     threshInd{i} = find(abs(LFPTs.data(i,:))>thresh);
+    % Checks if amount of data beyond threhold exceeds 50%, if so set whole
+    % channel to 0
+    if length(threshInd{i}) >= 0.3*length(LFPTs.data(i,:))
+       LFPTs.data(i,:) = 0;
+       % Keep trach of zeroed channels
+       zeroedChannel = [zeroedChannel,i];
+       % Reset threshInd to empty
+       threshInd{i} = [];
+    end
     % Checks if none of the channels exceed threshold
     chk_nan = chk_nan + numel(threshInd{i});
 end

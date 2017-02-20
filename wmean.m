@@ -1,13 +1,22 @@
-function [awx] = wmean(x,w)
-% Uses vector of weights (w) corresponding to 3rd dimension of data (x)
-% to compute a weighted average
-for wi = 1:numel(w)
-    for si = 1:size(x{wi},3)
-        % Multiply each file PSD, coh, powCorr with weight matrix
-        wx{wi}(:,:,si) = x{wi}(:,:,si)*w{wi}(si);
-        % Sum across files
-        swx{wi} = sum(wx{wi},3);
-        % Divide by sum of weights
-        awx{wi} = swx{wi}./sum(w{wi});
-    end
-end
+function [wAvg] = wMean(x,w,dim)
+%%
+% INPUTS
+% x = data matrix with format at least 2 dimensions
+% w = vector of weights corresponding to dimension of x; dim
+% dim = dimension to average over, 'collapse'
+%%
+% Replace any inf with NaN
+x(isinf(x)) = NaN;
+% Repeat w vector into 2d matrix
+wMat = repmat(w',1,size(x,2));
+% Stack 2dW and permute to create 3D weight array equivalent to data
+wArr = permute(repmat(wMat,1,1,size(x,1)),[3,2,1]);
+% Multiply data by weights
+wDat = x.*wArr;
+% Sum across dim
+datSum = nansum(wDat,dim);
+% Get sum of weights accounting for any NaNs
+wArr(isnan(x)) = 0;
+wSum = sum(wArr,3);
+% Get weighted average
+wAvg = datSum./wSum;

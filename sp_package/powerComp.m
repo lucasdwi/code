@@ -106,7 +106,7 @@ for ii = 1:length(events)
         end
     end
     for j = 1:chans
-        hold on; ax{ii} = plot(F,psdTrls.(events{ii}).Overall(j,:),'color',clrs{j});
+        hold on; ax{ii} = plot(F,psdTrls.(events{ii}).Overall(j,:));%,'color',clrs{j});
 %         % Fill NaN data in plot
 %         if strcmpi(filter,'y')
 %             thisstart = [F(notchInd(1)-1),F(notchInd(2)+1)];
@@ -186,7 +186,7 @@ end
 % per frequency band per channel
 if length(events) == 1
     subplot(1,2,2)
-    bar(relPower'.*100,'stacked');
+    bar(relPower.event1'.*100,'stacked');
     set(gca,'XTickLabel',trls{1,1}.label);
     title('Distribution of power across frequency bands');
     xlabel('Channel'); ylabel('Percent of total power');
@@ -195,7 +195,7 @@ end
 if length(events) == 2
     subplot(1,3,3)
     h = barwitherr(stdPower.*100,powerEventComp.*100);
-    set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'});
+    set(gca,'XTick',1:size(bands,1),'XTickLabel',{'\delta','\theta','\alpha','\beta','l\gamma','h\gamma'});
     l = legend(trls{1,1}.label);
     set(l,'Location','southeast');
     title(['Percent change in ',eoi{1,1},' from ',eoi{2,1}]);
@@ -227,7 +227,7 @@ if length(events) == 2
     for ii = 1:chans
         subplot(1,chans,ii)
         [hBar{ii}] = barwitherr([psdTrls.event1.Std(:,ii),psdTrls.event2.Std(:,ii)],[psdTrls.event1.Avg(:,ii),psdTrls.event2.Avg(:,ii)]);
-        set(gca,'XTick',1:5,'XTickLabel',{'\theta','\alpha','\beta','l\gamma','h\gamma'})
+        set(gca,'XTick',1:size(bands,1),'XTickLabel',{'\delta','\theta','\alpha','\beta','l\gamma','h\gamma'})
         title([trls{1}.label{ii}],'FontSize',9);
         hold on
         %for j = 1:length(bandNames)

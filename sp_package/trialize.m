@@ -11,31 +11,32 @@ if strcmpi(eoi(:,1),'full')
     eventTs.t = []; eventTs.t = {LFPTs.tvec(1),LFPTs.tvec(end)};
     markers = [1,1];
     eventLabel = {'All Data'};
-% Otherwise run eventInd to find correct indices for events
+    % Otherwise run eventInd to find correct indices for events
 else if sum(strcmpi(eoi(:,1),'app')) || sum(strcmpi(eoi(:,1),'binge')) || sum(strcmpi(eoi(:,1),'rest'))
-       % If looking at 'notbinge' then remove it for eventInd to run
-        if strcmpi(eoi(2,1),'notbinge')
-            [eventInds,eventTs,eventLabel,markers] = eventInd(eventTs,eoi(1,:));  
+        % If looking at 'notbinge' then remove it for eventInd to run
+        if size(eoi,1) > 1 && strcmpi(eoi(2,1),'notbinge')
+            [eventInds,eventTs,eventLabel] = eventInd(eventTs,eoi(1,:));
         else
-            [eventInds,eventTs,eventLabel,markers] = eventInd(eventTs,eoi);
+            [eventInds,eventTs,eventLabel] = eventInd(eventTs,eoi);
         end
     end
 end
 %%
 % Preallocate intTime array
-numMark = size(markers,1);
-for i = 1:size(markers,1)
-    numMark(i) = numel(eventTs.t{markers(i,2)}); 
+numMark = size(eventInds,1);
+for i = 1:size(eventInds,1)
+    numMark(i) = numel(eventTs.t{eventInds(i,1)}); 
 end
 largest = max(numMark);
-intTime = cell(size(markers,1),largest);
+intTime = cell(size(eventInds,1),largest);
 % Fill intTime array with .tvec indices
-for i = 1:size(markers,1)
+for i = 1:size(eventInds,1)
     tic
-    for j = 1:numel(eventTs.t{markers(i,2)})
-        intTime{i,j} = nearest_idx3(eventTs.t{1,markers(i,2)}(j),LFPTs.tvec):nearest_idx3(eventTs.t{1,(markers(i,2)+1)}(j),LFPTs.tvec);
+    for j = 1:numel(eventTs.t{eventInds(i,1)})
+        intTime{i,j} = nearest_idx3(eventTs.t{1,eventInds(i,1)}(j),LFPTs.tvec):nearest_idx3(eventTs.t{1,(eventInds(i,2))}(j),LFPTs.tvec);
         for k = 1:chans
-            intTime{i,j}(k,:) = intTime{i,j}(1,:); %Copy channel one indices to all other channels
+            % Copy channel one indices to all other channels
+            intTime{i,j}(k,:) = intTime{i,j}(1,:); 
         end
     end
     toc
@@ -44,7 +45,7 @@ end
 % If looking at 'notbinge' then uses time stamps for the end of one binge
 % and the beginning of the next as start and stops.
 % N.B.: ASSUMES THAT THE RECORDING DOES NOT START OR STOP DURING A BINGE
-if strcmpi(eoi(2,1),'notbinge')
+if size(eoi,1)>1 && strcmpi(eoi(2,1),'notbinge')
    intTime{2,1} = repmat((1:(intTime{1,1}(1,1)-1)),4,1);
    for j = 2:size(intTime(1,:),2)+1
       if j == size(intTime(1,:),2)+1
@@ -56,7 +57,7 @@ if strcmpi(eoi(2,1),'notbinge')
 end
 %% NaN timestamps corresponding to NaNed LFPTs data
 for i = 1:size(intTime,1)
-    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))%numel(eventTs.t{markers(i,2)})
+    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))
         for k = 1:chans
             intTime{i,j}(k,isnan(LFPTs.data(i,intTime{i,j}(k,:)))) = NaN;
         end
@@ -64,10 +65,11 @@ for i = 1:size(intTime,1)
 end
 %% NaN contiguous data intervals less than minInt
 tic
-clnTrls = cell(size(markers,1),largest); %Preallocate clnTrls
+% Preallocate clnTrls
+clnTrls = cell(size(eventInds,1),largest); 
 thisTrls = [];
 for i = 1:size(intTime,1)
-    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))%numel(eventTs.t{markers(i,2)})
+    for j = 1:sum(~cellfun(@isempty,intTime(i,:)))
         for k = 1:chans
             A = intTime{i,j}(k,:); A(~isnan(A)) = 1; A(isnan(A)) = 0;
             dataStart = find(diff(A)==1)+1;
@@ -79,11 +81,8 @@ for i = 1:size(intTime,1)
                 dataStop = horzcat(dataStop,length(intTime{i,j}));
             end
             if ~isnan(sum(intTime{i,j}(k,:))) && intTime{i,j}(k,end)-intTime{i,j}(k,1) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
-            %if ~isnan(sum(intTime{i,j}(k,:))) && LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)) >= (minInt*adfreq + 1/adfreq) %No NaNed data and longer than minInt + 1 for indexing
                 numTrls = floor((intTime{i,j}(k,end)-intTime{i,j}(k,1))/(minInt*adfreq + 1/adfreq));    
-                %numTrls = floor((LFPTs.tvec(intTime{i,j}(k,end))-LFPTs.tvec(intTime{i,j}(k,1)))/(minInt*adfreq + 1/adfreq));
                 thisTrls = intTime{i,j}(k,1:((minInt*adfreq)*numTrls));
-                %thisTrls = intTime{i,j}(k,1:((minInt*adfreq+1)*numTrls));
                 clnTrls{i,j}(k,:) = thisTrls;
             else thisTrls = [];
                 for intInd = 1:length(dataStart) %Run through data intervals
@@ -91,7 +90,6 @@ for i = 1:size(intTime,1)
                     if intLen >= (minInt*adfreq + 1/adfreq) %Keep if big enough
                         numTrls = floor(intLen/(minInt*adfreq + 1/adfreq));
                         thisTrls = horzcat(thisTrls,intTime{i,j}(k,dataStart(intInd):(dataStart(intInd)+((minInt*adfreq)*numTrls))-1));
-                        %thisTrls = horzcat(thisTrls,intTime{i,j}(k,dataStart(intInd):(dataStart(intInd)+((minInt*adfreq+1)*numTrls))-1));
                     end
                 end
                 if ~isempty(thisTrls)
@@ -116,27 +114,18 @@ thisTrl.fsample = adfreq;
 thisTrl.trial = {};
 thisTrl.time = {};
 thisTrl.sampleinfo = [];
-%thisTrl.event = [];
-% Check if doing comparison, then grab correct trials
-if size(eoi,1)>1
-    
-end
 % Create trl structures for each event
 trls = cell(1,size(eoi,1));
 for ii = 1:size(eoi,1)
-    %ind = markers(ii);
     if ~isempty(clnEvents{ii,1})
         nTrls = length(clnEvents{ii,1})/(minInt*adfreq);
-        %nTrls = length(clnEvents{ii,1})/((minInt*adfreq)+1);
         for j = 1:nTrls
             % To account for the transition of zero indexed time, start
             % 1 sample after 0
             thisTrl.time{1,j} = (1/adfreq:1/adfreq:minInt);
             thisTrl.sampleinfo(j,1) = clnEvents{ii,1}(1,1+minInt*adfreq*(j-1));
             thisTrl.sampleinfo(j,2) = clnEvents{ii,1}(1,minInt*adfreq*j);
-            thisTrl.trial{1,j} = LFPTs.data(1:4,clnEvents{ii,1}(1,(1+minInt*adfreq*(j-1)):minInt*adfreq*j));
-            %thisTrl.trial{1,j} = LFPTs.data(1:4,clnEvents{ii,1}(1,(1+minInt*adfreq*(j-1)):1+minInt*adfreq*j));
-            %thisTrl.event = ind;
+            thisTrl.trial{1,j} = LFPTs.data(:,clnEvents{ii,1}(1,(1+minInt*adfreq*(j-1)):minInt*adfreq*j));
         end
         trls{ii} = thisTrl;
     else

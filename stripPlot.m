@@ -40,7 +40,11 @@ end
 if isempty(data2)
    plot([1 size(data1,2)],[0 0],'k') 
 end
-% Using string vector of varaibles names for x-axis label
-set(gca,'XTick',logicFind(0.05,p,'<='),'XTickLabels',x(logicFind(0.05,p,'<=')),'XTickLabelRotation',90)
-% Set title
-title(main)
+if ~isempty(x)
+    % Using string vector of varaibles names for x-axis label
+    set(gca,'XTick',logicFind(0.05,p,'<='),'XTickLabels',x(logicFind(0.05,p,'<=')),'XTickLabelRotation',90)
+end
+if ~isempty(main)
+    % Set title
+    title(main)
+end

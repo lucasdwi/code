@@ -1,17 +1,32 @@
-nameVect = names;
+function [AUC,xAx,yAx,dev,tpr,fpr] = logPredict(x,y)
+%% Uses data in x to predict y through logisitic regression and ROC
+% INPUTS
+% x = data matrix; format = observations x variables
+% y = response matrix, may be multinomial; format = observations x categories
+
+% OUTPUTS
+% AUC = area under the reciever operator curve
+% xAx = cell array of x data for plotting
+% yAx = cell arary of y data for plotting
 %%
-for fi = 2%:length(T1)
-    [masterDev{fi},masterLam{fi},masterBeta{fi},masterMinLam{fi},masterSurvBeta{fi},masterMeanBeta{fi},masterOR{fi},masterStdBeta{fi},TOrig{fi},betaNames{fi},hist{fi}] = params(T1{1,fi},'y',1,'n','binom',[1],0.9,10,'n',(1),nameVect);
-    save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\enetAutosave.mat')
-end
-    [beta{fi},dev{fi},stats{fi}] = glmfit(T1{1,fi}(:,logicFind(0.99,masterSurvBeta{fi}{1,1},'>=')+1),T1{1,fi}(:,1),'binomial','link','logit');
-    %md1{fi} = fitglm(zscore(T1{1,2}(:,logicFind(0.99,masterSurvBeta{1,1},'>=')+1)),T1{1,2}(:,1),'distribution','binomial','link','logit')
-    for iter = 1:size(T1{1,fi},1)
-        vars = [1,T1{1,fi}(iter,logicFind(0.99,masterSurvBeta{1,fi}{1,1},'>=')+1)];
-        betax = sum(vars.*beta{fi}');
-        prob(fi,iter) = exp(betax)/(1+exp(betax));
-    end
-    bingeT = [tsBinge{1,fi},ones(size(tsBinge{1,fi},1),1),round(prob(end-size(tsBinge{1,fi},1)+1:end))',prob(end-size(tsBinge{1,fi},1)+1:end)'];
-    restT = [tsRest{1,fi},zeros(size(tsRest{1,fi},1),1),round(prob(1:size(tsRest{1,fi},1)))',prob(1:size(tsRest{1,fi},1))'];
-    allT = sortrows([bingeT;restT]);
+% Get number of observations
+nObv = size(x,1);
+% Cycle through all responses - y columns
+% figure 
+for yi = 1:size(y,2)
+    % Get beta coefficients from logistic regression
+   [beta{yi},dev{yi}] = glmfit(x,y(:,yi),'binomial','link','logit');
+   % Expand betas to matrix
+   betaMat = repmat(beta{yi}',nObv,1);
+   % Calulate yhat from betas and data
+   yhat = sum([ones(nObv,1),x].*betaMat,2);
+   % Convert yhat to logisitic probability
+   prob = exp(yhat)./(1+exp(yhat));
+   % Compare probability to actual with varying thresholds
+   [xAx{yi},yAx{yi},~,AUC{yi}] = perfcurve(y(:,yi),prob,1);
+   [tpr,fpr] = rocCurve(y,prob,0:0.1:1);
+   % Plot ROCs
+%    subplot(2,2,yi)
+%    hold on
+%    plot(xAx{yi},yAx{yi})
 end

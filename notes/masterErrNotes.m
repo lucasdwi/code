@@ -1,16 +1,18 @@
 %% Ephys Enet
-files = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\ephys4foldEnet\'},{'enet4fold'});
+files = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSiteLasso\'},{'.mat'});
+%files = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\subsetLasso\'},{'.mat'});
+%files = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\ephys4foldEnet\'},{'enet4fold'});
 %files = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\behavior3foldEnet\'},{'enet3foldBehavior'});
 beta = [];
 masterErr = []; bestModel = []; %masterRawErr = [];
-for fi = 1:size(files,1)
-    load(files(1).name,'allBeta','allLambda','allAlpha')
+for fi = 1:size(files{1},1)
+    load(files{1}(fi).name,'allBeta','allLambda','allAlpha')
     for s = 1:size(allBeta,2)
        beta = cat(1,beta,allBeta{s}.betas);
     end
     for s = 1:size(allLambda,2)
         masterErr = [masterErr;allLambda{s}.allErr];
-        bestModel = cat(3,bestModel,[allAlpha{s}.bestAlpha;allLambda{s}.bestLambda;allLambda{s}.minLamErr]);
+%         bestModel = cat(3,bestModel,[allAlpha{s}.bestAlpha;allLambda{s}.bestLambda;allLambda{s}.minLamErr]);
     end
 %     for a = 1:size(CVfits,2)
 %         for r = 1:size(CVfits{a},1)
