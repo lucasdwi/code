@@ -14,7 +14,7 @@ for c = 1:size(data1,2)
     if p(c) <= 0.05
         % Plot data1
         plot([c-0.25],data1(:,c),'.k')
-        thism1 = mean(data1(:,c));
+        thism1 = nanmean(data1(:,c));
         % If comparing to zero, change color of mean square for above 
         % (blue) or below (red) 0
         if isempty(data2)
@@ -31,7 +31,7 @@ for c = 1:size(data1,2)
         % Plot data2
         if ~isempty(data2)
             plot([c+0.25],data2(:,c),'.','color',[.5 .5 .5])
-            thism2 = mean(data2(:,c));
+            thism2 = nanmean(data2(:,c));
             plot([c+0.25],thism2,'sr')
         end
     end

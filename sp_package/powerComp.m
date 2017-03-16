@@ -53,7 +53,9 @@ end
 %%
 psdTrls = {};
 % Determine hammSize from frequency step in foi as desired freq resolution
-hammSize = adfreq/foi(2);
+% hammSize = adfreq/foi(2);
+% Uses nearest power of 2 for speed.
+[~,hammSize] = nearestPow2(adfreq/foi(2));
 % Check hammSize vs. trial size
 %if hammSize > length(trls)
 for ii = 1:length(trls)

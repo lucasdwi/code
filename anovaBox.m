@@ -1,6 +1,11 @@
 function [p] = anovaBox(x,group,varName,varUnit)
 % Run ANOVA
-[p,tbl,stats] = anova1(x,group,'off');
+% If group not supplied, run with each column as group
+if isempty(group)
+    [p,tbl,stats] = anova1(x,[],'off');
+else
+    [p,tbl,stats] = anova1(x,group,'off');
+end
 % Run multiple corrections (Bonferroni) on all pairs of means
 [mctbl] = multcompare(stats,'CType','bonferroni','display','off');
 % Combine group labels for sigstar

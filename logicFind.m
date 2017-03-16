@@ -23,7 +23,7 @@ end
 allIdx = 1:numel(data);
 if strcmp(op,'==')
     if isa(data,'cell')
-       inds = allIdx(strcmp(x,data)); 
+       inds = allIdx(strcmpi(x,data)); 
     else
         inds = allIdx(data == x);
     end

@@ -49,10 +49,9 @@ for iteration=1:length(bands)-1;
     %Create notch index
     notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
     % De-Nanning
-    % z = 1; trial
-    % c = 1; channel
-    % j = 1; frequency
-    % t = 1; window
+    % z = 1;
+    % c = 1;
+    % j = 1;
     powerCorrSort.nonansTotals = [];
     
     % Create NaNs index
@@ -123,10 +122,20 @@ for iteration=1:length(bands)-1;
             powerCorrSort.thisCorr(z,e) = R(1,2);
         end
     end
-   
-        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(1:size(powerCorrSort.thisCorr,2))) = powerCorrSort.thisCorr(:,:);
-
-%%    
+    
+    
+    if iteration == 1
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(1:size(powerCorrSort.thisCorr,2)-6)) = powerCorrSort.thisCorr(:,1:22);
+    end
+    
+    if iteration >= 2
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),((iteration-1)*size(powerCorrSort.thisCorr,2)-6*(iteration-1)+1):((iteration)*size(powerCorrSort.thisCorr,2)-6*(iteration))) = powerCorrSort.thisCorr(:,1:22);
+    end
+    
+    if iteration == length(bands)-1
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(iteration-1)*size(powerCorrSort.thisCorr,2)-17:iteration*size(powerCorrSort.thisCorr,2)-18) = powerCorrSort.thisCorr(:,:);
+    end
+    
     switch cfg.trialwindows
         
         case 'yes'
@@ -426,7 +435,7 @@ for iteration=1:length(bands)-1;
         %   toc
         
         % Plot Real STDs
- %%       
+        
         powerCorrSort.masterCorrStdPlot(powerCorrSort.masterCorrStdPlot==0)=NaN;
         
         

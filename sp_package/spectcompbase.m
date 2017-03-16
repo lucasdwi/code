@@ -8,7 +8,7 @@ function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh,hist
 % thresh = threshold for detecting noise artifacts; format = mV (or other
 %   y-axis scale for time series)
 % onset = number of samples to NaN before noise event; format = number
-%   in discrete samples, e.g. samples = sec * adfreq
+%  in discrete samples, e.g. samples = sec * adfreq
 % offset = number of samples to NaN after noise event; format = number
 %   in discrete samples, e.g. samples = sec * adfreq
 % minInt = minimum interval of clean data to use, N.B.: consider the lowest
@@ -181,10 +181,10 @@ if strcmpi(cohMethod,'mat')
     disp('Using cohCompMat.m for coherence...')
     % Calculate window size
     if ~isempty(ftimwin)
-        winSize = (ftimwin*adfreq);
+        [~,winSize] = nearestPow2(ftimwin*adfreq);
     else if ~isempty(cycles)
             % Uses lowest frequency (first in bands) to compute winSize
-            winSize = cycles/bands{1,2}(1)*adfreq;
+            [~,winSize] = nearestPow2((cycles/bands{1,2}(1))*adfreq);
         end
     end
 %     [~,winSize] = nearestPow2(winSize);

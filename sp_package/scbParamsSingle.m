@@ -1,8 +1,10 @@
 function [sdir,file,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsSingle
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\megan\';
+sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\angela\';
+%sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\megan\';
 %sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';
 %sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\editedWithSleep\';
-file = 'M376_Dec_6_Base_ScoredComplete';
+file = 'N07_4_21_16_Base_pl2_scored_plx';
+%file = 'M376_Dec_6_Base_ScoredComplete';
 %file = 'I12RegChowNov20.mat';
 %file = '5HzR_N7_PreStim_9_8_16';
 filter = 'y';

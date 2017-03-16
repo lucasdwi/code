@@ -3,9 +3,9 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 % x = matrix of predictors; format = observations (animal) x predictor
 % (feature)
 % y = matrix of response variables; format = observations (animal) x
-%     repsonse; if more than one goes through each separately (perhaps add
+%     response; if more than one goes through each separately (perhaps add
 %     multinomial later)
-% family = type of regression; format = string: 'binomial' or 'gaussian'
+% family = type of regression; format = string: 'binomial', 'multinomial', or 'gaussian'
 % type = type of error term to use; format = string: 'mse' and 'mae' can be
 %        used by all; 'auc' and 'class' can only be used by binomial
 % alph = elastic net tuning parameter alpha (0 = ridge, 1 = lasso); format
@@ -53,11 +53,11 @@ if size(x,1) ~= size(y,1)
     error('Inequal predictor and response matrices.')
 end
 % Check regression family
-if ~strcmpi(family,'binomial') && ~strcmpi(family,'gaussian')
-    error(['Family, ',family,', not supported; choose either "binomial" or "gaussian".'])
+if ~strcmpi(family,'binomial') && ~strcmpi(family,'gaussian') && ~strcmpi(family,'multinomial')
+    error(['Family, ',family,', not supported; choose either "binomial", "multinomial", or "gaussian".'])
 end
 % Check type of error matches regression family
-if (strcmpi(type,'auc') || strcmpi(type,'class')) && ~strcmpi(family,'binomial')
+if (strcmpi(type,'auc') || strcmpi(type,'class')) && (~strcmpi(family,'binomial') && ~strcmpi(family,'multinomial'))
    error(['Can not use type ',type,' with family ',family,'.'])
 end
 % Check nfolds
