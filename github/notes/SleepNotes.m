@@ -1,0 +1,56 @@
+function [] = sleepDetect(LFPTs)
+%% Filter signal for sleep, get instantaneous amplitude via Hilbert 
+% transform and determine 95 %tile for cutoff for each channel
+% Create filter
+[b,a] = cheby1(3,.5,[9 41]/1000);
+%fvtool(b,a,'Fs',2000);
+chans = size(LFPTs.data,2);
+% Apply filter and get %tile from amplitude distribution
+for c = 1:chans
+    filtData.data(c,:) = filtfilt(b,a,LFPTs.data(c,:));
+    instAmp(c,:) = abs(hilbert(filtData.data(c,:)));
+    perc(c) = prctile(instAmp(c,:),99.5);
+    [f{c} xi{c}] = ksdensity(instAmp(c,:));
+end
+%% Plot instantaneous amplitude and distribution
+figure;
+for c = 1:4
+    subplot(1,2,1); plot(LFPTs.tvec,instAmp(c,:)); hold on;
+    subplot(1,2,2); plot(xi{c},f{c}); hold on;
+end
+%% Use amplitude cutoffs to determine time stamps of sleep events
+for c = 1:4
+   sleepInds{c} = LFPTs.tvec(instAmp(c,:) >= perc(c));
+end
+%% Turn each time stamp into interval and then merge
+for c = 1:chans
+    % Skip to the first usable index to avoid negative indexing
+    firstIndex = find(sleepInds{1,c} > onset);
+    sleepInds{2,c}(1,:) = sleepInds{1,c}(firstIndex) - onset;
+    sleepInds{2,c}(2,:) = sleepInds{1,c}(firstIndex) + offset;
+end
+%% Merge overlapping intervals
+[overInt] = intMaker(sleepInds,4,4,4);
+%%
+if ~isequal(length(overInt{1,1}),length(overInt{1,2}),length(overInt{1,3}),length(overInt{1,4}))
+error('Warning: Inequal number of intervals across channels, check signal and onset/offset parameters.')
+end
+
+catInt = cell(2,1);
+for c = 1:chans
+    catInt{1,1} = vertcat(catInt{1,1},overInt{1,c}(1,:));
+    catInt{2,1} = vertcat(catInt{2,1},overInt{1,c}(2,:));
+end
+%%
+% For each interval, find the earliest start and latest stop across
+% channels
+for ii = 1:length(catInt{1,1});
+    % Get earliest start
+    sleepInt(1,ii) = min(catInt{1,1}(:,ii));
+    % Get latest stop
+    sleepInt(2,ii) = max(catInt{2,1}(:,ii));
+end
+%% Plot channels with intervals
+for c = 1:chans
+
+
