@@ -14,7 +14,7 @@ function [STDCorr,MeanCorr,TWCorr,powerCorrSort,freqRange,notchInd,numCmb,varCmb
 % frequency bands. For additional frequencies or comparisions,
 % iterations=frequencybands-1.
 %% Initialize frequency ranges and notch range
-for iteration=1:length(bands)-1
+for iteration=1:length(bands)-1;
     
     %iteration=4; %Tune for specific iterations if desired
     
@@ -28,9 +28,9 @@ for iteration=1:length(bands)-1
     ind1 = iteration;
     ind2 = ind1+1;
     % Setting ceiling for iteration indices
-    if ind1 == size(bands,1)
+    if ind1 == size(bands,1);
         ind2 = ind1;
-        disp('Error: Iteration number equals frequency bands and will cause erroenous autocorrelations')
+        display('Error: Iteration number equals frequency bands and will cause erroenous autocorrelations')
     end
     % Setting indices for Frequency A based on iteration and bands input
     bandInd1 = find(powCorrTFR{1,ind1}.freq>=bands{ind1,2}(1),1);
@@ -48,20 +48,18 @@ for iteration=1:length(bands)-1
     F = powCorrTFR{1,ind1}.freq;
     %Create notch index
     notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
-%     notchInd = [29 32];
     % De-Nanning
-    % z = 1; trial
-    % c = 1; channel
-    % j = 1; frequency
-    % t = 1; window
+    % z = 1;
+    % c = 1;
+    % j = 1;
     powerCorrSort.nonansTotals = [];
     
     % Create NaNs index
     inds = find(squeeze(~isnan(powCorrTFR{1,ind1}.powspctrm(1,1,1,:)))); % Set D as all non-NaN numbers
-   
-    for z = 1:size(powCorrTFR{1,ind1}.powspctrm,1)
-        for c = 1:length(powCorrTFR{1,ind1}.label)
-            for j = 1:length(powCorrTFR{1,ind1}.powspctrm(1,1,:,1))
+    
+    for z = 1:size(powCorrTFR{1,ind1}.powspctrm,1);
+        for c = 1:length(powCorrTFR{1,ind1}.label);
+            for j = 1:length(powCorrTFR{1,ind1}.powspctrm(1,1,:,1));
                 % Fill with valid entries only
                 powerCorrSort.nonansTotals(z,c,j,:) = powCorrTFR{1,ind1}.powspctrm(z,c,j,inds);
                 10*log10(powCorrTFR{1,ind1}.powspctrm(z,c,j,inds));
@@ -79,7 +77,7 @@ for iteration=1:length(bands)-1
             for t = 1:length(powerCorrSort.nonansTotals(1,1,1,:));
                 % Fill with valid entries only
                 powerCorrSort.nonansTotals(z,c,notchInd(1):notchInd(2),t) = NaN;
-                powerCorrSort.nonansTotals(z,c,notchInd(1):notchInd(2),t) = interp1(find(~isnan(powerCorrSort.nonansTotals(z,c,:,t))),squeeze(powerCorrSort.nonansTotals(z,c,squeeze(~isnan(powerCorrSort.nonansTotals(z,c,:,t))),t)),find(isnan(powerCorrSort.nonansTotals(z,c,:,t))),'linear');
+                powerCorrSort.nonansTotals(z,c,notchInd(1):notchInd(2),t) = interp1(find(~isnan(powerCorrSort.nonansTotals(z,c,:,t))),sq(powerCorrSort.nonansTotals(z,c,squeeze(~isnan(powerCorrSort.nonansTotals(z,c,:,t))),t)),find(isnan(powerCorrSort.nonansTotals(z,c,:,t))),'linear');
             end
         end
     end
@@ -124,10 +122,20 @@ for iteration=1:length(bands)-1
             powerCorrSort.thisCorr(z,e) = R(1,2);
         end
     end
-   
-        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(1:size(powerCorrSort.thisCorr,2))) = powerCorrSort.thisCorr(:,:);
-        trialCorr{iteration} = thisCorr;
-%%    
+    
+    
+    if iteration == 1
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(1:size(powerCorrSort.thisCorr,2)-6)) = powerCorrSort.thisCorr(:,1:22);
+    end
+    
+    if iteration >= 2
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),((iteration-1)*size(powerCorrSort.thisCorr,2)-6*(iteration-1)+1):((iteration)*size(powerCorrSort.thisCorr,2)-6*(iteration))) = powerCorrSort.thisCorr(:,1:22);
+    end
+    
+    if iteration == length(bands)-1
+        powerCorrSort.masterCorr(1:size(powerCorrSort.thisCorr,1),(iteration-1)*size(powerCorrSort.thisCorr,2)-17:iteration*size(powerCorrSort.thisCorr,2)-18) = powerCorrSort.thisCorr(:,:);
+    end
+    
     switch cfg.trialwindows
         
         case 'yes'
@@ -136,7 +144,7 @@ for iteration=1:length(bands)-1
             
             for w = 1:size(p,2);
                 p2 = p(:,w,:);
-                p3 = squeeze(p2);
+                p3 = sq(p2);
                 p4 = reshape(p3,[(size(p3, 1)*size(p3, 2)), 1]);
                 powerCorrSort.trialWinString(:,w) = p4(:,1);
             end
@@ -163,7 +171,7 @@ for iteration=1:length(bands)-1
         powerCorrSort.masterCorrTwPlot = zeros(size(bands,1)*size(powCorrTFR{1,ind1}.label,2)+1,size(bands,1)*size(powCorrTFR{1,ind1}.label,2)+1);
     end
     
-    m = mean(powerCorrSort.thisCorr,1,'omitnan')';
+    m = mean(powerCorrSort.thisCorr,1)';
     s = std(powerCorrSort.thisCorr,0,1)';
     switch cfg.trialwindows
         
@@ -427,7 +435,7 @@ for iteration=1:length(bands)-1
         %   toc
         
         % Plot Real STDs
- %%       
+        
         powerCorrSort.masterCorrStdPlot(powerCorrSort.masterCorrStdPlot==0)=NaN;
         
         

@@ -1,23 +1,20 @@
-function [xSpace] = stripPlot(data,group,varNames)
-%% Plots data by group using dots for each datapoint and squares for group 
-% means.  
-
+function stripPlot(data1,data2,p,x,main)
+%% Creates scatter plot comparing two datasets and uses p-value to plot significance
 % INPUTS:
-% data = data to be visualized; format: either column vector or matrix with
-%   observation X variable
-% group = group assignment per observation; format: column vector of equal
-%   length as number of rows in data
-% varNames = optional input for matrix data, names corresponding to columns
-%   of matrix; format: string array
+% data1 = data array 1, format: observation X variable
+% data2 = data array 2, format: observation X variable
+% p = row vector of p-values, format: each column corresponds to
+%   statistical test output from comparing that column in data1 to data2
+% x = x-axis labels; format: row vector of strings
+% main = title; format: string in cell
 %%
-<<<<<<< Updated upstream
 figure
 hold on
 for c = 1:size(data1,2)
     if p(c) <= 0.05
         % Plot data1
         plot([c-0.25],data1(:,c),'.k')
-        thism1 = mean(data1(:,c));
+        thism1 = nanmean(data1(:,c));
         % If comparing to zero, change color of mean square for above 
         % (blue) or below (red) 0
         if isempty(data2)
@@ -34,65 +31,20 @@ for c = 1:size(data1,2)
         % Plot data2
         if ~isempty(data2)
             plot([c+0.25],data2(:,c),'.','color',[.5 .5 .5])
-            thism2 = mean(data2(:,c));
+            thism2 = nanmean(data2(:,c));
             plot([c+0.25],thism2,'sr')
         end
-=======
-% If vector, plots with comparisons across groups. 
-% If matrix, two options: (1) all same group and plots each column as own
-% distribution (2) separate groups - as indicated by group - and plots
-% groups side by side for each column.
-
-% Transpose data and group if given as row vectors
-if isrow(data)
-    data = data';
-end
-if isrow(group)
-    group = group';
-end
-% Check that data dimensions and group dimensions match
-if size(data,1) ~= length(group)
-   error('Data and groups do match dimensionality! Number of data points does not match group labels.') 
-end
-% If groups are cells of strings, convert to numbers for plotting, but keep
-% string version
-if iscellstr(group)
-    groupStr = group;
-    uGroup = unique(group);
-    group = zeros(size(groupStr,1),1);
-    for iG = 1:numel(uGroup)
-        gInds = logicFind(uGroup(iG),groupStr,'==');
-        group(gInds,1) = iG;
->>>>>>> Stashed changes
     end
 end
-% Grab unique groups
-uGroup = unique(group);
-% Determine spacing for plotting
-spacing = fliplr(1./(1:numel(uGroup)));
-% Grab midpoint for labels
-mid = (spacing(end)-spacing(1))/2;
-% Set up figure
-figure
-for iC = 0:size(data,2)-1
-    for iG = 1:numel(uGroup)
-        % Plot group data
-        plot(repmat(iC+spacing(iG),sum(group==uGroup(iG)),1),data(group==uGroup(iG)),'.k')
-        hold on
-        % Plot mean of group
-        plot(iC+spacing(iG),mean(data(group==uGroup(iG))),'rs')
-    end
+% If comparing to zero, plot zero line
+if isempty(data2)
+   plot([1 size(data1,2)],[0 0],'k') 
 end
-xlim([0 spacing(end)+iC+0.5])
-% Use group labels, either string or numeral, as x labels
-xSpace = spacing(1):spacing(1):spacing(end)*(iC+1);
-if exist('groupStr','var')
-    set(gca,'XTick',xSpace,'XTickLabel',unique(groupStr))
-else
-    set(gca,'XTick',xSpace,'XTickLabel',uGroup)
+if ~isempty(x)
+    % Using string vector of varaibles names for x-axis label
+    set(gca,'XTick',logicFind(0.05,p,'<='),'XTickLabels',x(logicFind(0.05,p,'<=')),'XTickLabelRotation',90)
 end
-% If data is matrix, add second x-axis above to delineate variables
-if exist('varNames','var') && size(data,2)
-   ax1 = gca;
-   axes('Position',ax1.Position,'XAxisLocation','top','Color','none','YTickLabel','','XLim',ax1.XLim,'XTick',1-mid:spacing(end)*(iC+1)-mid,'XTickLabel',varNames);
+if ~isempty(main)
+    % Set title
+    title(main)
 end

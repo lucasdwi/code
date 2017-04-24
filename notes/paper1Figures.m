@@ -1,13 +1,13 @@
 %% Plot real and random histograms
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBWHist.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBSHist.mat')
 subtitles = {'Shell All','Shell Strict','Core All','Core Strict'};
 figure;
 for c = 1:4
     subplot(2,2,c)
-    histogram(realData.allAcc(:,c),'FaceColor','k','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
+    histogram(realErr.allAcc(:,c),'FaceColor','k','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
     title(subtitles{c})
     hold on
-    histogram(randData.allAcc(:,c),'FaceColor','w','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
+    histogram(randErr.allAcc(:,c),'FaceColor','w','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
     xlim([0.2 1]); ylim([0 .25])
 end
 % Perform 2 sample KS test

@@ -111,10 +111,10 @@ end
 %% Compare binge size to time spent binging
 % Set up aoc table
 aTab = [bingeCals(:,1);bingeCals(:,2);bingeCals(:,3);bingeCals(:,4)];
-aTab(:,2) = [totBinge(:,1);totBinge(:,2);totBinge(:,3);totBinge(:,4)];
+aTab(:,2) = [bingeSpeed(:,1);bingeSpeed(:,2);bingeSpeed(:,3);bingeSpeed(:,4)];
 aTab(isnan(aTab(:,1)),:) = [];
 group = {'base','base','base','base','base','base','base','base','base','base','base','base','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep24','dep48','dep48','dep48','dep48','dep48','dep48','dep48','dep48','dep48','chow','chow','chow','chow','chow','chow','chow','chow',};
-aoctool(aTab(:,1),aTab(:,2),group)
+aoctool
 %%
 %[r,p] = corrcoef(bingeSizes(~isnan(bingeSizes(:,3)),3),totBinge(~isnan(totBinge(:,3)),3))
 figure
@@ -125,7 +125,7 @@ for ii = 1:4
    lsline
 end
 xlabel('Binge Size (kCal)'); ylabel('Time Bingeing (s)')
-legend({'Base','Dep24','Dep48','Chow'},'location','northwest')
+
 
 %% Average speed
 bingeSpeed = bingeCals./totBinge;

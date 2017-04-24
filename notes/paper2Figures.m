@@ -22,8 +22,4 @@ ylabel('Binge Size (gm)');
 sigInds = logicFind(0.05,mctbl(:,6),'<=');
 % Plot significance bars with sigstar
 sigstar(sigGroups(sigInds),mctbl(sigInds,6))
-%% Try predicting binge vs rest
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\processed\H10BaseOct15_binge_vs_rest.mat')
 %%
-binge = [reshape(relPower.event1,1,48),reshape(coh{1,1}.rel,1,36];
-rest = [reshape(relPower.event2,1,48),];

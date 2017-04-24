@@ -57,8 +57,8 @@ for iteration=1:length(bands)-1;
         for c = 1:length(powCorrTFR{1,ind1}.label);
             for j = 1:length(powCorrTFR{1,ind1}.powspctrm(1,1,:,1));
                 % Fill with valid entries only
-%                 powerCorrSort.nonansTotals(z,c,j,:) = powCorrTFR{1,ind1}.powspctrm(z,c,j,inds);
-                powerCorrSort.nonansTotals(z,c,j,:) = 10*log10(powCorrTFR{1,ind1}.powspctrm(z,c,j,inds));
+                powerCorrSort.nonansTotals(z,c,j,:) = powCorrTFR{1,ind1}.powspctrm(z,c,j,inds);
+                10*log10(powCorrTFR{1,ind1}.powspctrm(z,c,j,inds));
                 %powerCorrSort.nonansTotals(:,:,notchInd(1):notchInd(2),:) = NaN;
             end
         end

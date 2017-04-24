@@ -4,7 +4,7 @@ function [varargout] = fileCycle(fun,fType,files,sdir)
 
 % Inputs (pick one from fType and files, set the other to []):
 % fun = function group to run; options = 'scb' for spectcompbase.m; 'tab'
-%   for tabulateData.m; 'sleep' for sleepDetect.m; 'pre' for preProcess.m
+%   for tabulateData.m; 'sleep' for sleepDetect.m
 % fType = wildcard(s) to search for in order to populate list of files to
 %   be processed; format = string array
 %   N.B.: not case sensitive, but use best practice to avoid problems
@@ -43,31 +43,11 @@ if strcmp(fun,'scb')
     for i = 1:length(files)
         tic
         disp(['Running spectcompbase on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
-        [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsMulti(files{i});
-        [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent);
+        [sdir,file,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsMulti(files{i});
+        [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent);
         % OLD VERSION[LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,[1 2 150],3,{1,'50%';2,'50%';3,'50%'},[3])
         close all; clearvars -except files i sdir fun;
         toc
-    end
-end
-%% Run preProcess.m
-if strcmpi(fun,'pre')
-    cd(sdir);
-    if ~isempty(fType)
-        % Creates data structure with information on files with wildcard fType
-        % in name; if >1 fType, then concatentates together
-        files = [];
-        for f = 1:length(fType)
-            thisF = dir(strcat('*',fType{f},'*'));
-            % Just pull out 'name' field and concatenate to 'files'
-            files = vertcat(files,extractfield(thisF,'name')');
-        end
-    end
-    for i = 1:length(files)
-        disp(['Running spectcompbase on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
-        load(files{i})
-        [LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,minInt,eoi,eventTs);
-        save(strcat(sdir,'\processed\',files{i},'.mat'),LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq)
     end
 end
 %% Initialize files to be tabulated, then run through tabulateData.m

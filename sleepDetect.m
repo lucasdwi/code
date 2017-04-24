@@ -12,7 +12,7 @@ function [smInstAmp,LFPTs] = sleepDetect(LFPTs,minInt,thresh,onset,offset,adfreq
 %%
 tic
 chans = size(LFPTs.data,1);
-[LFPTs,~] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,1);
+[LFPTs,~] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,1,chans);
 %% Get NaN indices and replace with randomized data
 nanInd = find(isnan(LFPTs.data(1,:)));
 goodInd = find(~isnan(LFPTs.data(1,:)));

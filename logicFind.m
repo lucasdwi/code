@@ -23,7 +23,7 @@ end
 allIdx = 1:numel(data);
 if strcmp(op,'==')
     if isa(data,'cell')
-       inds = allIdx(strcmp(x,data)); 
+       inds = allIdx(strcmpi(x,data)); 
     else
         inds = allIdx(data == x);
     end
@@ -34,12 +34,6 @@ end
 if strcmp(op,'>=')
     inds = allIdx(data >= x);
 end
-if strcmp(op,'>')
-    inds = allIdx(data > x);
-end
-if strcmp(op,'<')
-    inds = allIdx(data < x);
-end
 if strcmp(op,'~=')
     if isa(data,'cell')
        inds = allIdx(~strcmp(x,data)); 
@@ -47,6 +41,8 @@ if strcmp(op,'~=')
         inds = allIdx(data ~= x);
     end
 end
+
+
 if strcmpi(position,'first')
     inds = inds(1);
 else if strcmpi(position,'last')

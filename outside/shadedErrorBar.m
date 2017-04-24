@@ -50,7 +50,7 @@ function varargout=shadedErrorBar(x,y,errBar,lineProps,transparent)
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 % Error checking    
-narginchk(3,5)
+error(nargchk(3,5,nargin))
 
 
 %Process y using function handles if needed to make the error bar
