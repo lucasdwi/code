@@ -3,13 +3,13 @@ function [T1,T2,fName,tsRest,tsBinge,nRest,nBinge] = collateData(sdir,searchStr,
 % Get file structure for each searchStr
 [fileStruct] = fileSearch(sdir,searchStr);
 % Go through each file structure and extract data from files therein
-for fsi = 1:numel(fileStruct)
+for fsi = 1:size(fileStruct,2)
     disp(fsi)
     for fi = 1:size(fileStruct{fsi},1)
         % Splits filename at '_' and stores first part
-        parts = strsplit(fileStruct{fsi}(fi).name,'_');
+        parts = strsplit(fileStruct{fsi,fi},'_');
         fName{fsi,fi} = parts{1};
-        load([sdir{1},fileStruct{fsi}(fi).name],'coh','psdTrls','relPower','powerCorrSort','LFPTs','trls','hist');
+        load([sdir,fileStruct{fsi,fi}],'coh','psdTrls','relPower','r1','r2','LFPTs','trls','hist');
         % Stack overall PSD and PSD distributions
         %psdBinge{fsi}(:,:,fi) = psdTrls.event1.Overall;
         %psdRest{fsi}(:,:,fi) = psdTrls.event2.Overall;
@@ -32,8 +32,8 @@ for fsi = 1:numel(fileStruct)
         cohMatBinge{fsi,fi} = coh{1}.Cxy;
         cohMatRest{fsi,fi} = coh{2}.Cxy;
         % Stack power correlations
-        powCorrBinge{fsi,fi} = powerCorrSort{1}.masterCorr;
-        powCorrRest{fsi,fi} = powerCorrSort{2}.masterCorr;
+        powCorrBinge{fsi,fi} = r1;
+        powCorrRest{fsi,fi} = r2;
         % Stack number of windows
         nBinge{fsi}(fi) = size(psdTrls.event1.Pow,2);
         nRest{fsi}(fi) = size(psdTrls.event2.Pow,2);
