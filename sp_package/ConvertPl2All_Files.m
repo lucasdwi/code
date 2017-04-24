@@ -1,32 +1,26 @@
-function [fd] = ConvertPl2All_Files(dir)
-%   Runs Pl2tomvdm.m on all files within the directory. Written by
-%   JJS, edited by LLD
+function [fNames] = ConvertPl2All_Files(dir)
+%% Runs Pl2tomvdm.m on all files within the directory. 
+% INPUTS:
+% dir = source directory of files to be converted; format = string
 
-% Check if MClust and other toolboxes (van der Meer) from path
-pathCell = regexp(path,pathsep,'split');
-if sum(cell2mat(regexp(pathCell,'MClust'))) ~= 0
-    rmpath(genpath('C:\Users\Lucas\Documents\GitHub\neuraldata-w16\toolboxes\MClust-4.3\'));
-    rmpath(genpath('C:\Users\Lucas\Documents\GitHub\neuraldata-w16\toolboxes\MClust-3.5\'));
-end
+% OUTPUTS; 
+% fNames = file names that have been converted
+
+%% Written by JJS, edited by LLD (got rid of 'sd' and replaced all MClust
+% functions)
+
 %%
-% dir = directory within which to search for files
-cd(dir);
-fd = FindFiles('*pl2');
-
-for iSess = 1:length(fd);
-    pushdir(fileparts(fd{iSess}));
-    [~, name, ~] = fileparts(fd{iSess});
-    disp(iSess)
+fNames = fileSearch(dir,'pl2');
+for iFile = 1:size(fNames,2)
+    [~, name, ~] = fileparts(fNames{iFile});
+    disp(iFile)
     disp(name)
-    if exist(strcat(fd{iSess},'.mat')) == 2;
-        disp('matfile already exists...skipping')
+    if exist(strcat(fNames{iFile},'.mat'),'file') == 2
+        disp('.mat file already exists...skipping')
     else
-        %[~, ~] = Pl2tomvdm(fd{iSess});
-        [~, sd] = Pl2tomvdmGenFile(fd{iSess});
-        ad = sd.ad; adfreq = sd.adfreq; eventTs = sd.eventTs; fn = sd.fn; lfpchan = sd.lfpchan; LFPTs = sd.LFPTs; n = sd.n; pl2 = sd.pl2; TimeSampEr = sd.TimeSampEr; ts = sd.ts; WBchan = sd.WBchan;
-        disp('Saving file...')
-        save(strcat(name, '.mat'),'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
+        [~,sd] = Pl2tomvdmGenFile(fNames{iFile});
+        % Extract variables from sd to save
+        ad = sd.ad; adfreq = sd.adfreq; eventTs = sd.evetTs; fn = sd.fn; lfpchan = sd.lfpchan; LFPTS = sd.LFPTs; n = sd.n; pl2 = sd.pl2; TimeSampEr = sd.TimeSampEr; ts = sd.ts; WBchan = sd.WBchan;  %#ok<NASGU>
+        save(strcat(name, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
     end
-    popdir;
 end
-

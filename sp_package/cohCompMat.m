@@ -9,12 +9,15 @@ end
 % Use unique subset
 skipInd = unique(skipInd);
 % Set colors to be used
-cols = mat2cell(distinguishable_colors(size(cmb,1)),[ones(size(cmb,1),1)],[3]);
+cols = mat2cell(distinguishable_colors(size(cmb,1)),(ones(size(cmb,1),1)),3);
 % Create foi vector
 foiV = (foi(1):foi(2):foi(3));
 cohPlots{1} = figure;
+% Preallocate coh structure
+coh = cell(1,size(eoi,1));
 for e = 1:size(eoi,1)
-    Cxy = zeros(size(cmb,1),length(foiV),length(trls{1,e}.trial)); CxyFull = zeros(size(cmb,1),length(foiV));
+    Cxy = zeros(size(cmb,1),length(foiV),size(trls{1,e}.trial,3)); 
+    CxyFull = zeros(size(cmb,1),length(foiV));
     for c = 1:size(cmb,1)
         tic
         % Check if channel should be skipped
@@ -24,8 +27,8 @@ for e = 1:size(eoi,1)
             Cxy(c,:,:) = NaN;
         else
             disp(['Calculating combination ',num2str(c)])
-            for t = 1:length(trls{1,e}.trial)
-                [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial{t}(cmb(c,1),:),trls{1,e}.trial{t}(cmb(c,2),:),hanning(winSize),winSize*overlap,foiV,adfreq);
+            for t = 1:size(trls{1,e}.trial,3)
+                [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial(cmb(c,1),:,t),trls{1,e}.trial(cmb(c,2),:,t),512,[],foiV,adfreq);
                 % Interpolate over notch filter data
                 notchInd = [nearest_idx3(57.5,F1);nearest_idx3(62.5,F1)];
                 Cxy(c,notchInd(1):notchInd(2),t) = NaN;
@@ -45,22 +48,20 @@ for e = 1:size(eoi,1)
         toc
     end
     %% Get population statistics for all trial coherence
-    mCxy = sq(nanmean(Cxy,3));
-    sdCxy = sq(std(Cxy,[],3,'omitnan'));
+    mCxy = squeeze(nanmean(Cxy,3));
+    sdCxy = squeeze(std(Cxy,[],3,'omitnan'));
     %% Calculate average coherence per frequency band
     % Set frequency band limits
     %bands.thet.limit = [4,7]; bands.alph.limit = [8,13]; bands.bet.limit = [15,30]; bands.lgam.limit = [45,65]; bands.hgam.limit = [70,90];
     % Find indices corresponding to frequency bands
-    for j = 1:size(bands,1)
-        % Create frequency band intervals from indices in freq
-        bandInd(j,1) = find(F1>=bands{j,2}(1),1);
-        bandInd(j,2) = find(F1<=bands{j,2}(2),1,'last');
-    end
+    bInd = bandIndices(bands,F1);
     % Get mean coherence per band and normalize by average across bands
-    for j = 1:size(bands,1)
+    bandCoh = zeros(size(bInd,1),size(cmb,1));
+    relCoh = zeros(size(bandCoh));
+    for j = 1:size(bInd,1)
         for k = 1:size(cmb,1)
-            bandCoh(j,k) = mean(mCxy(k,bandInd(j,1):bandInd(j,2),:));
-            relCoh(j,k) = bandCoh(j,k)./mean(mCxy(k,bandInd(1,1):bandInd(end,2),:));
+            bandCoh(j,k) = mean(mCxy(k,bInd(j,1):bInd(j,2),:));
+            relCoh(j,k) = bandCoh(j,k)./mean(mCxy(k,bInd(1,1):bInd(end,2),:));
         end
     end
     %% Plot full and mean with error coherence, if full exists

@@ -1,4 +1,10 @@
-outside/*
+# Outside files
+/outside/*
+# Discovery files
+/discovery/*
+# Old files
+/old/*
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
