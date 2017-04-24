@@ -4,6 +4,37 @@ load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\indGroups.mat')
 y = y(:,[1,3]);
 normX = zscore(x);
 %%
+probAllTest = []; probTrain = [];
+% Cycle through each subset in inds/indName
+for ii = 1%:size(inds,1)
+    % Cycle through and take out each pair of two files from the same
+    % animal
+    for iO = 1:2:24;       
+        trainX = normX(~ismember(1:24,iO:iO+1),:);
+        trainY = y(~ismember(1:24,iO:iO+1),:);
+        testX = normX(iO:iO+1,:);
+        testY = y(iO:iO+1,:);
+        % Run PCA on training data
+%         [coeff,scores,latent,~,explained] = pca(normX(:,inds{ii}),'Economy',false,'Centered',false);
+        [coeff,scores,latent,~,explained] = pca(trainX(:,inds{ii}),'Economy',false,'Centered',false);
+        % Calculate cumulative percent of variance explained
+        percVar = cumsum(explained);
+        % Find number of PCs needed to explain 80% of the variance
+        ind(ii) = logicFind(80,percVar,'>=','first');
+        pcVar(ii) = percVar(ind(ii));
+        % Project test data into PCA space - get scores
+        testScores = testX/coeff';
+        % Use those PCs in a logistic regression, with test set
+        [~,~,~,~,~,~,probTest] = logPredict(scores(:,1:ind(ii)),trainY,testScores(:,1:ind(ii)),testY);
+        probAllTest = [probAllTest;[probTest{1,1},probTest{1,2}]];
+        [~,~,~,~,~,~,probTrain{iO}] = logPredict(scores(:,1:ind(ii)),trainY,[],[]);
+%         probAllTrain = [probAllTrain;[probTrain(1,1),probTrain{1,2}]];
+        % Without test set
+%         [AUC(ii,:,iO),xMat{ii,iO},yMat{ii,iO},dev{ii,iO},~] = logPredict(scores(:,1:ind(ii)),y,[],[]);
+    end
+end
+
+%%
 for ii = 1:size(inds,1)
 %     for ri = 1:100
 %         for ni = 1:size(normX,1)
@@ -12,7 +43,7 @@ for ii = 1:size(inds,1)
 % Randomized
 %     [coeff,scores,latent,~,explained] = pca(normX(thisPerm(:,inds{ii})),'Economy',false);
 % Go through different inds
-    [coeff,scores,latent,~,explained] = pca(normX(:,inds{ii}),'Economy',false);
+    [coeff,scores,latent,~,explained] = pca(normX(:,inds{ii}),'Economy',false,'Centered',false);
 % Use all x
 %     [coeff,scores,latent,~,explained] = pca(normX,'Economy',false);
     % Plot number of prinicple components vs. % of variance explained
@@ -24,7 +55,7 @@ for ii = 1:size(inds,1)
     % Use first n pcs for regression
     ind(ii) = logicFind(80,percVar,'>=','first');
     pcVar(ii) = percVar(ind(ii));
-    [AUC(ii,:),xMat{ii},yMat{ii},dev{ii}] = logPredict(scores(:,1:ind(ii)),y);
+    [AUC(ii,:),xMat{ii},yMat{ii},dev{ii},~,~,prob{ii}] = logPredict(scores(:,1:ind(ii)),y,[],[]);
 %     [AUC(ii,:,ri),xMat{ii,ri},yMat{ii,ri},dev{ii,ri}] = logPredict(scores(:,1:ind(ii)),y);
 %     for ri = 1:100
 %         thisPerm = randperm(size(y,1));

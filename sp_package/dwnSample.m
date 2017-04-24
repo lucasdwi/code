@@ -1,22 +1,36 @@
-function [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq,chans)
+function [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq)
 %% Decimates LFPTs data and downsamples time vector
-% Inputs:
-% LFPTs = data structure
-% dsf = downsample factor; format = integer 
-% adfreq = sampling rate; format = Hz
-% chans = number of channels; format = integer
-
-% Outputs:
-% LFPTs = downsampled data
-% adfreq = new sampling rate
-%%
-LFPTsDwn.data = [];
-
-for i = 1:chans
-    LFPTsDwn.data(i,:) = decimate(LFPTs.data(i,:),dsf);
+%__________________________________________________________________________
+% INPUTS:
+% LFPTs = data structure, with .data as field with data in it
+% dsf = downsample factor, needs to be a divisor of adfreq; format: integer 
+% adfreq = sampling rate; format: integer
+%__________________________________________________________________________
+% OUTPUTS:
+% LFPTs = decimated data
+% adfreq = adjusted sampling rate
+%__________________________________________________________________________
+% USE:
+% [LFPTs,adfreq] = dwnSample(LFPTs,5,2000);
+% Decimates data in LFPTs which was sampled at 2 kHz by a factor of 5 and
+% adjusts sampling rate accordingly (2000/5=400)
+%__________________________________________________________________________
+% LLD 2016-17
+%% Preallocate counts
+% Count number of channels
+chans = size(LFPTs.data,1);
+% Count number of data points
+tStamps = size(LFPTs.data,2);
+% Set-up output data
+dwnData = zeros(chans,tStamps/dsf);
+for iC = 1:chans
+    dwnData(iC,:) = decimate(LFPTs.data(iC,:),dsf);
 end
-LFPTsDwn.tvec = downsample(LFPTs.tvec,dsf);
+dwnTvec = downsample(LFPTs.tvec,dsf);
 % Overwrite old LFPTs with LFPTsdwn; for further analysis
-LFPTs.data = LFPTsDwn.data;
-LFPTs.tvec = LFPTsDwn.tvec;
+LFPTs.data = dwnData;
+LFPTs.tvec = dwnTvec;
+% Adjust sampling rate
 adfreq = adfreq/dsf;
+% Record that data was downsampled
+LFPTs.cfg.history.mfun{end+1} = 'dwnSample';

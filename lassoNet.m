@@ -1,11 +1,19 @@
 function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,family,type,alph,kfolds,repeats,cfg)
-%% INPUTS
+%% Runs elastic net using glmnet functions from the Tibshirani group. Check
+% input documentation for details on different options for analysis.
+%__________________________________________________________________________
+% INPUTS
 % x = matrix of predictors; format = observations (animal) x predictor
 % (feature)
 % y = matrix of response variables; format = observations (animal) x
 %     repsonse; if more than one goes through each separately (perhaps add
 %     multinomial later)
+<<<<<<< Updated upstream
 % family = type of regression; format = string: 'binomial' or 'gaussian'
+=======
+% family = type of regression; format = string: 'binomial', 'multinomial',
+%   or 'gaussian'
+>>>>>>> Stashed changes
 % type = type of error term to use; format = string: 'mse' and 'mae' can be
 %        used by all; 'auc' and 'class' can only be used by binomial
 % alph = elastic net tuning parameter alpha (0 = ridge, 1 = lasso); format
@@ -14,7 +22,8 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 % repeats = number of times to repeat whole procedure; format = integer
 % cfg = configuration structure, includes the following fields
 %       naive = percent of data to be left out entirely for final model
-%               testing; format = decimal (0.9 for 90%)
+%               testing; format = decimal (0.9 for 90%) or two structures
+%               with first being x and second being y
 %       rand = whether to randomize data; format = string 'y' or 'n',
 %              default is 'n'
 %       normalize = whether to normalize data; format = string 'y' or 'n',
@@ -27,7 +36,8 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 %                      lambda; format = integer, default is 100
 %       minTerm = which lambda term to use for optimization; either 'min'
 %                 or '1se'
-%% OUTPUTS
+%__________________________________________________________________________
+% OUTPUTS
 % allAlpha = structure of alpha tuning data
 %          bestAlpha = 
 %          meanAlpha = 
@@ -65,39 +75,87 @@ if kfolds <=3
     warning('It is not recommended to run cross-validation with less than 4 folds, consider resetting. Press "Ctrl+C" to quit, or any key to continue.')
     %pause
 end
-% Set cfg.rand to default if unset 
+% Set cfg.rand to default if unset: 'n'
 if ~isfield(cfg,'rand') || isempty(cfg.rand)
     cfg.rand = 'n';
 end
-% Set cfg.normalize to default if unset 
+% Set cfg.normalize to default if unset: 'y' 
 if ~isfield(cfg,'normalize') || isempty(cfg.normalize)
-    cfg.norm = 'n';
+    cfg.norm = 'y';
 end
-% Set cfg.foldGen to default if unset
+% Set cfg.foldGen to default if unset: 'n'
 if ~isfield(cfg,'foldGen') || isempty(cfg.foldGen)
     cfg.foldGen = 'n';
 end
-% Set cfg.cvIterations to default if unset
+% Set cfg.cvIterations to default if unset: 100
 if ~isfield(cfg,'cvIterations') || isempty(cfg.cvIterations)
     cfg.Iterations = 100;
+end
+% Set cfg.naiveType to default if unset and cfg.naive is set: 'random'
+if (~isfield(cfg,'naiveType') || isempty(cfg.naiveType)) && (isfield(cfg,'naive') || ~isempty(cfg.naive))
+   cfg.naiveType = 'random'; 
+end
+% Set cfg.minTerm to defualt if unset: '1se'
+if ~isfield(cfg,'minTerm') || isempty(cfg.minTerm)
+    cfg.minTerm = '1se';
 end
 %% Split data into naive-test set and training set
 % Use CV to train best model, then get error from predicting naive-test set
 for rep = 1:repeats
     if ~isempty(cfg.naive)
-        % Determine indices of random subset for naive testing; rounds down
-        naiveInd = randperm(size(x,1),floor(size(x,1)*cfg.naive));
-        testX = x(naiveInd,:);
-        testY = y(naiveInd,:);
-        % Set up index vector
-        inds  = 1:size(x,1);
-        % Grab train data using those indices not in naiveInd
-        trainX = x(~ismember(inds,naiveInd),:);
-        trainY = y(~ismember(inds,naiveInd),:);
+        % Check if using a numeric, percent of complete dataset to use
+        if isnumeric(cfg.naive)
+            if strcmpi(cfg.naiveType,'balanced')
+                % Maintain distribution of response in test and train sets
+                % Get percent of ones in data
+                nOne = sum(y==1);
+                oneDist = nOne/(numel(y));
+                % Determine size of naive set, rounding up
+                nNaive = ceil(numel(y)*cfg.naive);
+                % Calculate number of ones to include in test set
+                nNaiveOnes = ceil(nNaive*oneDist);
+                % Grab random subset of ones for naive testing
+                oneInd = logicFind(1,y,'==');
+                randOneInd = randperm(nOne,nNaiveOnes);
+                naiveOneInd = oneInd(randOneInd);
+                % Grab random subset of zeros to complete naive test set
+                nZero = sum(y==0);
+                nNaiveZero = nNaive-nNaiveOnes;
+                zeroInd = logicFind(0,y,'==');
+                randZeroInd = randperm(nZero,nNaiveZero);
+                naiveZeroInd = zeroInd(randZeroInd);
+                % Combine indices
+                naiveInd = [naiveOneInd';naiveZeroInd'];
+            elseif strcmpi(cfg.naiveType,'random')
+                % Determine indices of random subset for naive testing; rounds down
+                naiveInd = randperm(size(x,1),floor(size(x,1)*cfg.naive));
+            end
+            % Use naiveInd to build test and train sets
+            testX = x(naiveInd,:);
+            testY = y(naiveInd,:);
+            % Set up index vector
+            inds  = 1:size(x,1);
+            % Grab train data using those indices not in naiveInd
+            trainX = x(~ismember(inds,naiveInd),:);
+            trainY = y(~ismember(inds,naiveInd),:);
+        % Otherwise, use dataset provided as test set and complete data in
+        % x as training set
+        elseif isstruct(cfg.naive)
+            % Set up training set
+            trainX = x;
+            trainY = y;
+            % Set up testing set
+            testX = cfg.naive.testX;
+            testY = cfg.naive.testY;
+            % Set up empty naiveInd
+            naiveInd = [];
+        end
     else
         % If not using naive set, rename x and y and create empty test matrices
         trainX = x; testX = [];
         trainY = y; testY = [];
+        % Create empty predY and naiveInd
+        predY = []; naiveInd = [];
     end
     % Determine number of response (dependent) variables - number of models
     nResp = size(trainY,2);
@@ -194,9 +252,8 @@ for rep = 1:repeats
     % Go through CVfits and extract errors
     if strcmpi(cfg.minTerm,'1se')
         lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_1se,exMinErr.lambda,'==')),CVfits);
-    else if strcmpi(cfg.minTerm,'min')
-            lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_min,exMinErr.lambda,'==')),CVfits);
-        end
+    elseif strcmpi(cfg.minTerm,'min')
+        lamErr = cellfun(@(exMinErr) exMinErr.cvm(logicFind(exMinErr.lambda_min,exMinErr.lambda,'==')),CVfits);
     end
     % Get average and standard deviation of min error for each model
     lamErrAvg = mean(lamErr,1);
@@ -205,9 +262,8 @@ for rep = 1:repeats
     % error for naive prediction
     if strcmpi(cfg.minTerm,'1se')
         minLam = cellfun(@(exLam) exLam.lambda_1se,CVfits);
-    else if strcmpi(cfg.minTerm,'min')
-            minLam = cellfun(@(exLam) exLam.lambda_min,CVfits);
-        end
+    elseif strcmpi(cfg.minTerm,'min')
+        minLam = cellfun(@(exLam) exLam.lambda_min,CVfits);
     end
     % Go through CVfits and extract mean of all error - cvm
     allErr = cellfun(@(exAllErr) mean(exAllErr.cvm),CVfits);
@@ -251,7 +307,7 @@ for rep = 1:repeats
                 acc(r) = predY(r,:) - testY(:,r)';
             % Otherwise, use misclassificaiton error
             else
-                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,'lambda_1se','class');
+                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,'lambda_1se','response');
                 % Compare predY to testY: percent accuracy
                 acc(r) = mean(predY(r,:) == testY(:,r)');
             end 
@@ -293,7 +349,8 @@ for rep = 1:repeats
     allBeta{rep}.survBeta = survBeta;
     allBeta{rep}.signBeta = signBeta;
     % Create acc and CVfits array
-    accArray{rep} = acc;
+    accArray{rep}.acc = acc;
+    accArray{rep}.pred = predY;
     cvFitsArray{rep} = CVfits;
     % Create hist array
     hist.cfg = cfg;
@@ -302,4 +359,5 @@ for rep = 1:repeats
     hist.nfolds = kfolds;
     hist.alpha = alph;
     hist.repeats = repeats;
+    hist.testInd = naiveInd;
 end

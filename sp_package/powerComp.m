@@ -31,14 +31,14 @@ clrs = {[0.2081 0.1663 0.5292];[0.0265 0.6137 0.8135];[0.6473 0.7456 0.4188];[0.
 % values then will compare those two events
 nTrials = {};
 if size(eoi,1) == 1
-    nTrials = {length(trlData{1}.trial)};
+    nTrials = size(trlData{1,1}.trial,3);
     trls = trlData(1);
     events = {'event1'};
 end
 
 if size(eoi,1) == 2
-   nTrials{1} = length(trlData{1,1}.trial);
-   nTrials{2} = length(trlData{1,2}.trial);
+   nTrials{1} = size(trlData{1,1}.trial,3);
+   nTrials{2} = size(trlData{1,2}.trial,3);
    trls = {trlData{1,1},trlData{1,2}};
    events = {'event1','event2'};
 end
@@ -66,7 +66,7 @@ for ii = 1:length(trls)
             % Uses full trial length nfft
             %[Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],length(trls{ii}.trial{1,j}(k,:)),adfreq);
             % Returns two-sided Welch PSD estimate at fois
-            [Pxx,F] = pwelch(trls{ii}.trial{1,j}(k,:),hamming(hammSize),[],(foi(1):foi(2):foi(3)),adfreq);
+            [Pxx,F] = pwelch(trls{ii}.trial(k,:,j),hamming(hammSize),[],(foi(1):foi(2):foi(3)),adfreq);
             % Convert PSD into dB and store
             psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
         end
@@ -101,9 +101,8 @@ for ii = 1:length(events)
     % Check number of events and set up subplots accordingly
     if length(events) == 1
         subplot(1,2,ii)
-    else if length(events) == 2
-    subplot(1,3,ii);
-        end
+    elseif length(events) == 2
+        subplot(1,3,ii);
     end
     for j = 1:chans
         hold on; ax{ii} = plot(F,psdTrls.(events{ii}).Overall(j,:));%,'color',clrs{j});
@@ -129,16 +128,15 @@ end
 % text(0.5,1,'\bf Power Spectral Densities','HorizontalAlignment','Center','VerticalAlignment','top');
 hold off;
 %% Calculate total power in frequency bands of interest
+% Get frequency indices corresponding to bands of interest
+bInd = bandIndices(bands,F);
 for ii = 1:length(trls)
-    for j = 1:size(bands,1)
-        % Get frequency band interval indices from indices in F
-        bandInd(j,1) = find(F>=bands{j,2}(1),1);
-        bandInd(j,2) = find(F<=bands{j,2}(2),1,'last');
+    for j = 1:size(bInd,1)
         for k = 1:nTrials{ii}
             for c = 1:chans
                 % Integrates across frequency bands and puts in 5x4 matrix
                 % in second row;[theta; alpha; beta; low gamma; high gamma] 
-                psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(psdTrls.(events{ii}).Pow{1,k}(c,bandInd(j,1):bandInd(j,2)));
+                psdTrls.(events{ii}).Pow{2,k}(j,c) = trapz(psdTrls.(events{ii}).Pow{1,k}(c,bInd(j,1):bInd(j,2)));
                 % Removes values around notch filter
 %                 if j == 4 && strcmpi(filter,'y')
 %                     notchOut = trapz(notchInd(1):notchInd(2),psdTrls.(events{ii}).Pow{1,k}(c,notchInd(1):notchInd(2)));
@@ -164,11 +162,11 @@ end
 % falls outside of the bands
 %relPower = cell(size(bands,1),chans);
 for c = 1:chans
-    psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):bandInd(end,2)));
+    psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bInd(1,1):bInd(end,2)));
     %psdTrls.event1.totalPower(c) = trapz(psdTrls.event1.Overall(c,bandInd(1,1):notchInd(1)-1))+trapz(psdTrls.event1.Overall(c,notchInd(2)+1:bandInd(size(bands,1),2)));
     relPower.event1(:,c) = psdTrls.event1.Avg(:,c)./psdTrls.event1.totalPower(c);
     if length(events) == 2
-        psdTrls.event2.totalPower(c) = trapz(psdTrls.event2.Overall(c,bandInd(1,1):bandInd(end,2)));
+        psdTrls.event2.totalPower(c) = trapz(psdTrls.event2.Overall(c,bInd(1,1):bInd(end,2)));
         relPower.event2(:,c) = psdTrls.event2.Avg(:,c)./psdTrls.event2.totalPower(c);
     end
 end
