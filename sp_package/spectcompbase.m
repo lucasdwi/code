@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,clnEvents,relPower,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
+function [LFPTs,trls,clnTrls,clnEvents,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
 %% Preproccesses data and calculates the following metrics: power, 
 %  coherence, and power coupling. Read input documentation for more detail
 %  on the options for these analyses and necessary information to run the
@@ -119,16 +119,16 @@ disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
 chans = size(LFPTs.data,1);
 if size(eoi,1) == 1
-    [psdTrls,relPower,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
+    [psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
 end
 if size(eoi,1) == 2
-    [psdTrls,relPower,powerPlots,powerEventComp,stdPower] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
+    [psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
 end
 toc
 %% Calculate power correlations
 tic
 disp('Calculating power corrleations using powerCorr.m...')
-[r1,r2] = powerCorr(psdTrls,bands);
+[r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
 toc
 %% Create n windows (per band) and run freqanalysis for each --> powerCorr
 % cmb = nchoosek(1:chans,2);
@@ -175,6 +175,7 @@ toc
 if strcmpi(cohMethod,'mat')
     tic
     disp('Using cohCompMat.m for coherence...')
+    chans = size(LFPTs.data,1);
     % Calculate window size
     if ~isempty(ftimwin)
         [~,winSize] = nearestPow2(ftimwin*adfreq);
@@ -258,7 +259,7 @@ if size(eoi,1) == 1
     end
     % Go to directory
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','relPower','coh','hist','trls','LFPTs','r1');
+    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','coh','hist','trls','LFPTs','r','rVect');
     % Save input variables
 end
 if size(eoi,1) == 2
@@ -267,7 +268,7 @@ if size(eoi,1) == 2
         mkdir(saveParent);
     end
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','relPower','powerEventComp','stdPower','coh','hist','trls','LFPTs','r1','r2');
+    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','stdPower','coh','hist','trls','LFPTs','r','rVect');
     % Save input variables
 end
 toc

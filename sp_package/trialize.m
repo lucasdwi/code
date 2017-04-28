@@ -139,21 +139,27 @@ for iB = 1:nBehavior
         dummy(isnan(dummy)) = 0;
         dataStart = find(diff(dummy)==1)+1;
         dataStop = find(diff(dummy)==-1);
-        if ~isnan(intTime{iB,iT})
+        % Check for clean data at first index
+        if ~isnan(intTime{iB,iT}(1,1))
             dataStart = [1, dataStart]; %#ok<AGROW>
         end
+        % Check for clean data at last index
         if ~isnan(intTime{iB,iT}(end))
             dataStop = horzcat(dataStop,length(intTime{iB,iT})); %#ok<AGROW>
         end
-        if ~isnan(sum(intTime{iB,iT})) && (size(intTime{iB,iT},2) >= (minInt*adfreq + 1/adfreq)) %No NaNed data and longer than minInt + 1 for indexing
+        % Only keep data that is not NaNed and in continuous intervals
+        % longer than minInt (+ 1 for indexing)
+        if ~isnan(sum(intTime{iB,iT})) && (size(intTime{iB,iT},2) >= (minInt*adfreq + 1/adfreq)) 
             numTrls = floor(size(intTime{iB,iT},2)/(minInt*adfreq + 1/adfreq));
             thisTrls = intTime{iB,iT}(1:((minInt*adfreq)*numTrls));
             clnTrls{iB,iT} = thisTrls;
         else
             thisTrls = [];
-            for intInd = 1:length(dataStart) %Run through data intervals
+            % Run through data intervals
+            for intInd = 1:length(dataStart) 
                 intLen = dataStop(intInd) - dataStart(intInd);
-                if intLen >= (minInt*adfreq + 1/adfreq) %Keep if big enough
+                % Double check that each interval is long enough
+                if intLen >= (minInt*adfreq + 1/adfreq) 
                     numTrls = floor(intLen/(minInt*adfreq + 1/adfreq));
                     thisTrls = horzcat(thisTrls,intTime{iB,iT}(dataStart(intInd):(dataStart(intInd)+((minInt*adfreq)*numTrls))-1)); %#ok<AGROW>
                 end

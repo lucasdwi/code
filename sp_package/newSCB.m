@@ -1,6 +1,6 @@
 x = LFPTs.data(:,1:5000);
 [nChan,lData] = size(x);
-k = 10; gam = 2; bet = 5; d = 8;
+k = 10; gam = 3; bet = 6; d = 10;
 high = 100*(2*pi/adfreq);
 low = 1*(2*pi/adfreq);
 %% Continuous
@@ -46,13 +46,23 @@ if strcmpi(aType,'cont')
        % Conduct wavelet transform - time X frequency X channel X
        % eigenspectra
 %        w = wavetrans(x(1,:)',psi);
-       w = wavetrans(x',psi); 
+       w = wavetrans(x',psi);
+       % Calculate auto- and cross-spectra
+       for ii = 1:size(w,3)
+           auto(:,:,ii,:) = abs(w(:,:,ii,:)).^2;
+           for k = 1:size(w,3)
+               cross{ii}(:,:,k,:) = w(:,:,ii,:).*conj(w(:,:,k,:)); 
+           end
+       end
        %% Normalize
        % Reshape weight vector - put each weight on its own page
        eWr = reshape(eW,1,1,1,numel(eW));
        % Transform weight vector into appropriately sized matrix
        weight = repmat(eWr,size(w,1),size(w,2),size(w,3));
-       sW = sum(abs(weight.*w).^2,4);
+       sAuto = sum(weight.*auto,4);
+       for ii = 1:size(cross,2)
+           sCross{ii} = sum(weight.*cross{ii},4);
+       end
        %% COI
        % Get standard deviation in time domain 
        sigmaT = sqrt(1/(gammaHat((2*bet+1)/gam))*((bet^2)*gammaHat((2*bet-1)/gam)+gam^2*gammaHat((2*bet+2*gam-1)/gam)-2*bet*gam*gammaHat((2*bet+gam-1)/gam)));
@@ -64,27 +74,32 @@ if strcmpi(aType,'cont')
        coiScalar = fF/sigmaT;
        dt = 1/adfreq;
        coi = coiScalar*dt*[1E-5,1:((lData+1)/2-1),fliplr((1:(lData/2-1))),1E-5];
-       %% Calculate Power
-%        wPSD = abs(sW).^2;
-       wPSD = sW;
+       %% Plot Power
+       wPSD = sAuto;
        % Plot power
        % Convert fLog back to Hz.
        f = (fLog)*(adfreq/(2*pi));
+       % Set up time vector
+       t = LFPTs.tvec(1:5000);
+       % Remove last index
        figure
-       for iC = 1:nChan
-           subplot(2,2,iC)
-           imagesc(t,f,wPSD(:,:,iC)')
+       for ii = 1:nChan
+           subplot(2,2,ii)
+           imagesc(t,f,wPSD(:,:,ii)')
            colormap('viridis')
            set(gca,'YDir','normal')
            hold on
            % Convert COI from period to frequency and shade
            area(t,1./coi,'FaceColor','w','EdgeColor','w','FaceAlpha',0.5)
-           title(LFPTs.label{iC})
+           title(LFPTs.label{ii})
            xlabel('Time (sec)')
            ylabel('Frequency (Hz)')
        end
        %% Calculate Coherence
-       r = sW
+       for ii = 1:size(sCross,2)
+           
+       end
+       test = abs(sCross{1,1}(:,:,2)).^2./(sAuto(:,:,1).*sAuto(:,:,2));
    elseif strcmpi(fType,'fft')
        % Power
        [s,f,t,ps] = spectrogram(data,);

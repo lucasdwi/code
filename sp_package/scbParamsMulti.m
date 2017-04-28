@@ -20,4 +20,4 @@ ftimwin = [];
 overlap = 0.5;
 cohMethod = 'mat';
 eoi = {'binge',[0 5];'notbinge',[0 5]};
-saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\processed4\';
+saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\binge_notbinge\';

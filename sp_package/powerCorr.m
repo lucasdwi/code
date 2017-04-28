@@ -1,40 +1,38 @@
-function [r1,r2] = powerCorr(psdTrls,bands)
+function [r,rVect] = powerCorr(psdTrls)
 %% Calculates power correlations within frequency bands across channels
 % INPUTS:
-% psdTrls = 
-% bands = 
+% psdTrls = power-spectra for each behavior of interest; format: structure
+%   created by powerComp.m where each behavior is in its own cell with
+%   .relPow as a field containing the relative power in each band for every
+%   trial
 %__________________________________________________________________________
 % OUTPUTS:
-% r1 = 
-% r2 = 
+% r = cell array of correlation values; format: cell array with 3D arrays
+%   containing all correlation values (channel,channel,band)
+% rVect = vectorized version of r; because of intrinsic symmetry of
+%   correlation matrices, takes just lower half of matrix and puts into row
+%   vector. For example, if 4 channels then the vector of r values will be
+%   for the following correlations: 1-2, 1-3, 1-4, 2-3, 2-4, and 3-4.
 %__________________________________________________________________________
 %% LLD and MAC 2017
-%% Preallocate different sizes
-chans = size(psdTrls.event1.Overall,1);
-nTrls = [size(psdTrls.event1.Pow,2),size(psdTrls.event2.Pow,2)];
-nBands = size(bands,1);
-% Grab frequency band indices using frequency vector from powerComp.m
-bInd = bandIndices(bands,psdTrls.F);
-% Event 1 band power normalization
-event1Pow = zeros(nBands,chans,nTrls(1,1));
-total1Pow = zeros(nBands,chans,nTrls(1,1));
-for ii = 1:size(psdTrls.event1.Pow(2,:),2)
-    event1Pow(:,:,ii) = psdTrls.event1.Pow{2,ii};
-    total1Pow(:,:,ii) = repmat(trapz(psdTrls.event1.Pow{1,ii}(:,bInd(1,1):bInd(end,2)),2)',6,1,1);
+%% Preallocate
+% Get number of bands from .relPow field in first psdTrls cell
+nBands = size(psdTrls{1,1}.relPow,1);
+nEvents = size(psdTrls,2);
+r = cell(1,nEvents);
+p = cell(1,nEvents);
+rVect = cell(1,nEvents);
+%% Go through each event and all bands getting correlations of all channels
+% to eachother
+for iE = 1:nEvents
+    for iB = 1:nBands
+        % Calculate correlations
+        [r{1,iE}(:,:,iB),p{1,iE}(:,:,iB)] = corrcoef(squeeze(psdTrls{1,iE}.relPow(iB,:,:))');
+        % Extract just lower half of correlation matrix
+        thisR = squeeze(r{1,iE}(:,:,iB));
+        % Place in rVect which will be ordered by column then row (i.e. all
+        % rows of column one, then 2, etc.)
+        rVect{1,iE}(:,iB) = thisR(logicFind(0,triu(thisR),'=='));
+    end
 end
-norm1Pow = event1Pow./total1Pow;
-% Event 2 band power normalization
-event2Pow = zeros(nBands,chans,nTrls(1,2));
-total2Pow = zeros(nBands,chans,nTrls(1,2));
-for ii = 1:size(psdTrls.event2.Pow(2,:),2)
-    event2Pow(:,:,ii) = psdTrls.event2.Pow{2,ii};
-    total2Pow(:,:,ii) = repmat(trapz(psdTrls.event2.Pow{1,ii}(:,bInd(1,1):bInd(end,2)),2)',6,1,1);
-end
-norm2Pow = event2Pow./total2Pow;
-%
-r1 = zeros(chans,chans,nBands); p1 = zeros(size(r1));
-r2 = zeros(chans,chans,nBands); p2 = zeros(size(r2));
-for iB = 1:nBands
-    [r1(:,:,iB),p1(:,:,iB)] = corrcoef(squeeze(norm1Pow(iB,:,:))');
-    [r2(:,:,iB),p2(:,:,iB)] = corrcoef(squeeze(norm2Pow(iB,:,:))');
-end
+
