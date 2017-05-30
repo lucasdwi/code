@@ -1,4 +1,4 @@
-function [data,samp] = collateData(sdir,searchStr,vars,dat)
+function [data,samp] = collateData(sdir,searchStr,vars,dat,varargin)
 %% Collates data from many files into matrices.
 %__________________________________________________________________________
 % INPUTS:
@@ -29,8 +29,6 @@ function [data,samp] = collateData(sdir,searchStr,vars,dat)
 %__________________________________________________________________________
 % LLD 2017
 %% Initialization
-% Get number of strings going to be used in searchStr
-nStr = size(searchStr,1);
 % Check that dat is set to either 'trl' or 'avg'
 if ~strcmpi(dat,'avg') && ~strcmpi(dat,'trl')
     error('Warning: dat needs to be set to either "avg" or "trl".')
@@ -44,15 +42,26 @@ end
 if size(searchStr,2) == 1
     searchStr = [searchStr,repmat({'in'},size(searchStr,1),1)];
 end
+% Get number of strings going to be used in searchStr
+if ~isempty(searchStr)
+    nStr = size(searchStr,1);
+else
+    nStr = 1;
+end
 % Preallocate files
 if nStr > 1
     files = cell(nStr,1);
-else
+elseif ~isempty(searchStr)
     files = cell(1,1);
 end
 %% Cycle through each searchStr and get file names
-for sI = 1:size(searchStr,1)
-    [files{sI}] = fileSearch(sdir,searchStr{sI,1},searchStr{sI,2});
+if ~isempty(searchStr)
+    for sI = 1:size(searchStr,1)
+        [files{sI}] = fileSearch(sdir,searchStr{sI,1},searchStr{sI,2});
+    end
+else
+    files = varargin{1};
+    nStr = size(files,2);
 end
 nAllFile = sum(cellfun(@numel,files));
 %% Go through each cell of files and collate data from files within into
@@ -98,8 +107,10 @@ for sI = 1:nStr
                     thisCoh = reshape(permute(coh{iE}.rel,[2,1,3]),cmb*b,t)';
                 else
                     [cmb,b,~] = size(coh{iE}.rel);
+%                     [cmb,b,~] = size(coh{iE}.band);
                     % Mean and permute coh.rel
                     thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
+%                     thisCoh = reshape(permute(mean(coh{iE}.band,3),[2,1]),1,cmb*b);
                 end
                 % Store coherence
                 thisData{iE} = [thisData{iE},thisCoh];
@@ -117,7 +128,7 @@ for sI = 1:nStr
                 thisData{iE} = [thisData{iE},thisCorr];
             end
             % Grab sampleInfo for timing
-            thisSamp{iE} = trls{1,iE}.sampleinfo;
+            thisSamp{iE} = trls{1,iE}.sampleinfo; 
         end
         data{sI} = [data{sI};thisData];
         samp{sI} = [samp{sI};thisSamp];

@@ -60,5 +60,8 @@ if ~isempty(exStr)
 else
     fNames = fNamesIn;
 end
-% Check for, any remove, any non-unique entries
+% Check for, and remove, any non-unique entries
 fNames = unique(fNames);
+% Check for, and remove, directory entries ('.' or '..')
+fNames(logicFind(1,cellfun(@(x) strcmpi('.',x),fNames),'==')) = [];
+fNames(logicFind(1,cellfun(@(x) strcmpi('..',x),fNames),'==')) = [];

@@ -38,15 +38,15 @@ function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,over
 %% LLD 2017
 %% See above documentation for details on variables.
 
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\mat\';
+% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\angela\mat\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\raw\';
-%sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\converted\to_process\';
+sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\toProcess\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\megan\baseData\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';
 %sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\editedWithSleep\';
 % file = 'N07_4_21_16_Base_pl2_scored_plx';
 % file = 'M376_Dec_6_Base_ScoredComplete';
-file = 'H10BaseOct15.mat';
+file = 'I4Base1_2015-09-24.mat';
 % file = '10HzR_N12_PostStim_9_20_16';
 filter = 'y';
 dsf = 5;
@@ -55,6 +55,7 @@ onset = 0.125;
 offset = 40;
 % minInt = 5;
 foi = [1 2 100];
+% bands = {'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 bands = {'delta',[1,4];'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 cycles = 3;
 ftimwin = [];

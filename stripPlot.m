@@ -48,22 +48,22 @@ figure
 for iC = 0:size(data,2)-1
     for iG = 1:numel(uGroup)
         % Plot group data
-        plot(repmat(iC+spacing(iG),sum(group==uGroup(iG)),1),data(group==uGroup(iG)),'.k')
+        plot(repmat(iC+spacing(iG),sum(group==uGroup(iG)),1),data(group==uGroup(iG),iC+1),'.k')
         hold on
         % Plot mean of group
-        plot(iC+spacing(iG),mean(data(group==uGroup(iG))),'rs')
+        plot(iC+spacing(iG),mean(data(group==uGroup(iG),iC+1),'omitNaN'),'rs')
     end
 end
 xlim([0 spacing(end)+iC+0.5])
-% Use group labels, either string or numeral, as x labels
-xSpace = spacing(1):spacing(1):spacing(end)*(iC+1);
-if exist('groupStr','var')
-    set(gca,'XTick',xSpace,'XTickLabel',unique(groupStr))
-else
-    set(gca,'XTick',xSpace,'XTickLabel',uGroup)
-end
-% If data is matrix, add second x-axis above to delineate variables
-if exist('varNames','var') && size(data,2)
-   ax1 = gca;
-   axes('Position',ax1.Position,'XAxisLocation','top','Color','none','YTickLabel','','XLim',ax1.XLim,'XTick',1-mid:spacing(end)*(iC+1)-mid,'XTickLabel',varNames);
-end
+% % Use group labels, either string or numeral, as x labels
+% xSpace = spacing(1):spacing(1):spacing(end)*(iC+1);
+% if exist('groupStr','var')
+%     set(gca,'XTick',xSpace,'XTickLabel',unique(groupStr))
+% else
+%     set(gca,'XTick',xSpace,'XTickLabel',uGroup)
+% end
+% % If data is matrix, add second x-axis above to delineate variables
+% if exist('varNames','var') && size(data,2)
+%    ax1 = gca;
+%    axes('Position',ax1.Position,'XAxisLocation','top','Color','none','YTickLabel','','XLim',ax1.XLim,'XTick',1-mid:spacing(end)*(iC+1)-mid,'XTickLabel',varNames);
+% end

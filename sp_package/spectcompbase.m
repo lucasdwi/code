@@ -30,7 +30,7 @@ function [LFPTs,trls,clnTrls,clnEvents,psdTrls,coh,stdPower,stdCoh,hist] = spect
 %   consider a single epoch; format: cell {'tag1',[0 3];'tag2',[-1.5 1.5]}
 %   indicates to use a 3 second window around tag1 (interval) and a 3
 %   second window centered at the scalar tag2.
-%   N.B.: if all the data use the tag 'full', otherwise use tags
+%   N.B.: if all the data use the tag 'all', otherwise use tags
 %   corresponding to event markers.
 % saveParent = parent directory path to save plots and files; format:
 %   string N.B.: if directory/file exists will warn about overwritting
@@ -90,10 +90,9 @@ if ~isempty(ftimwin)
     end
 end
 % Check for cohMethod
-if isempty(cohMethod) || (~strcmpi(cohMethod,'ft') && ~strcmpi(cohMethod,'mat')) 
-    disp(['Either cohMethod is empty or incorrectly entered, press '...
+if isempty(cohMethod) || (~strcmpi(cohMethod,'mtm') && ~strcmpi(cohMethod,'mat')) 
+    error(['Either cohMethod is empty or incorrectly entered, press '...
         'Ctrl+c to quit and re-define'])
-    pause
 end
 % Check bands for potential overlap
 [bInd] = bandIndices(bands,foi(1):foi(2):foi(3));
@@ -130,51 +129,10 @@ tic
 disp('Calculating power corrleations using powerCorr.m...')
 [r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
 toc
-%% Create n windows (per band) and run freqanalysis for each --> powerCorr
-% cmb = nchoosek(1:chans,2);
-% for c = 1:size(cmb,1)
-%     channelCmb(c,:) = LFPTs.label(cmb(c,:));
-% end
-% for e = 1:size(eoi,1)
-%     for b = 1:size(bands,1)
-%         tic
-%         disp(['Computing CSD with ft_freqanalysis.mat for ',bands{b,1},' band...'])
-%         cfg              = [];
-%         cfg.output       = 'powandcsd';
-%         cfg.method       = 'mtmconvol';
-%         cfg.taper        = 'hanning';
-%         cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
-%         % Use frequency dependent windows (n cycles per window, computed at
-%         % start, 'cycFtimwin') with (x%) overlap
-%         if ~isempty(cycles)
-%             cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycles/bands{b,2}(1));
-%             minTWin          = min(cfg.t_ftimwin)*overlap;
-%             cfg.toi          = eoi{e,2}(1):minTWin:eoi{e,2}(2);
-%             % Or use a constant size for windows with (x%) overlap to compute
-%             % cycles and apply forward
-%         else
-%             cfg.t_ftimwin    = ones(size(cfg.foi)).*(cycFtimwin/bands{b,2}(1));
-%             cfg.toi          = eoi{e,2}(1):ftimwin*overlap:eoi{e,2}(2);
-%         end
-%         cfg.keeptrials   = 'yes';
-%         cfg.channel      = LFPTs.label;
-%         cfg.channelcmb   = channelCmb;
-%         
-%         powCorrTFR{e,b} = ft_freqanalysis(cfg,trls{1,e});
-%         toc
-%     end
-%     % Run powerCorr
-%     disp('Running powerCorr.m...')
-%     tic
-%     cfg.trialwindows = 'yes';
-%     [STDCorr{e},MeanCorr{e},TWCorr{e},powerCorrSort{e},~,~,~,~] = powerCorr(powCorrTFR(e,:),bands,cfg);
-%     toc
-% end
-% STDCorr = []; MeanCorr = []; TWCorr = []; powerCorrSort = [];
 %% Use inhouse/Matlab code for coherence
 if strcmpi(cohMethod,'mat')
     tic
-    disp('Using cohCompMat.m for coherence...')
+    disp('Using cohCompMat.m to calculate coherence...')
     chans = size(LFPTs.data,1);
     % Calculate window size
     if ~isempty(ftimwin)
@@ -186,20 +144,15 @@ if strcmpi(cohMethod,'mat')
     [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,zeroedChannel,eoi);
     toc
 end
-%% Use Fieldtrip code for coherence
-% if strcmpi(cohMethod,'ft')
-%     tic
-%     disp('Using cohCompFT.mat for coherence...')
-%     if size(eoi,1) == 1
-%         [coh,cohPlots,~] = cohCompFT(LFPTs,trls,bands,chans,cycles,ftimwin,overlap,foi,eoi);
-%     end
-%     if size(eoi,1) == 2
-%         [coh,cohPlots,stdCoh] = cohCompFT(LFPTs,trls,bands,chans,cycles,ftimwin,overlap,foi,eoi);
-%         %stdCoh = varargout;
-%         %varargout{2} = stdCoh;
-%     end
-%     toc
-% end
+%% Use multitaper method for coherence
+if strcmpi(cohMethod,'mtm')
+   tic
+   disp('Using cohCompMTM.m to calculate coherence...')
+   [coh] = cohCompMTM(trls,adfreq,eoi);
+   % Set up empty cohPlots to avoid saving error
+   cohPlots = [];
+   toc
+end
 %% Create history structure - Stores all inputs used and a few variables
 hist.sdir = sdir; hist.file = file; hist.filter = filter; hist.dsf = dsf;
 hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 

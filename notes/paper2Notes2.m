@@ -1,12 +1,12 @@
-% Load ephys data for all trials of binge and rest
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRestAllTrial.mat')
-for ii = 1:size(data,2)
-    for k = 1:size(data{1,ii},2)
-        trialDat{k,ii} = cat(1,data{1,ii}{:,k});
-    end
-end
+% % Load ephys data for all trials of binge and rest
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRestAllTrial.mat')
+% for ii = 1:size(data,2)
+%     for k = 1:size(data{1,ii},2)
+%         trialDat{k,ii} = cat(1,data{1,ii}{:,k});
+%     end
+% end
 % Load ephys average data of binge and rest
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRestAllAvg.mat')
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestAllAvg.mat')
 for ii = 1:size(data,2)
     for k = 1:size(data{1,ii},2)
         avgDat{k,ii} = cat(1,data{1,ii}{:,k});
@@ -33,7 +33,7 @@ end
 % Get indices of significant p-values to exclude those features
 pInds = logicFind(0.05,p,'<=');
 % Save
-save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\allDataBingeRest.mat','avgDat','trialDat','pInds')
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\featCorr.mat','avgDat','pInds','feats','vorDiff')
 %% Predicting baseline binge size using baseline data
 x = avgDat{1,1}-avgDat{2,1};
 y = bingeSizes(:,1);
@@ -52,8 +52,15 @@ rand.err = [];
 for ii = 1:100
    rand.err = [rand.err;rand.lambda{ii}.allErr];
 end
-% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBaseBinge.mat','real','rand')
+% Get Mann-Whitney U statistic
+[p,h,stats] = ranksum(real.err,rand.err);
+% Get r-family effect size
+r = abs(stats.zval/sqrt(numel(real.err)+numel(rand.err)));
+% Get Cohen's d from r
+d = (2*r)/sqrt(1-r.^2);
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBaseBinge.mat','real','rand','d')
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBaseBinge.mat')
+
 figure
 histogram(real.err,'Normalization','probability','BinWidth',.1)
 hold on
@@ -97,7 +104,13 @@ rand.err = [];
 for ii = 1:100
    rand.err = [rand.err;rand.lambda{ii}.allErr];
 end
-%save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeChange.mat','real','rand')
+% Get Mann-Whitney U statistic
+[p,h,stats] = ranksum(real.err,rand.err);
+% Get r-family effect size
+r = abs(stats.zval/sqrt(numel(real.err)+numel(rand.err)));
+% Get Cohen's d from r
+d = (2*r)/sqrt(1-r.^2);
+%save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeChange.mat','real','rand','d')
 %load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeChange.mat')
 figure
 histogram(real.err.*100,'Normalization','probability','BinWidth',5)
@@ -132,7 +145,13 @@ rand.err = [];
 for ii = 1:100
    rand.err = [rand.err;rand.lambda{ii}.allErr];
 end
-% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictPalatability.mat','rand','real')
+% Get Mann-Whitney U statistic
+[p,h,stats] = ranksum(real.err,rand.err);
+% Get r-family effect size
+r = abs(stats.zval/sqrt(numel(real.err)+numel(rand.err)));
+% Get Cohen's d from r
+d = (2*r)/sqrt(1-r.^2);
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictPalatability.mat','rand','real','d')
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictPalatability.mat')
 figure
 histogram((1-real.err).*100,'Normalization','probability','BinWidth',2)
@@ -219,6 +238,15 @@ for ii = 1:size(trlDat,2)
         end
     end
 end
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeNot.mat')
+%% Binge vs. Not Subsets
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeNot\')
+for ii = 1:13
+   load([num2str(ii),'.mat'],'rocX','rocY','auc')
+   x{ii} = rocX; y{ii} = rocY;
+   a(ii) = auc;
+end
+save('subsetBingeNot.mat','x','y','a')
 %% Subsetting indices for trial data (i.e. 60 dimensions; 24 from power and
 % 36 from coherence)
 % Power indices (channel,band)
@@ -309,6 +337,20 @@ end
 for iC = 1:size(mRanks,2)
    ranks(4,iC) = logicFind(iC,mRanks,'==');
 end
+load('subsetBingeNot.mat')
+% Add NaN for power corr
+aNaN = [a(2:3),NaN,a(4:end)];
+[~,sorted] = sort(aNaN,2,'descend');
+for iC = 1:13
+    if iC == 3
+        ranks(5,iC) = NaN;
+    else
+        ranks(5,iC) = logicFind(iC,sorted(1,:),'==')-1;
+    end
+end
+% Set all .50s to the same value
+inds = logicFind(0.5,round(aNaN,2),'==');
+ranks(5,inds) = ranks(5,inds(1));
 figure
 imagesc(ranks)
 set(gca,'XTick',1:13,'XTickLabel',{'pow','coh','corr','\Delta','\theta','\alpha','\beta','l\gamma','h\gamma','left','right','shell','core'},'YTick',1:4,'YTickLabel',{'Base Binge Size','\Delta Binge Size','Palatability','Ranked Mean'})
@@ -358,4 +400,55 @@ for ii = 1:size(real,2)
       h = get(gca,'children');
       set(h,'LineWidth',2) 
    end
+end
+%% Other conds
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\otherConds.mat')
+% dep24 = 1,4,7,10,13,16,22,25,28,29,30
+% dep48 = 2,5,8,11,14,17,20,23,26
+% chow = 3,6,9,12,15,18,21,24,27
+%%
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\otherCond\')
+for ii = 1:30
+   load(['otherCond',num2str(ii),'.mat'])
+   allX{ii} = x;
+   allY{ii} = y;
+   allA{ii} = a;
+end
+%%
+dep24 = [1,4,7,10,13,16,19,22,25,28,29,30];
+dep48 = [2,5,8,11,14,17,20,23,26];
+chow = [3,6,9,12,15,18,21,24,27];
+figure
+for ii = 1:30
+    hold on
+    h = plot(allX{ii},allY{ii});
+    if ismember(ii,dep24)
+       set(h,'Color','g')
+    elseif ismember(ii,dep48)
+        set(h,'Color','b')
+    elseif ismember(ii,chow)
+        set(h,'Color','r')
+    end
+end
+plot([0,1],[0,1],'--k','LineWidth',2)
+%% Binge Not One to All Other Animals - Baseline
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeNotBingeTrial.mat')
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeNotOneToAll\')
+for ii = 1:12
+    load([num2str(ii),'.mat'])
+    [~,~,~,auc(1,ii)] = perfcurve(trlDat{1,ii}(hist.testInd,1),accArray{1,1}.pred,1);
+    auc(2,ii) = a;
+end
+%% Binge Not one animal baseline to all other animals and conditions
+for ii = 1:12
+   load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\oneToRest\',num2str(ii),'.mat'])
+   x{ii,:} = allX{ii,:}; y{ii,:} = allY{ii,:};
+   a(ii,:) = allA(ii,:);
+end
+%%
+for ii = 1:20
+    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\test\',num2str(ii),'.mat'])
+    x{ii,:} = allX{ii,:}; y{ii,:} = allY{ii,:};
+    a(ii,:) = allA(ii,:);
+    lam(ii,:) = allLambda{1,1}.allErrAvg;
 end

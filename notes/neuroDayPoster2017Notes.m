@@ -489,6 +489,15 @@ plot(baseDepX,baseDepY,'LineWidth',3)
 plot(baseDep48X,baseDep48Y,'LineWidth',3)
 plot(h10Baseh13BaseX,h10Baseh13BaseY,'LineWidth',3)
 legend({'Base','Dep 24','Dep 48'})
-%% Predict binge vs. rest - within animal, 24dep
-
+%% kcal per group
+figure
+hold on
+for ii = 1:4
+    scatter(ones(1,12).*ii,bingeCal(:,ii),100,'.k')
+    plot([ii-0.25,ii+0.25],[mean(bingeCal(:,ii),'omitNaN'),mean(bingeCal(:,ii),'omitNaN')],'-r')
+end
+set(gca,'XTick',1:4,'XTickLabel',{'Base','Dep24','Dep48','Chow'})
+title('Binge Size across Conditions')
+ylabel('Calories (kCal)')
+sigstar({[1 3],[2 4],[3 4]},[0.01,0.01,0.001])
 

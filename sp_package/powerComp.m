@@ -28,7 +28,7 @@ function [psdTrls,powerPlots] = powerComp(trlData,adfreq,chans,bands,filter,foi,
 % values then will compare those two events
 nTrials = {};
 if size(eoi,1) == 1
-    nTrials = size(trlData{1,1}.trial,3);
+    nTrials{1} = size(trlData{1,1}.trial,3);
     trls = trlData(1);
     events = {'event1'};
 end
@@ -142,18 +142,19 @@ for ii = 1:length(trls)
         % last. Replicate to match dimension of .bandPow 
         % (band,channel,trial) where columns will be identical because the
         % total power is the same (i.e. the bands don't matter here)
-        psdTrls{ii}.totPow(:,:,k) = repmat(trapz(psdTrls{ii}.Pow(:,bInd(1,1):bInd(end,2),k),2)',6,1,1);
+        psdTrls{ii}.totPow(:,:,k) = repmat(trapz(psdTrls{ii}.Pow(:,bInd(1,1):bInd(end,2),k),2)',size(bands,1),1,1);
     end
     % Use element-wise division to obtain percent of total power wuithin
     % each band
     psdTrls{ii}.relPow = psdTrls{ii}.bandPow./psdTrls{ii}.totPow;
 end
-%% Compare event related relative power across bands
-if length(trls) == 2
-   for ii = 1:length(trls)
-      psdTrls{ii}.avgRelPow = mean(psdTrls{ii}.relPow,3);
-      psdTrls{ii}.stdRelPow = std(psdTrls{ii}.relPow,0,3);
-   end
+%% Get average relative power
+for ii = 1:length(trls)
+    psdTrls{ii}.avgRelPow = mean(psdTrls{ii}.relPow,3);
+    psdTrls{ii}.stdRelPow = std(psdTrls{ii}.relPow,0,3);
+end
+%% If two behaviors, compare relPow  
+if length(trls) == 2 
    % Preallocate p matrix
    p = zeros(chans,size(bInd,1));
    for iC = 1:chans
@@ -168,11 +169,11 @@ end
 % per frequency band per channel
 
     if length(events) == 1
-        subplot(1,2,2)
-        bar(relPower.event1'.*100,'stacked');
-        set(gca,'XTickLabel',trls{1,1}.label);
-        title('Distribution of power across frequency bands');
-        xlabel('Channel'); ylabel('Percent of total power');
+%         subplot(1,2,2)
+%         bar(psdTrls{1,1}.relPow.*100,'stacked');
+%         set(gca,'XTickLabel',trls{1,1}.label);
+%         title('Distribution of power across frequency bands');
+%         xlabel('Channel'); ylabel('Percent of total power');
     end
     % Plot average percent change from event 2 to event 1 with 2 sigma confidence bars
     if length(events) == 2

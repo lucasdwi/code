@@ -1,4 +1,46 @@
-% Examine first 3 minutes post stim relative to the average pre stim
+searchStr = {'5Hz_Pre','in';'5Hz_Post','in';'10Hz_Pre','in';'10Hz_Post','in'};
+sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed';
+for sI = 1:size(searchStr,1)
+    [files{sI}] = fileSearch(sdir,searchStr{sI,1},searchStr{sI,2});
+    for fi = 1:size(files{sI},2)
+       load(files{sI}{1,fi},'coh')
+       cohMat{sI,fi}(:,:,:) = coh{1,1}.coh;
+    end
+end
+%% Normalize by total average
+n = 60;
+for rI = [1,3]
+    for cI = 1:sum(~cellfun(@isempty,cohMat(rI,:)))
+        if n ~= 0
+            % Frequency average
+            fM{rI,cI} = mean(cohMat{rI,cI}(end-n+1:end,:,:),1);
+            fS{rI,cI} = std(cohMat{rI,cI}(end-n+1:end,:,:),[],1);
+        else
+            % Frequency average
+            fM{rI,cI} = mean(cohMat{rI,cI},1);
+            fS{rI,cI} = std(cohMat{rI,cI},[],1);
+        end
+        % All average
+        aM{rI,cI} = mean(fM{rI,cI},2);
+        aS{rI,cI} = std(fM{rI,cI},[],2);
+        % Get number of samples
+        s = size(cohMat{rI+1,cI},1);
+        fN{rI,cI} = (cohMat{rI+1,cI}-repmat(fM{rI,cI},s,1,1))./repmat(fS{rI,cI},s,1,1);
+        % Normalize by all
+        aN{rI,cI} = (cohMat{rI+1,cI}-repmat(aM{rI,cI},s,1,1))./repmat(aS{rI,cI},s,1000,1);
+    end
+end
+%% Test plot
+figure
+subplot(2,2,1)
+imagesc(301:360,1:0.2:200,cohMat{1,1}(301:360,1:500,1)')
+subplot(2,2,3)
+imagesc(1:60,1:0.2:200,cohMat{2,1}(1:60,1:500,1)')
+subplot(2,2,2)
+imagesc(1:60,1:0.2:200,fN{1,1}(1:60,1:500,1)')
+subplot(2,2,4)
+imagesc(1:60,1:0.2:200,aN{1,1}(1:60,1:500,1)')
+%% Examine first 3 minutes post stim relative to the average pre stim
 % 3 min = 180 sec = 36 5 sec trials
 [~,fNames] = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed\'},{'pre','post'});
 % Set number of trials from the beginning to look at in post file

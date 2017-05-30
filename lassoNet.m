@@ -112,18 +112,21 @@ for rep = 1:repeats
                 nNaiveOnes = ceil(nNaive*oneDist);
                 % Grab random subset of ones for naive testing
                 oneInd = logicFind(1,y,'==');
+                rng('shuffle')
                 randOneInd = randperm(nOne,nNaiveOnes);
                 naiveOneInd = oneInd(randOneInd);
                 % Grab random subset of zeros to complete naive test set
                 nZero = sum(y==0);
                 nNaiveZero = nNaive-nNaiveOnes;
                 zeroInd = logicFind(0,y,'==');
+                rng('shuffle')
                 randZeroInd = randperm(nZero,nNaiveZero);
                 naiveZeroInd = zeroInd(randZeroInd);
                 % Combine indices
                 naiveInd = [naiveOneInd';naiveZeroInd'];
             elseif strcmpi(cfg.naiveType,'random')
                 % Determine indices of random subset for naive testing; rounds down
+                rng('shuffle')
                 naiveInd = randperm(size(x,1),floor(size(x,1)*cfg.naive));
             end
             % Use naiveInd to build test and train sets
@@ -161,6 +164,7 @@ for rep = 1:repeats
     nObv = size(trainY,1);
     %% Shuffle data assignment to response by randomizing y
     if strcmpi(cfg.rand,'y')
+        rng('shuffle')
         thisPerm = randperm(nObv);
         trainY = trainY(thisPerm',:);
     end
@@ -178,6 +182,7 @@ for rep = 1:repeats
             else
                 N = nObv;
                 population = cat(2, repmat(1:kfolds, 1, floor(N/kfolds)), 1:mod(N,kfolds));
+                rng('shuffle')
                 foldid(ii,:,r) = population(randperm(length(population), N));
             end
         end
@@ -226,7 +231,7 @@ for rep = 1:repeats
     CVfits = cell(cfg.cvIterations,nResp);
     bestLambda = zeros(1,nResp);
     bestLambdaInds = zeros(1,nResp);
-    minLamErr = zeros(1,nResp);
+    bestLamErr = zeros(1,nResp);
     betas = zeros(cfg.cvIterations,nVar,nResp);
     survBeta = zeros(nResp,nVar);
     signBeta = zeros(nResp,nVar);
@@ -254,7 +259,7 @@ for rep = 1:repeats
     % Get average and standard deviation of min error for each model
     lamErrAvg = mean(lamErr,1);
     lamErrSd = std(lamErr,[],1);
-    % Go though CVfits and extract lamda_1se with lowest misclassification
+    % Go through CVfits and extract lamda_1se with lowest misclassification
     % error for naive prediction
     if strcmpi(cfg.minTerm,'1se')
         minLam = cellfun(@(exLam) exLam.lambda_1se,CVfits);
@@ -266,19 +271,25 @@ for rep = 1:repeats
     % Get average and standard deviation of all errors for each model
     allErrAvg = mean(allErr,1);
     allErrSd = std(allErr,[],1);
-    % Find lambda_1se (value and index) with smallest error - in case of ties,
-    % choose larger lambda
+    % Find lambda_1se (value and index) with smallest error - in case of
+    % ties, choose larger lambda
     for r = 1:nResp
-        % Get indices of lamErr minima
-        minInds = logicFind(min(lamErr(:,r)),lamErr(:,r),'==');
-        % Get lambda value and index of largest minima
-        [bestLambda(r),thisMinInd] = max(minLam(minInds,r));
-        bestLambdaInds(r) = minInds(thisMinInd);
+        % Get indices of best lamErr (minima for 'error' terms:
+        % 'mae','mse', and 'class'; maxima for 'accuracy' term: 'auc')
+        if strcmpi(type,'auc')
+            bestInds = logicFind(max(lamErr(:,r)),lamErr(:,r),'==');
+        else
+            bestInds = logicFind(min(lamErr(:,r)),lamErr(:,r),'==');
+        end
+        % Get lambda value and index of largest if there is a tie
+        [bestLambda(r),thisBestInd] = max(minLam(bestInds,r));
+        bestLambdaInds(r) = bestInds(thisBestInd);
         % Get error of best lambda
-        minLamErr(r) = lamErr(bestLambdaInds(r),r);
+        bestLamErr(r) = lamErr(bestLambdaInds(r),r);
     end
-    % Get beta coefficients of lambda_1se (minLam) - N.B. these values are not
-    % comparable due to varying shrinkage, only used to compute survival rates
+    % Get beta coefficients of lambda_1se (bestLam) - N.B. these values are
+    % not comparable due to varying shrinkage, only used to compute
+    % survival rates
     for r = 1:nResp
         for c = 1:cfg.cvIterations
             betas(c,:,r) = CVfits{c,r}.glmnet_fit.beta(:,logicFind(minLam(c,r),CVfits{c,r}.lambda,'=='));
@@ -296,17 +307,18 @@ for rep = 1:repeats
         acc = zeros(1,nResp);
         % Use best CVfit for each model
         for r = 1:nResp
-            % If used deviance as error term, then use that for prediction
-            if strcmpi(type,'mse') || strcmpi(type,'mae')
-                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,'lambda_1se',type);
+            % If family is gaussian (continuous), use defualt prediction
+            % 'type' ('link')
+            if strcmpi(family,'gaussian')
+                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm]);
                 % Compare predY to testY: difference
                 acc(r) = predY(r,:) - testY(:,r)';
-            % Otherwise, use misclassificaiton error
-            else
-                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,'lambda_1se','response');
-                % Compare predY to testY: percent accuracy
-                acc(r) = mean(predY(r,:) == testY(:,r)');
-            end 
+            % Otherwise, if binomial or multinomial, use 'response' type to
+            % get probability of group 1 assignment
+            elseif strcmpi(family,'binomial') || strcmpi(family,'multinomial')
+                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm],'response');
+                [~,~,~,acc(r)] = perfcurve(testY,predY(r,:),1);
+            end
         end
     else
         acc = [];
@@ -334,7 +346,7 @@ for rep = 1:repeats
     allLambda{rep}.lamErrAvg = lamErrAvg;
     allLambda{rep}.lamErrSd = lamErrSd;
     allLambda{rep}.minLam = minLam;
-    allLambda{rep}.minLamErr = minLamErr;
+    allLambda{rep}.minLamErr = bestLamErr;
     allLambda{rep}.bestLambda = bestLambda;
     allLambda{rep}.bestLambdaInds = bestLambdaInds;
     allLambda{rep}.allErr = allErr;

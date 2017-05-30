@@ -1,4 +1,8 @@
 %% Angela Data
+%% Reorder channels from Nick's animals (N<20)to be the same as Angela's (N>=20)
+LFPTs.data = flipud(LFPTs.data);
+LFPTs.label = fliplr(LFPTs.label);
+%%
 % NAcc (probably) not better than chance at predicting response to stim
 load('C:\Users\Lucas\Desktop\GreenLab\data\angela\angelaPFCNAcc.mat')
 cfg = lassoNetCfg([],'n','y','n',100,'1se');

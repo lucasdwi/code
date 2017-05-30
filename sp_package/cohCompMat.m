@@ -29,7 +29,7 @@ for e = 1:size(eoi,1)
         else
             disp(['Calculating combination ',num2str(c)])
             for t = 1:size(trls{1,e}.trial,3)
-                [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial(cmb(c,1),:,t),trls{1,e}.trial(cmb(c,2),:,t),512,[],foiV,adfreq);
+                [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial(cmb(c,1),:,t),trls{1,e}.trial(cmb(c,2),:,t),hamming(512),[],foiV,adfreq);
                 % Interpolate over notch filter data
                 notchInd = [nearest_idx3(57.5,F1);nearest_idx3(62.5,F1)];
                 Cxy(c,notchInd(1):notchInd(2),t) = NaN;
@@ -65,7 +65,8 @@ for e = 1:size(eoi,1)
             for iB = 1:size(bInd,1)
                 bandCoh(iC,iB,iT) = mean(Cxy(iC,bInd(iB,1):bInd(iB,2),iT));
             end
-            totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,nCmb);
+%             totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,nCmb);
+            totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,size(bands,1));
         end
     end
     relCoh = bandCoh./totalCoh;

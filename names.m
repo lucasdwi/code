@@ -2,28 +2,36 @@ function [nameVect] = names(chan,band)
 %% Power Names
 for i = 1:length(chan)
     for j = 1:length(band)
-        thisName = strcat(chan{i},'-',band{j});
+        thisName = strcat(chan{i},band{j});
         cbNames{j+((i-1)*length(band))} = thisName;
     end
 end
 %% Coherence Names
 cmbs = nchoosek(1:length(chan),2);
 for iC = 1:size(cmbs,1)
-    test{iC} = strcat(chan(cmbs(iC,1)),chan(cmbs(iC,2)));
+    chlComb{iC} = strcat(chan(cmbs(iC,1)),chan(cmbs(iC,2)));
 end
 for i = 1:length(chlComb)
     for j = 1:length(band)
-        thisName = strcat(chlComb{i},'-',band{j});
+        thisName = strcat(chlComb{i},band{j});
         pbNames{j+((i-1)*length(band))} = thisName;
     end
 end
 %% Power Correlation Names
-for ii = 1:size(corrNameParts,1)
-   corrNames{ii} = [corrNameParts{ii,1},corrNameParts{ii,2},'-',corrNameParts{ii,3},corrNameParts{ii,4}] ;
+cmbs = nchoosek(1:length(chan),2);
+c = 1;
+for ii = 1:length(band)
+   for jj = 1:length(cmbs)
+        corrNames{c} = [chan{cmbs(jj,1)},band{ii},chan{cmbs(jj,2)}];
+        c = c+1;
+   end
 end
-[corrNames] = powCorrNames(band,chan);
+% for ii = 1:size(corrNameParts,1)
+%     corrNames{ii} = [corrNameParts{ii,1},corrNameParts{ii,2},'-',corrNameParts{ii,3},corrNameParts{ii,4}] ;
+% end
+% [corrNames] = powCorrNames(band,chan);
 %% Concatenate names
-nameVect = [cbNames,pbNames,corrNames'];
+nameVect = [cbNames,pbNames,corrNames];
 %%
 % chan = {'sl','sr','cl','cr'};
 % chlComb = {'slsr'; 'slcl'; 'slcr'; 'srcl';'nscr';'clcr'};

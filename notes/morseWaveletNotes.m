@@ -1,8 +1,8 @@
 %% Initialize
-x = LFPTs.data(:,1:5000);
+x = LFPTs.data(:,start{ii}-20000:start{ii}+20000);
 [nChan,lData] = size(x);
 k = 10; gam = 3; bet = 6; d = 10;
-high = 100*(2*pi/adfreq);
+high = 200*(2*pi/adfreq);
 low = 1*(2*pi/adfreq);
 %% Determine energy concentration of wavelet with parameters beta, gamma, 
 % and D
@@ -76,7 +76,7 @@ wPSD = sAuto;
 % Convert fLog back to Hz.
 f = (fLog)*(adfreq/(2*pi));
 % Set up time vector
-t = LFPTs.tvec(1:5000);
+t = start{ii}-20000:start{ii}+20000;
 % Remove last index
 figure
 for ii = 1:nChan
