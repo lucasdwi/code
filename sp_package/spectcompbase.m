@@ -117,14 +117,10 @@ tic
 disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
 chans = size(LFPTs.data,1);
-if size(eoi,1) == 1
-    [psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
-end
-if size(eoi,1) == 2
-    [psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
-end
+[psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
 toc
-%% Calculate power correlations
+%% Calculate power correlations - requires at least 2 trials otherwise 
+% inputs NaN
 tic
 disp('Calculating power corrleations using powerCorr.m...')
 [r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
@@ -170,7 +166,7 @@ disp('Saving plots...')
 % Get name; file without .ext
 [~,name,~] = fileparts(strcat(sdir,file));
 % Set up directory and cd to it
-if size(eoi,1) == 1
+if size(eoi,1) == 1 || size(eoi,1) > 2
     mkdir(strcat(saveParent,'Plots\',name,'_',eoi{1,1}));
     cd(strcat(saveParent,'Plots\',name,'_',eoi{1,1}));
 elseif size(eoi,1) == 2
@@ -223,5 +219,13 @@ if size(eoi,1) == 2
     cd(saveParent)
     save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','stdPower','coh','hist','trls','LFPTs','r','rVect');
     % Save input variables
+end
+if size(eoi,1) > 2
+    % Check if folder to save in exists, if not make
+    if exist(saveParent,'dir') == 0
+        mkdir(saveParent);
+    end
+    cd(saveParent)
+    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','stdPower','coh','hist','trls','LFPTs','r','rVect');
 end
 toc

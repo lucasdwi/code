@@ -6,7 +6,7 @@
 %     end
 % end
 % Load ephys average data of binge and rest
-% load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestAllAvg.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestAllAvg.mat')
 for ii = 1:size(data,2)
     for k = 1:size(data{1,ii},2)
         avgDat{k,ii} = cat(1,data{1,ii}{:,k});
@@ -15,14 +15,14 @@ end
 % Load voracity data
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\4conditionBingeSize.mat')
 % Correlate voracity with all features
-vorDiff = [voracity(:,3)-voracity(:,1);voracity(:,2)-voracity(:,1)];
+vorDiff = [(voracity(:,3)-voracity(:,1))./voracity(:,1);(voracity(:,2)-voracity(:,1))./voracity(:,1)];
 % Get non-NaN indices
 inds24 = logicFind(1,~isnan(voracity(:,2)),'==');
 inds48 = logicFind(1,~isnan(voracity(:,3)),'==');
 % Do same subtractions for features
-dep48Feats = avgDat{1,3}-avgDat{2,3};
-dep24Feats = avgDat{1,2}-avgDat{2,2};
-baseFeats = avgDat{1,1}-avgDat{2,1};
+dep48Feats = (avgDat{1,3}-avgDat{2,3});
+dep24Feats = (avgDat{1,2}-avgDat{2,2});
+baseFeats = (avgDat{1,1}-avgDat{2,1});
 
 feats = [(dep48Feats-baseFeats(inds48,:))./baseFeats(inds48,:);(dep24Feats-baseFeats(inds24,:))./baseFeats(inds24,:)];
 for fi = 1:size(feats,2)

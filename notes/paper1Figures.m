@@ -1,35 +1,99 @@
-%% Plot real and random histograms
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBWHist.mat')
-subtitles = {'Shell All','Shell Strict','Core All','Core Strict'};
-figure;
-for c = 1:4
-    subplot(2,2,c)
-    histogram(realData.allAcc(:,c),'FaceColor','k','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
-    title(subtitles{c})
-    hold on
-    histogram(randData.allAcc(:,c),'FaceColor','w','FaceAlpha',0.5,'Normalization','probability','BinWidth',0.02)
-    xlim([0.2 1]); ylim([0 .25])
+%% Build and test (LOOCV) univariate models for both shell and core all (resp 1&3)
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
+c = 1;
+for k = [1,3]
+    for ii = 1:size(x,2)
+        for jj = 1:24
+            inds = 1:24;
+            inds = inds(~ismember(inds,jj));
+            mdl = fitglm(x(inds,ii),y(inds,k),'Distribution','Binomial');
+            p(ii,jj,c) = mdl.Coefficients.pValue(2);
+            r(ii,jj,c) = mdl.Rsquared.Ordinary;
+            prob(ii,jj,c) = predict(mdl,x(jj,ii));
+        end
+        [rocx(ii,:,c),rocy(ii,:,c),~,a(ii,c)] = perfcurve(y(:,k),prob(ii,:,c),1);
+    end
+    c = c+1;
 end
-% Perform 2 sample KS test
-for c = 1:4
-    [h(c), p(c)] = kstest2(realData.allErr(:,c),randData.allErr(:,c));
-end
-%% Plot KS Curves (cdfs)
+%%
+[shellUni,shellInds] = sort(a(:,1),'descend');
+[coreUni,coreInds] = sort(a(:,2),'descend');
 figure
-for r = 1:4
-    subplot(2,2,r)
-    ecdf(realData.allAcc(:,r))
-    hold on
-    ecdf(randData.allAcc(:,r))
-    h = get(gca,'children');
-    % Change real data to black
-    set(h(2,1),'Color','k','LineWidth',1);
-    % Change rand data to grey
-    set(h(1,1),'Color',[0.5 0.5 0.5],'LineWidth',1)
-    xlabel('Accuracy'); ylabel('Cumulative Density')
-    title(subtitles{r})
-    xlim([0.2 1])
+hold on
+scatter(1:50,coreUni,'ok')
+scatter(1:50,shellUni,'or')
+nameVect = names({'SL','CL','SR','CR'},{'t','a','b','lg','hg'});
+sigVars = [nameVect(shellInds)',nameVect(coreInds)'];
+
+%%
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSite.mat')
+for ii = 1:size(x2,2)
+    for jj = 1:20
+        inds = 1:20;
+        inds = inds(~ismember(inds,jj));
+        mdl = fitglm(x2(inds,ii),y2(inds,1),'Distribution','Binomial');
+        prob(ii,jj) = predict(mdl,x2(jj,ii));
+    end
+    [rocx(ii,:),rocy(ii,:),~,a(ii)] = perfcurve(y2,prob(ii,:),1);
 end
+[cvsUni,cvsInds] = sort(a,'descend');
+%%
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\rand\')
+randData.allErr = [];
+for ii = 1:100
+   load([num2str(ii),'.mat'])
+   randData.allErr = [randData.allErr;allLambda{1,1}.allErr];
+end
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\real.mat')
+realData.allErr = allLambda{1,1}.allErr;
+%%
+randData.allAcc = 1-randData.allErr;
+realData.allAcc = 1-realData.allErr;
+%% Plot real and random histograms
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBWHist.mat')
+subtitles = {'Shell All','Core All'};
+for ii = 1:2
+    % Get effect sizes
+    [es,~] = distES(realData.allAcc(:,ii),randData.allAcc(1:1000,ii));
+    figure
+    hold on
+    histogram(realData.allAcc(:,ii),'FaceColor','k','Normalization','probability','BinWidth',0.02,'FaceAlpha',1,'EdgeColor','w')
+    histogram(randData.allAcc(1:1000,ii),'FaceColor','w','Normalization','probability','BinWidth',0.02,'FaceAlpha',1)
+    title(subtitles{ii})
+    legend({['Observed: ',num2str(round(mean(realData.allAcc(:,ii)),2)),'\pm',num2str(round(std(realData.allAcc(:,ii)),2))],['Permuted: ',num2str(round(mean(randData.allAcc(:,ii)),2)),'\pm',num2str(round(std(randData.allAcc(:,ii)),2))]},'Location','northwest')
+    text(0.22,0.12,['d = ',num2str(round(es,2))])
+    xlabel('Accuracy')
+    ylabel('Proportion of Models')
+end
+% 
+% %% Plot KS Curves (cdfs)
+% figure
+% for r = 1:4
+%     subplot(2,2,r)
+%     ecdf(realData.allAcc(:,r))
+%     hold on
+%     ecdf(randData.allAcc(:,r))
+%     h = get(gca,'children');
+%     % Change real data to black
+%     set(h(2,1),'Color','k','LineWidth',1);
+%     % Change rand data to grey
+%     set(h(1,1),'Color',[0.5 0.5 0.5],'LineWidth',1)
+%     xlabel('Accuracy'); ylabel('Cumulative Density')
+%     title(subtitles{r})
+%     xlim([0.2 1])
+% end
+%% Plot core vs. shell distributions
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSiteLassoRealRand.mat')
+figure
+hold on
+histogram(realData.acc,'FaceColor','k','Normalization','probability','BinWidth',0.02,'FaceAlpha',1,'EdgeColor','w')
+histogram(randData.acc(1:1000),'FaceColor','w','Normalization','probability','BinWidth',0.02,'FaceAlpha',1)
+d = distES(realData.acc,randData.acc(1:1000));
+legend({['Observed: ',num2str(round(mean(realData.acc),2)),'\pm',num2str(round(std(realData.acc),2))],['Permuted: ',num2str(round(mean(randData.acc(1:1000)),2)),'\pm',num2str(round(std(randData.acc(1:1000)),2))]},'Location','northwest')
+text(0.22,0.15,['d = ',num2str(round(d,2))])
+xlabel('Accuracy')
+ylabel('Proportion of Models')
+title('Core vs. Shell: lasso')
 %% Response site CDFs
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSiteRealRand.mat')
 figure
@@ -148,7 +212,7 @@ sigCount = sum(ps <= 0.05);
 adjSigCount = sum(adjP <= 0.05);
 %% Theta CL-SR Stability
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cutoff40Betas.mat')
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cutoff40Betas.mat')
 day = [18,46,16,12,1,13,14,34,2,71,67,36];
 % Get every other row index for subtraction
 first = [1:2:size(x,1)];
@@ -245,4 +309,26 @@ coh = sum(cohcount);
 allFeat = reshape([powcount(:) cohcount(:)]',2*size(powcount,1),[])';
 % Normalize
 allFeatNorm = diag(1./sum(allFeat,2))*allFeat;
+%% Behavior plot
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\5behaviorResponseTable12animal.mat')
+% Core figure
+data = table2array(T.Base(:,[3,5,6,7]));
+% Shell figure
+data = table2array(T.Base(:,[1,5,6,7]));
+normData(:,1) = data(:,1);
+
+for ii = 2:4
+   normData(:,ii) = (data(:,ii)-min(data(:,ii)))./(max(data(:,ii))-min(data(:,ii)));
+   mData(ii,1) = mean(normData(normData(:,1)==1,ii),'omitnan');
+   sData(ii,1) = std(normData(normData(:,1)==1,ii),'omitnan');
+   mData(ii,2) = mean(normData(normData(:,1)==0,ii),'omitnan');
+   sData(ii,2) = std(normData(normData(:,1)==0,ii),'omitnan');
+end
+figure
+b = barwitherr(sData(2:4,:),mData(2:4,:));
+b(1).FaceColor = 'k';
+b(2).FaceColor = [0.8 0.8 0.8];
+set(gca,'box','off','XTickLabel',{'LRN','CPP','Binge'})
+ylabel('Normalized Behavior')
+
 

@@ -30,6 +30,29 @@ for rI = [1,3]
         aN{rI,cI} = (cohMat{rI+1,cI}-repmat(aM{rI,cI},s,1,1))./repmat(aS{rI,cI},s,1000,1);
     end
 end
+
+%% Test: perumatation test for significance
+% First obtain p value from 'z' score calculated above
+testP = 2*(1-normcdf(abs(fN{1,1}(1:60,1:500,1))));
+figure
+imagesc(testP')
+% Randomize post stim data by frequency
+for iterate = 1:1000
+    randInd = randperm(500,500);
+    randPost = cohMat{2,1}(:,randInd,1);
+    randZ(:,:,iterate) = (randPost-repmat(fM{1,1}(:,1:500,1),360,1,1))./repmat(fS{1,1}(:,1:500,1),360,1,1);
+end
+%%
+for ind1 = 1:size(randZ,1)
+    for ind2 = 1:size(randZ,2)
+        p(ind1,ind2) = sum(abs(squeeze(randZ(ind1,ind2,:)))>=abs(fN{1,1}(ind1,ind2,1)))/1000; 
+    end
+end
+%%
+test = fN{1,1}(:,1:500,1);
+test(p>=0.05) = NaN;
+%%
+[h,critP,adjP] = fdr_bh(p,0.05,'dep');
 %% Test plot
 figure
 subplot(2,2,1)

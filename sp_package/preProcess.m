@@ -76,4 +76,4 @@ minInt = max(diff(cell2mat(eoi(:,2)),1,2));
 % end
 %% Trialize data into equal length 'trials'
 disp('Trializing data with trialize.m...')
-[clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq);
+[clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq);

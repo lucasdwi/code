@@ -25,14 +25,19 @@ rVect = cell(1,nEvents);
 %% Go through each event and all bands getting correlations of all channels
 % to eachother
 for iE = 1:nEvents
-    for iB = 1:nBands
-        % Calculate correlations
-        [r{1,iE}(:,:,iB),p{1,iE}(:,:,iB)] = corrcoef(squeeze(psdTrls{1,iE}.relPow(iB,:,:))');
-        % Extract just lower half of correlation matrix
-        thisR = squeeze(r{1,iE}(:,:,iB));
-        % Place in rVect which will be ordered by column then row (i.e. all
-        % rows of column one, then 2, etc.)
-        rVect{1,iE}(:,iB) = thisR(logicFind(0,triu(thisR),'=='));
+    if size(psdTrls{1,iE}.Pow,3) > 1
+        for iB = 1:nBands
+            % Calculate correlations
+            [r{1,iE}(:,:,iB),p{1,iE}(:,:,iB)] = corrcoef(squeeze(psdTrls{1,iE}.relPow(iB,:,:))');
+            % Extract just lower half of correlation matrix
+            thisR = squeeze(r{1,iE}(:,:,iB));
+            % Place in rVect which will be ordered by column then row (i.e. all
+            % rows of column one, then 2, etc.)
+            rVect{1,iE}(:,iB) = thisR(logicFind(0,triu(thisR),'=='));
+        end
+    else
+        r{1,iE} = NaN;
+        rVect{1,iE} = NaN;
     end
 end
 

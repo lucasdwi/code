@@ -29,9 +29,13 @@ function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,over
 %   in decimal form (1-percent; e.g. 90% overlap = 0.1)
 % eoi = events of interest, if one event then normalizes within that event,
 %   if two then compares events; format: structure {'tag1',[0 3];'tag2',[0
-%   3]} N.B.: if all the data use the tag 'full', otherwise use tags
-%   corresponding to event markers:
-%   'app','binge','rest','sleepOut'/'sleepIn'
+%   3]} first column corresponds to event marker labels, second column
+%   corresponds to timing around given event. If one number is given then
+%   it will be treated as the minimum trial length and as many trials of
+%   that length as possible will be found. If two numbers are given then
+%   the 'window' around the given maker will be found. N.B.: if all the
+%   data use the tag 'full', otherwise use tags corresponding to event
+%   markers: 'app','binge','rest','sleepOut'/'sleepIn'
 % saveParent = parent directory path to save plots and files; format:
 %   string N.B.: if directory/file exists will warn about overwritting
 %__________________________________________________________________________
@@ -46,7 +50,7 @@ sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\toProcess\';
 %sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\editedWithSleep\';
 % file = 'N07_4_21_16_Base_pl2_scored_plx';
 % file = 'M376_Dec_6_Base_ScoredComplete';
-file = 'I4Base1_2015-09-24.mat';
+file = 'I6Base_2015-11-24.mat';
 % file = '10HzR_N12_PostStim_9_20_16';
 filter = 'y';
 dsf = 5;
@@ -55,11 +59,14 @@ onset = 0.125;
 offset = 40;
 % minInt = 5;
 foi = [1 2 100];
+% foi = [70 2 90];
 % bands = {'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
-bands = {'delta',[1,4];'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
+% bands = {'delta',[1,4];'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
+bands = {'hgam',[70 90]};
 cycles = 3;
 ftimwin = [];
 overlap = 0.5;
 cohMethod = 'mat';
-eoi = {'binge',[0 5];'notbinge',[0 5]};
+eoi = {'rest',[0 5];'binge',[0 5]};
+% eoi = {'binge (s',[-5 0]};%'binge (s',[-6 -1];'binge (s',[-7 -2];'binge (s',[-8 -3];'binge (s',[-9 -4];'binge (s',[-10 -5]};
 saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\test\';

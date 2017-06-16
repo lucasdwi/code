@@ -39,6 +39,15 @@ if size(eoi,1) == 2
    trls = {trlData{1,1},trlData{1,2}};
    events = {'event1','event2'};
 end
+
+if size(eoi,1) > 2
+    for ii = 1:size(eoi,1)
+        nTrials{ii} = size(trlData{1,ii}.trial,3);
+%         nTrials{2} = size(trlData{1,2}.trial,3);
+    end
+    events = 1:size(eoi,1);
+    trls = trlData;
+end
 %%
 %trl1.nTrials = length(trl1.trial); trl2.nTrials = length(trl2.trial);
 %trls = {trl1,trl2};
@@ -105,7 +114,9 @@ for ii = 1:length(events)
     if length(events) == 1
         subplot(1,2,ii)
     elseif length(events) == 2
-        subplot(1,3,ii);
+        subplot(1,3,ii)
+    elseif length(events) > 2
+        subplot(2,ceil(length(events)/2),ii)
     end
     for j = 1:chans
         hold on; 

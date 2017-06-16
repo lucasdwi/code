@@ -1,11 +1,14 @@
-function [clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
+function [clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
+% [clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
 %% Uses behavior markers to trialize data
 %__________________________________________________________________________
 % INPUTS:
 % eoi = events of interest; format = cell array of strings corresponding to
 %   scored behaviors (e.g. 'binge', 'rest'; or special cases 'all',
 %   'notbinge') and of numbers corresponding to window around that behavior
-%   per trial (i.e. the minimum interval per behavioral trial)
+%   per trial; if a single positive number, then defines the minimum trial
+%   length; if a set of numbers, then defines the 'window' around the given
+%   marker
 % eventTs = event structure from ConvertPl2All_Files; fields .t and .label
 %   required for script to run
 % LFPTs = data structure from ConvertPl2All_Files; fields .data and .tvec
@@ -28,7 +31,7 @@ function [clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
 %           [start stop]
 %__________________________________________________________________________
 % USE: 
-% [clnTrls,clnEvents,trls] = trialize({'binge',[0 3];'orient',[-1.5
+% [clnTrls,clnEvents,trls] = trialize({'binge',[3];'orient',[-1.5
 % 1.5]},eventTs,LFPTs,adfreq)
 % Will trialize behavior 'binge' with interval timestamps (start and stop)
 % and 'orient' with scalar timestamp (each instance) using 3 second trials
@@ -125,14 +128,21 @@ end
 %% NaN timestamps corresponding to NaNed LFPTs data
 for iB = 1:nBehavior
     for iT = 1:sum(~cellfun(@isempty,intTime(iB,:)))
-        intTime{iB,iT}(isnan(LFPTs.data(iB,intTime{iB,iT}))) = NaN;
+        % Sums across channels of data to propogate missing data
+        intTime{iB,iT}(isnan(sum(LFPTs.data(:,intTime{iB,iT})))) = NaN;
     end
 end
-%% NaN contiguous data intervals less than minInt
+%% NaN contiguous data intervals less than the minimum trial length, which
+% in the case of two time values in the eoi will be calculated as the time
+% between them
 clnTrls = cell(size(intTime,1),sum(~cellfun(@isempty,intTime(iB,:))));
 for iB = 1:nBehavior
     % Get this behaviors minimum interval
-    minInt = diff(cell2mat(eoi(iB,2)),1,2);
+    if size(eoi{iB,2},2) == 2
+        minInt = diff(cell2mat(eoi(iB,2)),1,2);
+    elseif size(eoi{iB,2},2) == 1
+        minInt = eoi{iB,2};
+    end
     for iT = 1:sum(~cellfun(@isempty,intTime(iB,:)))
         dummy = intTime{iB,iT}; 
         dummy(~isnan(dummy)) = 1; 
@@ -171,12 +181,12 @@ for iB = 1:nBehavior
     end
 end
 %% Collapse data across behavior
-clnEvents = cell(size(clnTrls,1),1);
-for iB = 1:nBehavior
-    for iT = 1:size(clnTrls,2)
-        clnEvents{iB} = horzcat(clnEvents{iB},clnTrls{iB,iT});
-    end
-end
+% clnEvents = cell(size(clnTrls,1),1);
+% for iB = 1:nBehavior
+%     for iT = 1:size(clnTrls,2)
+%         clnEvents{iB} = horzcat(clnEvents{iB},clnTrls{iB,iT});
+%     end
+% end
 %% Create empty trial structure
 thisTrl = [];
 thisTrl.label = LFPTs.label;
@@ -187,18 +197,45 @@ thisTrl.sampleinfo = [];
 % Create trl structures for each event
 trls = cell(1,size(eoi,1));
 for iB = 1:size(eoi,1)
-    if ~isempty(clnEvents{iB,1})
-        nTrls = length(clnEvents{iB,1})/(minInt*adfreq);
-        for iT = 1:nTrls
-            % To account for the transition of zero indexed time, start
-            % 1 sample after 0
-            thisTrl.time{1,iT} = (1/adfreq:1/adfreq:minInt);
-            thisTrl.sampleinfo(iT,1) = clnEvents{iB,1}(1,1+minInt*adfreq*(iT-1));
-            thisTrl.sampleinfo(iT,2) = clnEvents{iB,1}(1,minInt*adfreq*iT);
-            thisTrl.trial(:,:,iT) = LFPTs.data(:,clnEvents{iB,1}(1,(1+minInt*adfreq*(iT-1)):minInt*adfreq*iT));
+    % Check if behavior has any data
+    if any(cell2mat(cellfun(@isempty,clnTrls(iB,:),'UniformOutput',0)))%~isempty(clnEvents{iB,1})
+        % Start counter
+        c = 1;
+        for iT = 1:size(clnTrls,2)
+            % Check if trial exists
+            if ~isempty(clnTrls{iB,iT})
+                % Split into as many trials as possible
+                for iN = 1:size(clnTrls{iB,iT},2)/(minInt*adfreq)
+                    thisTrl.time{1,c} = (1/adfreq:1/adfreq:minInt);
+                    thisTrl.sampleinfo(c,1) = clnTrls{iB,iT}(1+(iN-1)*minInt*adfreq);
+                    thisTrl.sampleinfo(c,2) = clnTrls{iB,iT}(iN*minInt*adfreq);
+                    thisTrl.trial(:,:,c) = LFPTs.data(:,clnTrls{iB,iT}(1+(iN-1)*minInt*adfreq:iN*minInt*adfreq));
+                    thisTrl.label = LFPTs.label;
+                    thisTrl.fsample = adfreq;
+                    c = c+1;
+                end
+            end
         end
         trls{iB} = thisTrl;
+        thisTrl = [];
     else
         disp('Warning: This event has 0 clean trials!')
     end
 end
+%%
+% for iB = 1:size(eoi,1)
+%     if ~isempty(clnEvents{iB,1})
+%         nTrls = length(clnEvents{iB,1})/(minInt*adfreq);
+%         for iT = 1:nTrls
+%             % To account for the transition of zero indexed time, start
+%             % 1 sample after 0
+%             thisTrl.time{1,iT} = (1/adfreq:1/adfreq:minInt);
+%             thisTrl.sampleinfo(iT,1) = clnEvents{iB,1}(1,1+minInt*adfreq*(iT-1));
+%             thisTrl.sampleinfo(iT,2) = clnEvents{iB,1}(1,minInt*adfreq*iT);
+%             thisTrl.trial(:,:,iT) = LFPTs.data(:,clnEvents{iB,1}(1,(1+minInt*adfreq*(iT-1)):minInt*adfreq*iT));
+%         end
+%         trls{iB} = thisTrl;
+%     else
+%         disp('Warning: This event has 0 clean trials!')
+%     end
+% end

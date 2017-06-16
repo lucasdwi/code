@@ -89,27 +89,27 @@ for e = 1:size(eoi,1)
 %     end
     %% Plot full and mean with error coherence, if full exists
     %cohPlots{1} = figure;
-    if ~isnan(nanChk)
-        ax1 = subplot(1,size(eoi,1)+1,1); hold on;
-        for c = 1:size(cmb,1)
-            plot(F1,CxyFull(c,:));
-        end
-        title('Full Recording Coherence'); xlabel('Frequency (Hz)'); ylabel('Coherence');
-        ax2 = subplot(1,size(eoi,1)+1,e+1); hold on;
-        for c = 1:size(cmb,1)
-            shadedErrorBar(F1,mCxy(c,:),sdCxy(c,:),{'color',cols{c,:},'linewidth',2},1);
-        end
-        title(['Average Trialized Coherence: ',eoi{e,1}]); xlabel('Frequency (Hz)'); ylabel('Coherence');
-        linkaxes([ax1,ax2],'xy');
-        % Otherwise just plot mean coherence with error
-    else
-        subplot(1,size(eoi,1),e)
-        hold on;
-        for c = 1:size(cmb,1)
-            shadedErrorBar(F1,mCxy(c,:),sdCxy(c,:),{'color',cols{c,:},'linewidth',2},1);
-        end
-        title(['Average Trialized Coherence: ',eoi{e,1}]); xlabel('Frequency (Hz)'); ylabel('Coherence');
-    end
+%     if ~isnan(nanChk)
+%         ax1 = subplot(1,size(eoi,1)+1,1); hold on;
+%         for c = 1:size(cmb,1)
+%             plot(F1,CxyFull(c,:));
+%         end
+%         title('Full Recording Coherence'); xlabel('Frequency (Hz)'); ylabel('Coherence');
+%         ax2 = subplot(1,size(eoi,1)+1,e+1); hold on;
+%         for c = 1:size(cmb,1)
+%             shadedErrorBar(F1,mCxy(c,:),sdCxy(c,:),{'color',cols{c,:},'linewidth',2},1);
+%         end
+%         title(['Average Trialized Coherence: ',eoi{e,1}]); xlabel('Frequency (Hz)'); ylabel('Coherence');
+%         linkaxes([ax1,ax2],'xy');
+%         % Otherwise just plot mean coherence with error
+%     else
+%         subplot(1,size(eoi,1),e)
+%         hold on;
+%         for c = 1:size(cmb,1)
+%             shadedErrorBar(F1,mCxy(c,:),sdCxy(c,:),{'color',cols{c,:},'linewidth',2},1);
+%         end
+%         title(['Average Trialized Coherence: ',eoi{e,1}]); xlabel('Frequency (Hz)'); ylabel('Coherence');
+%     end
     %% Setup output structure 'coh'
     coh{1,e}.Cxy = Cxy;
     if ~isnan(nanChk)
