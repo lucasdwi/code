@@ -71,4 +71,16 @@ for ii = 1:20
     end
     toc
 end
-
+%%
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
+allProb = [];
+for ii = 1:2:24
+    trainX = x(~ismember(1:24,ii:ii+1),:);
+    trainY = y(~ismember(1:24,ii:ii+1),1);
+    testX = x(ii:ii+1,:);
+    testY = y(ii:ii+1,1);
+    mdl = fitcsvm(trainX,trainY,'OptimizeHyperparameters','auto','HyperparameterOptimization',struct('kfold',3,'Verbose',0,'ShowPlots',0));
+    scoreMdl{ii} = fitPosterior(mdl);    
+    [prob] = predict(scoreMdl{ii},testX);
+    allProb = [allProb;prob];
+end

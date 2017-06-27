@@ -153,8 +153,9 @@ for ii = 1:length(trls)
         % last. Replicate to match dimension of .bandPow 
         % (band,channel,trial) where columns will be identical because the
         % total power is the same (i.e. the bands don't matter here)
-        psdTrls{ii}.totPow(:,:,k) = repmat(trapz(psdTrls{ii}.Pow(:,bInd(1,1):bInd(end,2),k),2)',size(bands,1),1,1);
+%         psdTrls{ii}.totPow(:,:,k) = repmat(trapz(psdTrls{ii}.Pow(:,bInd(1,1):bInd(end,2),k),2)',size(bands,1),1,1);
     end
+    psdTrls{ii}.totPow = repmat(trapz(psdTrls{ii}.Overall(:,bInd(1,1):bInd(end,2),:),2)',size(bands,1),1,nTrials{ii});
     % Use element-wise division to obtain percent of total power wuithin
     % each band
     psdTrls{ii}.relPow = psdTrls{ii}.bandPow./psdTrls{ii}.totPow;

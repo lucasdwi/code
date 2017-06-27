@@ -66,9 +66,11 @@ for e = 1:size(eoi,1)
                 bandCoh(iC,iB,iT) = mean(Cxy(iC,bInd(iB,1):bInd(iB,2),iT));
             end
 %             totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,nCmb);
-            totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,size(bands,1));
+%             totalCoh(iC,:,iT) = repmat(mean(Cxy(iC,bInd(1,1):bInd(end,2),iT)),1,size(bands,1));
         end
+        totalCoh(iC) = mean(mCxy(iC,bInd(1,1):bInd(end,2)));
     end
+    totalCoh = repmat(mean(mCxy(:,bInd(1,1):bInd(end,2)),2),1,size(bands,1),size(trls{1,e}.trial,3));
     relCoh = bandCoh./totalCoh;
     %%
 %     for iC = 1:size(cmb,1)

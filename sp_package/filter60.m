@@ -42,5 +42,9 @@ for iC = 1:chans
 end
 % If a data structure (i.e. LFPTs) record that data was filtered
 if isa(data,'struct')
-    data.cfg.history.mfun{end+1} = 'filter60';
+    if ~isfield(data,'cfg')
+        data.cfg = [];
+    else
+        data.cfg.history.mfun{end+1} = 'filter60';
+    end
 end

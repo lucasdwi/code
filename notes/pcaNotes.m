@@ -2,20 +2,41 @@ load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\indGroups.mat')
 %%
 y = y(:,[1,3]);
-normX = zscore(x);
+normX = x;
+inds{1} = 1:60;
+%%
+for ii = 1:2
+    for iO = 1:2:24
+        trainX = normX(~ismember(1:24,iO:iO+1),:);
+        trainY = y(~ismember(1:24,iO:iO+1),ii);
+        testX = normX(iO:iO+1,:);
+        testY = y(iO:iO+1,ii);
+        % Run PCA on training data
+        [coeff,scores,latent,~,explained] = pca(trainX,'Economy',false,'Centered',1);
+        % Calculate cumulative percent of variance explained
+        percVar = cumsum(explained);
+        % Find number of PCs needed to explain 80% of the variance
+        ind(iO) = logicFind(80,percVar,'>=','first');
+        pcVar(iO) = percVar(ind(iO));
+        % Project test data into PCA space - get scores
+        testScores = testX/coeff';
+        mdl = fitglm(scores(:,1:ind(iO)),trainY,'distribution','binomial');
+        prob(ii,iO:iO+1) = predict(mdl,testScores(:,1:ind(iO)));
+    end
+    [~,~,~,a(ii)] = perfcurve(y(:,1),prob(ii,:)',1);
+end
 %%
 probAllTest = []; probTrain = [];
 % Cycle through each subset in inds/indName
 for ii = 1%:size(inds,1)
     % Cycle through and take out each pair of two files from the same
     % animal
-    for iO = 1:2:24;       
+    for iO = 1:2:24       
         trainX = normX(~ismember(1:24,iO:iO+1),:);
         trainY = y(~ismember(1:24,iO:iO+1),:);
         testX = normX(iO:iO+1,:);
         testY = y(iO:iO+1,:);
         % Run PCA on training data
-%         [coeff,scores,latent,~,explained] = pca(normX(:,inds{ii}),'Economy',false,'Centered',false);
         [coeff,scores,latent,~,explained] = pca(trainX(:,inds{ii}),'Economy',false,'Centered',false);
         % Calculate cumulative percent of variance explained
         percVar = cumsum(explained);
@@ -27,13 +48,15 @@ for ii = 1%:size(inds,1)
         % Use those PCs in a logistic regression, with test set
         [~,~,~,~,~,~,probTest] = logPredict(scores(:,1:ind(ii)),trainY,testScores(:,1:ind(ii)),testY);
         probAllTest = [probAllTest;[probTest{1,1},probTest{1,2}]];
-        [~,~,~,~,~,~,probTrain{iO}] = logPredict(scores(:,1:ind(ii)),trainY,[],[]);
+%         [~,~,~,~,~,~,probTrain{iO}] = logPredict(scores(:,1:ind(ii)),trainY,[],[]);
 %         probAllTrain = [probAllTrain;[probTrain(1,1),probTrain{1,2}]];
         % Without test set
 %         [AUC(ii,:,iO),xMat{ii,iO},yMat{ii,iO},dev{ii,iO},~] = logPredict(scores(:,1:ind(ii)),y,[],[]);
     end
 end
-
+for ii = 1:2
+   [~,~,~,a(ii)] = perfcurve(y(:,ii),probAllTest(:,ii),1); 
+end
 %%
 for ii = 1:size(inds,1)
 %     for ri = 1:100

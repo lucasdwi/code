@@ -198,7 +198,7 @@ thisTrl.sampleinfo = [];
 trls = cell(1,size(eoi,1));
 for iB = 1:size(eoi,1)
     % Check if behavior has any data
-    if any(cell2mat(cellfun(@isempty,clnTrls(iB,:),'UniformOutput',0)))%~isempty(clnEvents{iB,1})
+    if any(~cell2mat(cellfun(@isempty,clnTrls(iB,:),'UniformOutput',0)))%~isempty(clnEvents{iB,1})
         % Start counter
         c = 1;
         for iT = 1:size(clnTrls,2)

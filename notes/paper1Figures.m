@@ -3,13 +3,13 @@ load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
 c = 1;
 for k = [1,3]
     for ii = 1:size(x,2)
-        for jj = 1:24
+        for jj = 1:2:24
             inds = 1:24;
-            inds = inds(~ismember(inds,jj));
+            inds = inds(~ismember(inds,jj:jj+1));
             mdl = fitglm(x(inds,ii),y(inds,k),'Distribution','Binomial');
-            p(ii,jj,c) = mdl.Coefficients.pValue(2);
-            r(ii,jj,c) = mdl.Rsquared.Ordinary;
-            prob(ii,jj,c) = predict(mdl,x(jj,ii));
+%             p(ii,jj,c) = mdl.Coefficients.pValue(2);
+%             r(ii,jj,c) = mdl.Rsquared.Ordinary;
+            prob(ii,jj:jj+1,c) = predict(mdl,x(jj:jj+1,ii));
         end
         [rocx(ii,:,c),rocy(ii,:,c),~,a(ii,c)] = perfcurve(y(:,k),prob(ii,:,c),1);
     end
@@ -20,35 +20,34 @@ end
 [coreUni,coreInds] = sort(a(:,2),'descend');
 figure
 hold on
-scatter(1:50,coreUni,'ok')
-scatter(1:50,shellUni,'or')
-nameVect = names({'SL','CL','SR','CR'},{'t','a','b','lg','hg'});
+scatter(1:60,coreUni,'ok')
+scatter(1:60,shellUni,'or')
+nameVect = names({'SL','CL','SR','CR'},{'d','t','a','b','lg','hg'});
 sigVars = [nameVect(shellInds)',nameVect(coreInds)'];
 
 %%
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSite.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1Data.mat')
 for ii = 1:size(x2,2)
-    for jj = 1:20
+    for jj = 1:2:20
         inds = 1:20;
-        inds = inds(~ismember(inds,jj));
+        inds = inds(~ismember(inds,jj:jj+1));
         mdl = fitglm(x2(inds,ii),y2(inds,1),'Distribution','Binomial');
-        prob(ii,jj) = predict(mdl,x2(jj,ii));
+        prob(ii,jj:jj+1) = predict(mdl,x2(jj:jj+1,ii));
     end
     [rocx(ii,:),rocy(ii,:),~,a(ii)] = perfcurve(y2,prob(ii,:),1);
 end
 [cvsUni,cvsInds] = sort(a,'descend');
 %%
-cd('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\rand\')
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\new folder\rand\')
 randData.allErr = [];
 for ii = 1:100
    load([num2str(ii),'.mat'])
    randData.allErr = [randData.allErr;allLambda{1,1}.allErr];
 end
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\real.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\new folder\real.mat')
 realData.allErr = allLambda{1,1}.allErr;
-%%
-randData.allAcc = 1-randData.allErr;
-realData.allAcc = 1-realData.allErr;
+randData.allAcc = (1-randData.allErr).*100;
+realData.allAcc = (1-realData.allErr).*100;
 %% Plot real and random histograms
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBWHist.mat')
 subtitles = {'Shell All','Core All'};
@@ -57,11 +56,11 @@ for ii = 1:2
     [es,~] = distES(realData.allAcc(:,ii),randData.allAcc(1:1000,ii));
     figure
     hold on
-    histogram(realData.allAcc(:,ii),'FaceColor','k','Normalization','probability','BinWidth',0.02,'FaceAlpha',1,'EdgeColor','w')
-    histogram(randData.allAcc(1:1000,ii),'FaceColor','w','Normalization','probability','BinWidth',0.02,'FaceAlpha',1)
+    histogram(realData.allAcc(:,ii),'FaceColor','k','Normalization','probability','BinWidth',2,'FaceAlpha',1,'EdgeColor','w')
+    histogram(randData.allAcc(1:1000,ii),'FaceColor','w','Normalization','probability','BinWidth',2,'FaceAlpha',1)
     title(subtitles{ii})
-    legend({['Observed: ',num2str(round(mean(realData.allAcc(:,ii)),2)),'\pm',num2str(round(std(realData.allAcc(:,ii)),2))],['Permuted: ',num2str(round(mean(randData.allAcc(:,ii)),2)),'\pm',num2str(round(std(randData.allAcc(:,ii)),2))]},'Location','northwest')
-    text(0.22,0.12,['d = ',num2str(round(es,2))])
+    legend({['Observed: ',num2str(round(mean(realData.allAcc(:,ii)))),'\pm',num2str(round(std(realData.allAcc(:,ii))))],['Permuted: ',num2str(round(mean(randData.allAcc(:,ii)))),'\pm',num2str(round(std(randData.allAcc(:,ii))))]},'Location','northwest')
+    text(12,.1,['d = ',num2str(round(es,2))])
     xlabel('Accuracy')
     ylabel('Proportion of Models')
 end
@@ -83,14 +82,30 @@ end
 %     xlim([0.2 1])
 % end
 %% Plot core vs. shell distributions
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\responseSiteLassoRealRand.mat')
+cd('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\coreVshell\rand\')
+randData.err = [];
+for ii = 1:10
+   load([num2str(ii),'.mat'])
+   randData.err = [randData.err;allLambda{1,1}.allErr];
+end
+randData.acc = (1-randData.err).*100;
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\coreVshell\real.mat')
+realData.err = allLambda{1,1}.allErr;
+realData.acc = (1-realData.err).*100;
+%% 
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\singleModels\real.mat')
+[shellSurv,shellInd] = sort(allBeta{1,1}.survBeta(1,:),'descend');
+[coreSurv,coreInd] = sort(allBeta{1,1}.survBeta(2,:),'descend');
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\coreVshell\real.mat')
+[cvsSurv,cvsInd] = sort(allBeta{1,1}.survBeta(1,:),'descend');
+%%
 figure
 hold on
-histogram(realData.acc,'FaceColor','k','Normalization','probability','BinWidth',0.02,'FaceAlpha',1,'EdgeColor','w')
-histogram(randData.acc(1:1000),'FaceColor','w','Normalization','probability','BinWidth',0.02,'FaceAlpha',1)
+histogram(realData.acc,'FaceColor','k','Normalization','probability','BinWidth',2,'FaceAlpha',1,'EdgeColor','w')
+histogram(randData.acc(1:1000),'FaceColor','w','Normalization','probability','BinWidth',2,'FaceAlpha',1)
 d = distES(realData.acc,randData.acc(1:1000));
-legend({['Observed: ',num2str(round(mean(realData.acc),2)),'\pm',num2str(round(std(realData.acc),2))],['Permuted: ',num2str(round(mean(randData.acc(1:1000)),2)),'\pm',num2str(round(std(randData.acc(1:1000)),2))]},'Location','northwest')
-text(0.22,0.15,['d = ',num2str(round(d,2))])
+legend({['Observed: ',num2str(round(mean(realData.acc))),'\pm',num2str(round(std(realData.acc)))],['Permuted: ',num2str(round(mean(randData.acc(1:1000)))),'\pm',num2str(round(std(randData.acc(1:1000))))]},'Location','northwest')
+text(30,0.15,['d = ',num2str(round(d,2))])
 xlabel('Accuracy')
 ylabel('Proportion of Models')
 title('Core vs. Shell: lasso')
@@ -185,9 +200,45 @@ xlabel('Group')
 ylabel('% Time Spent at Rest')
 sigstar({[1 2]},p(4,1))
 title('Time Spent at Rest vs. Shell Response')
+%% Stability v2
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
+% Days between recordings of H10, H13, H14, H15, I11, I12, I1, I2, I3, I4, I6, I8
+day = [18,46,16,12,1,13,14,34,2,71,67,36];
+% Get every other row index for subtraction
+first = [1:2:size(x,1)];
+second = [2:2:size(x,1)];
+change = (x(second,:)-x(first,:))./x(first,:);
+% Get avg difference between shell and core responders
+shell = mean(x([3,4,7,8,11,12,17:20],:)); 
+core = mean(x([1,2,5,6,21,22],:));
+avgDiff = (shell-core)./core;
+
+% Plot CLSR delta
+figure
+scatter(day,change(:,43).*100,'ok','Filled')
+hold on
+plot([0:71],repmat(avgDiff(43).*100,1,72),'-k')
+plot([0:71],repmat(avgDiff(43).*-100,1,72),'-k')
+xlim([0 72])
+ylim([-100 100])
+xlabel('Days')
+ylabel('%\Delta in Coherence')
+title('CLSR \Delta Coherence')
+%% Plot CLSR delta between groups
+figure
+hold on
+scatter(ones(1,10),x([3,4,7,8,11,12,17:20],43),'ok','Filled') 
+scatter(ones(1,6).*2,x([1,2,5,6,21,22],43),'or','Filled')
+% legend({'Shell','Core'},'Location','southeast')
+plot([0.75 1.25], [mean(x([3,4,7,8,11,12,17:20],43)) mean(x([3,4,7,8,11,12,17:20],43))],'-k')
+plot([1.75 2.25], [mean(x([1,2,5,6,21,22],43)) mean(x([1,2,5,6,21,22],43))],'-r')
+set(gca,'XTick',1:2,'XTickLabel',{'Core','Shell'})
+title('CLSR \Delta Difference')
+ylabel('Normalized Coherence')
+
 %% Stability
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cutoff40Betas.mat')
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cutoff40Betas.mat')
 % Setup day information and perform subtractions
 % Days between recordings of H10, H13, H14, H15, I11, I12, I1, I2, I3, I4, I6, I8
 day = [18,46,16,12,1,13,14,34,2,71,67,36];

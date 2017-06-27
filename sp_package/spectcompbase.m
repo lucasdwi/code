@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,clnEvents,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
+function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
 %% Preproccesses data and calculates the following metrics: power, 
 %  coherence, and power coupling. Read input documentation for more detail
 %  on the options for these analyses and necessary information to run the
@@ -111,7 +111,7 @@ cd(sdir);
 disp('Loading file...')
 % Load file
 load(file);
-[LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
+[LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
 %% Calculate power spectra and plot 
 tic
 disp(['Calculating power spectra and plotting average total power with '...
