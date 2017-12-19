@@ -19,6 +19,7 @@ sdir = varargin{1};
 cd(sdir)
 % Grab all extensions and criteria - put into vars
 vars = varargin(2:end);
+%%
 % If only one extension and no criterion defined, set to default 'in'
 if size(vars,2) == 1
     vars{1,2} = 'in';

@@ -43,9 +43,9 @@ zeroedChannel = [];
 chk_nan = 0;
 for iI = 1:chans
     threshInd{iI} = logicFind(thresh,abs(LFPTs.data(iI,:)),'>');
-    % Checks if amount of data beyond threhold exceeds 30%, if so set whole
+    % Checks if amount of data beyond threhold exceeds 50%, if so set whole
     % channel to 0
-    if length(threshInd{iI}) >= 0.3*length(LFPTs.data(iI,:))
+    if length(threshInd{iI}) >= 0.5*length(LFPTs.data(iI,:))
        LFPTs.data(iI,:) = 0;
        % Keep trach of zeroed channels
        zeroedChannel = [zeroedChannel,iI]; %#ok<AGROW>
@@ -92,6 +92,10 @@ if chk_nan ~= 0
             k = k+1;
             overInt{1,iI}(k) = startI;
             overInt{2,iI}(k) = endI;
+            % Check if last interval goes beyond length of data, if so cap it
+            if overInt{2,iI}(end) > size(LFPTs.data,2)
+                overInt{2,iI}(end) = size(LFPTs.data,2);
+            end
         end
     end
     % Idea borrowed from MergeBrackets.m Author: Bruno Luong
@@ -115,7 +119,7 @@ if chk_nan ~= 0
     oneChan = sum(LFPTsNaN.data,1);
     % Spread oneChan across all channels
     LFPTsNaN.data(:,isnan(oneChan)) = NaN; 
-    % Set onChan to 1 if good data and to 0 if NaN
+    % Set oneChan to 1 if good data and to 0 if NaN
     oneChan(~isnan(oneChan)) = 1; 
     oneChan(isnan(oneChan)) = 0;
     % Use diff() to find where good data starts and stops

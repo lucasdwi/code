@@ -1,24 +1,55 @@
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\concat50-50_500Train.mat')
+%% Concat
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\concat50-50_500TrainNewRand.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\pInds.mat','pInds')
+% Get usable indices
+inds = 1:60;
+inds = inds(~ismember(inds,pInds));
+for ii = 1:20
+    tic
+    trainX = allTrainX{1,ii}(:,inds);
+    trainY = allTrainY{1,ii};
+    mdl = fitcsvm(trainX,trainY,'OptimizeHyperparameters','auto','HyperparameterOptimization',struct('kfold',10,'Verbose',0,'ShowPlots',0));
+    scoreMdl{ii} = fitPosterior(mdl);
+    testX = allTestX{1,ii}(:,inds);
+    testY = allTestY{1,ii};
+    [~,prob] = predict(scoreMdl{ii},testX);
+    [concatX{ii},concatY{ii},~,concatA(ii)] = perfcurve(testY,prob(:,2),1);
+    for jj = 1:12
+        testX = [];
+        testX = eachTestX{ii,jj}(:,inds);
+        testY = [];
+        testY = eachTestY{ii,jj};
+        [~,prob] = predict(scoreMdl{ii},testX);
+        [eachX{ii,jj},eachY{ii,jj},~,eachA(ii,jj)] = perfcurve(testY,prob(:,2),1);
+    end
+    toc
+end
+%% Regularized - LASSO
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\concat50-50_500TrainNew.mat')
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeNotData.mat','pInds')
 % Build and test models from concat to concat
 lambda = logspace(-5,-1,15);
+% Get usable indices
+inds = 1:60;
+inds = inds(~ismember(inds,pInds));
 for ii = 1:20
     tic
     disp(num2str(ii))
-    trainX = allTrainX{1,ii};%(:,[1:2,4:34,36:55,57:60]);
+    trainX = allTrainX{1,ii}(:,inds);
     trainY = allTrainY{1,ii};
     CVmdl = fitrlinear(trainX,trainY,'kfold',10,'lambda',lambda,'Regularization','lasso');
     mse = kfoldLoss(CVmdl);
     ind = logicFind(min(mse),mse,'==');
     lam = lambda(ind);
     mdl{ii} = fitrlinear(trainX,trainY,'lambda',lam,'Regularization','lasso');
-    testX = allTestX{1,ii};%(:,[1:2,4:34,36:55,57:60]);
+    testX = allTestX{1,ii}(:,inds);
     testY = allTestY{1,ii};
     pred = predict(mdl{ii},testX);
     [concatX{ii},concatY{ii},~,concatA(ii)] = perfcurve(testY,pred,1);
     % Test concat models on each data
     for jj = 1:12
         testX = [];
-        testX = eachTestX{ii,jj};%(:,[1:2,4:34,36:55,57:60]);
+        testX = eachTestX{ii,jj}(:,inds);
         testY = [];
         testY = eachTestY{ii,jj};
         pred = predict(mdl{ii},testX);
@@ -49,28 +80,7 @@ for ii = 1:12
     plot(eXm(ii,:),eYm(ii,:))
     hold on
 end
-%% Concat
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\concat50-50_500TrainRand.mat')
-for ii = 1:20
-    tic
-    trainX = allTrainX{1,ii};%(:,[1:2,4:34,36:55,57:60]);
-    trainY = allTrainY{1,ii};
-    mdl = fitcsvm(trainX,trainY,'OptimizeHyperparameters','auto','HyperparameterOptimization',struct('kfold',10,'Verbose',0,'ShowPlots',0));
-    scoreMdl{ii} = fitPosterior(mdl);
-    testX = allTestX{1,ii};%(:,[1:2,4:34,36:55,57:60]);
-    testY = allTestY{1,ii};
-    [~,prob] = predict(scoreMdl{ii},testX);
-    [concatX{ii},concatY{ii},~,concatA(ii)] = perfcurve(testY,prob(:,2),1);
-    for jj = 1:12
-        testX = [];
-        testX = eachTestX{ii,jj};%(:,[1:2,4:34,36:55,57:60]);
-        testY = [];
-        testY = eachTestY{ii,jj};
-        [~,prob] = predict(scoreMdl{ii},testX);
-        [eachX{ii,jj},eachY{ii,jj},~,eachA(ii,jj)] = perfcurve(testY,prob(:,2),1);
-    end
-    toc
-end
+
 %%
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
 allProb = [];

@@ -1,17 +1,20 @@
-% % Load ephys data for all trials of binge and rest
+%% Load ephys data for all trials of binge and rest
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRestAllTrial.mat')
-% for ii = 1:size(data,2)
-%     for k = 1:size(data{1,ii},2)
-%         trialDat{k,ii} = cat(1,data{1,ii}{:,k});
-%     end
-% end
-% Load ephys average data of binge and rest
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestAllAvg.mat')
+for ii = 1:size(data,2)
+    for k = 1:size(data{1,ii},2)
+        trialDat{k,ii} = cat(1,data{1,ii}{:,k});
+    end
+end
+% % Load ephys average data of binge and rest
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestAllAvg.mat')
 for ii = 1:size(data,2)
     for k = 1:size(data{1,ii},2)
         avgDat{k,ii} = cat(1,data{1,ii}{:,k});
     end
 end
+%% Get features that might be due to chewing noise - correlate with change in voracity
+% Load binge rest data
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestData.mat')
 % Load voracity data
 load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\4conditionBingeSize.mat')
 % Correlate voracity with all features
@@ -33,7 +36,60 @@ end
 % Get indices of significant p-values to exclude those features
 pInds = logicFind(0.05,p,'<=');
 % Save
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestData.mat','avgDat','trialDat','pInds')
 % save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\featCorr.mat','avgDat','pInds','feats','vorDiff')
+%% Plotting baseline binge size
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\baseBingeSize1.mat')
+d = distES(real.err,perm.err(1:1000));
+figure
+histogram(real.err,'Normalization','probability','BinWidth',.1)
+hold on
+histogram(perm.err(1:1000),'Normalization','probability','BinWidth',.1)
+title('Predicting Baseline Binge Size: Base Binge - Base Rest')
+xlabel('Mean Absolute Error (gm)')
+ylabel('Model Frequency')
+legend({['Real: \mu = ',num2str(round(mean(real.err)),2),'\pm',num2str(round(std(real.err),2)),' gm'],['Permuted: \mu = ',num2str(round(mean(perm.err(1:1000)),2)),'\pm',num2str(round(std(perm.err(1:1000)),2)),' gm']})
+text(4,.11,['d = ',num2str(d)])
+%% Plotting binge size change from baseline
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeSizeChange1.mat')
+d = distES(real.err,perm.err(1:1000));
+figure
+histogram(real.err.*100,'Normalization','probability','BinWidth',5)
+hold on
+histogram(perm.err(1:1000).*100,'Normalization','probability','BinWidth',5)
+title('Predicting %\Delta in Binge Size: Base(Binge-Rest)-Dep(Binge-Rest)')
+xlabel('Mean Absolute Error (%)')
+ylabel('Model Frequency')
+legend({['Real: \mu = ',num2str(round(mean(real.err)*100),2),'\pm',num2str(round(std(real.err)*100,2)),' %'],['Permuted: \mu = ',num2str(round(mean(perm.err(1:1000))*100,2)),'\pm',num2str(round(std(perm.err(1:1000))*100,2)),' %']})
+text(200,0.16,['d = ',num2str(d)])
+%% Plotting palatability
+load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\palat.mat')
+d = distES(real.err,rand.err(1:1000));
+figure
+histogram((1-real.err).*100,'Normalization','probability','BinWidth',2)
+hold on
+histogram((1-rand.err(1:1000)).*100,'Normalization','probability','BinWidth',2)
+title('Predicting Palatability: Chow(Binge-Rest) vs. Dep(Binge-Rest)')
+xlabel('Accuracy (%)')
+ylabel('Model Frequency')
+legend({['Real: \mu = ',num2str(round(mean(1-real.err)*100),2),'\pm',num2str(round(std(1-real.err)*100,2)),' %'],['Permuted: \mu = ',num2str(round(mean(1-rand.err(1:1000))*100,2)),'\pm',num2str(round(std(1-rand.err(1:1000))*100,2)),' %']},'Location','northwest')
+text(11,.11,['d = ',num2str(d)])
+%% Prep binge vs. rest data
+[data,~] = collateData('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRest\',{'base','dep24','dep48','chow'},{'pow','coh','corr'},'avg');
+for ii = 1:size(data,2)
+    for k = 1:size(data{1,ii},2)
+        avgDat{k,ii} = cat(1,data{1,ii}{:,k});
+    end
+end
+clear data samp
+[data,~] = collateData('C:\Users\Lucas\Desktop\GreenLab\data\paper2\bingeRest\',{'base','dep24','dep48','chow'},{'pow','coh'},'trl');
+for ii = 1:size(data,2)
+    for k = 1:size(data{1,ii},2)
+        trialDat{k,ii} = cat(1,data{1,ii}{:,k});
+    end
+end
+% save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeRestData.mat','avgDat','trialDat')
+
 %% Predicting baseline binge size using baseline data
 x = avgDat{1,1}-avgDat{2,1};
 y = bingeSizes(:,1);
@@ -61,14 +117,6 @@ d = (2*r)/sqrt(1-r.^2);
 % save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBaseBinge.mat','real','rand','d')
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBaseBinge.mat')
 
-figure
-histogram(real.err,'Normalization','probability','BinWidth',.1)
-hold on
-histogram(rand.err,'Normalization','probability','BinWidth',.1)
-title('Predicting Baseline Binge Size: Base Binge - Base Rest')
-xlabel('Mean Absolute Error (gm)')
-ylabel('Model Frequency')
-legend({['Real: \mu = ',num2str(round(mean(real.err)),2),'\pm',num2str(round(std(real.err),2)),' gm'],['Permuted: \mu = ',num2str(round(mean(rand.err),2)),'\pm',num2str(round(std(rand.err),2)),' gm']})
 %% Subset predicting baseline binge size
 for ii = 1:14
    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\baseBingeSize\baseBingeSize',num2str(ii),'.mat']) 
@@ -104,22 +152,7 @@ rand.err = [];
 for ii = 1:100
    rand.err = [rand.err;rand.lambda{ii}.allErr];
 end
-% Get Mann-Whitney U statistic
-[p,h,stats] = ranksum(real.err,rand.err);
-% Get r-family effect size
-r = abs(stats.zval/sqrt(numel(real.err)+numel(rand.err)));
-% Get Cohen's d from r
-d = (2*r)/sqrt(1-r.^2);
-%save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeChange.mat','real','rand','d')
-%load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictBingeChange.mat')
-figure
-histogram(real.err.*100,'Normalization','probability','BinWidth',5)
-hold on
-histogram(rand.err.*100,'Normalization','probability','BinWidth',5)
-title('Predicting %\Delta in Binge Size: Base(Binge-Rest)-Dep(Binge-Rest)')
-xlabel('Mean Absolute Error (%)')
-ylabel('Model Frequency')
-legend({['Real: \mu = ',num2str(round(mean(real.err)*100),2),'\pm',num2str(round(std(real.err)*100,2)),' %'],['Permuted: \mu = ',num2str(round(mean(rand.err)*100,2)),'\pm',num2str(round(std(rand.err)*100,2)),' %']})
+
 %% Subset predicting change in binge from baseline
 for ii = 1:14
    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeSizeChange\bingeSizeChange',num2str(ii),'.mat']) 
@@ -153,14 +186,7 @@ r = abs(stats.zval/sqrt(numel(real.err)+numel(rand.err)));
 d = (2*r)/sqrt(1-r.^2);
 % save('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictPalatability.mat','rand','real','d')
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\predictPalatability.mat')
-figure
-histogram((1-real.err).*100,'Normalization','probability','BinWidth',2)
-hold on
-histogram((1-rand.err).*100,'Normalization','probability','BinWidth',2)
-title('Predicting Palatability: Chow(Binge-Rest) vs. Dep(Binge-Rest)')
-xlabel('Accuracy (%)')
-ylabel('Model Frequency')
-legend({['Real: \mu = ',num2str(round(mean(1-real.err)*100),2),'\pm',num2str(round(std(1-real.err)*100,2)),' %'],['Permuted: \mu = ',num2str(round(mean(1-rand.err)*100,2)),'\pm',num2str(round(std(1-rand.err)*100,2)),' %']},'Location','northwest')
+
 %% Predicting palatability of food (chow vs. dep24)
 % Set up real and rand arrays
 real = cell(1,size(bingeRestInd,2));

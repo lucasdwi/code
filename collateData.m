@@ -1,4 +1,4 @@
-function [data,samp] = collateData(sdir,searchStr,vars,dat,varargin)
+function [data,samp,files,varargout] = collateData(sdir,searchStr,vars,dat,norm,varargin)
 %% Collates data from many files into matrices.
 %__________________________________________________________________________
 % INPUTS:
@@ -9,12 +9,14 @@ function [data,samp] = collateData(sdir,searchStr,vars,dat,varargin)
 % vars = variables to collate; format: string; options: 'pow','coh','corr'
 % dat = kind of data to be collated indicating whether all trials are used
 %   or just the averages; format: string, either 'avg' or 'trl'
+% norm = kind of normailzation; if 'rel' then uses relPow and relCoh
+% otherwise uses raw bandPow and bandCoh
 %__________________________________________________________________________
 % OUTPUTS:
 % data = data cell array of matrices for each searchStr used
 %__________________________________________________________________________
 % USE: 
-% [data] = collateData('C:\Users\matFiles\',{'foo';'bar'},{'pow','coh'},'trl') 
+% [data] = collateData('C:\Users\matFiles\',{'foo';'bar'},{'pow','coh'},'trl')
 % Will go through ~\matFiles\ and search for any files with 'foo' in the title
 % and 'bar' in the title. Then will open these files concatenating all of
 % the trials for each behavior into cell arrays. So if there are two
@@ -57,7 +59,7 @@ end
 %% Cycle through each searchStr and get file names
 if ~isempty(searchStr)
     for sI = 1:size(searchStr,1)
-        [files{sI}] = fileSearch(sdir,searchStr{sI,1},searchStr{sI,2});
+        [files{sI}] = fileSearch(sdir,searchStr{sI});
     end
 else
     files = varargin{1};
@@ -86,13 +88,24 @@ for sI = 1:nStr
             % the following pattern: c1b1,c1b2,c1b3,c1b4,c2b1,...
             if sum(strcmpi(vars,'pow')) == 1
                 if strcmpi(dat,'trl')
-                    [b,c,t] = size(psdTrls{iE}.relPow);
-                    % Reshape and transpose
-                    thisPow = reshape(psdTrls{iE}.relPow,b*c,t)';
+                    if strcmpi(norm,'rel')
+                        [b,c,t] = size(psdTrls{iE}.relPow);
+                        % Reshape and transpose
+                        thisPow = reshape(psdTrls{iE}.relPow,b*c,t)';
+                    else
+                        [b,c,t] = size(psdTrls{iE}.bandPow);
+                        % Reshape and transpose
+                        thisPow = reshape(psdTrls{iE}.bandPow,b*c,t)';
+                    end
                 else
                     [b,c] = size(psdTrls{iE}.avgRelPow);
-                    % Reshape
-                    thisPow = reshape(psdTrls{iE}.avgRelPow,1,b*c);
+                    if strcmpi(norm,'rel')
+                        % Reshape
+                        thisPow = reshape(psdTrls{iE}.avgRelPow,1,b*c);
+                    else
+                        % Average and reshape
+                        thisPow = reshape(mean(psdTrls{iE}.bandPow,3),1,b*c);
+                    end
                 end
                 % Store power
                 thisData{iE} = [thisData{iE},thisPow]; %#ok<*AGROW>
@@ -102,15 +115,24 @@ for sI = 1:nStr
             % c1c2b1,c1c2b2,c1c2b3,c1c2b4,c1c3b1...
             if sum(strcmpi(vars,'coh')) == 1
                 if strcmpi(dat,'trl')
-                    [cmb,b,t] = size(coh{iE}.rel);
-                    % Permute coh.rel into a similar pattern as power
-                    thisCoh = reshape(permute(coh{iE}.rel,[2,1,3]),cmb*b,t)';
+                    if strcmpi(norm,'rel')
+                        [cmb,b,t] = size(coh{iE}.rel);
+                        % Permute coh.rel into a similar pattern as power
+                        thisCoh = reshape(permute(coh{iE}.rel,[2,1,3]),cmb*b,t)';
+                    else
+                        [cmb,b,t] =  size(coh{iE}.band);
+                        % Permute coh.rel into a similar pattern as power
+                        thisCoh = reshape(permute(coh{iE}.band,[2,1,3]),cmb*b,t)';
+                    end
                 else
                     [cmb,b,~] = size(coh{iE}.rel);
-%                     [cmb,b,~] = size(coh{iE}.band);
-                    % Mean and permute coh.rel
-                    thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
-%                     thisCoh = reshape(permute(mean(coh{iE}.band,3),[2,1]),1,cmb*b);
+                    if strcmpi(norm,'rel')
+                        % Mean and permute coh.rel
+                        thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
+                    else
+                        % Mean and permute coh.band
+                        thisCoh = reshape(permute(mean(coh{iE}.band,3),[2,1]),1,cmb*b);
+                    end
                 end
                 % Store coherence
                 thisData{iE} = [thisData{iE},thisCoh];
@@ -128,9 +150,39 @@ for sI = 1:nStr
                 thisData{iE} = [thisData{iE},thisCorr];
             end
             % Grab sampleInfo for timing
-            thisSamp{iE} = trls{1,iE}.sampleinfo; 
+            thisSamp{iE} = trls{1,iE}.sampleinfo;
         end
         data{sI} = [data{sI};thisData];
         samp{sI} = [samp{sI};thisSamp];
+    end
+end
+%% Combine data together
+if strcmpi(dat,'trl')
+    try
+    for ii = 1:size(data,2)
+        for k = 1:size(data{1,ii},2)
+            trialData{k,ii} = cat(1,data{1,ii}{:,k});
+        end
+    end
+    varargout{1} = unpack(trialData);
+    catch err
+        msgText = getReport(err);
+        fprintf(2,'%s','Could not combine; leaving trialData empty.')
+        fprintf(2,'%s',msgText)
+        varargout{1} = [];
+    end
+elseif strcmpi(dat,'avg')
+    try
+    for ii = 1:size(data,2)
+        for k = 1:size(data,1)
+            avgData{k,ii} = cat(1,data{1,ii}{:,k});
+        end
+    end
+    varargout{1} = unpack(avgData);
+    catch err
+        msgText = getReport(err);
+        fprintf(2,'Could not combine; leaving avgData empty %s')
+        fprintf(2,'%s',msgText)
+        varargout{1} = [];
     end
 end

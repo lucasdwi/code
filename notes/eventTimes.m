@@ -1,5 +1,5 @@
 %%
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\mat\';
+sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\mat\';
 [fNames(:,1)] = fileSearch(sdir,'Base','in');
 [fNames(:,2)] = fileSearch(sdir,'Dep24','in');
 [fNames(1:9,3)] = fileSearch(sdir,'Dep48','in');
@@ -103,7 +103,7 @@ end
 figure
 hold on
 for ii = 1:4
-    plot([0:0.1:1],[0;m(:,ii)])
+    plot([0.1:0.1:1].*100,m(:,ii).*100)
 end
 xlabel('% of Session')
 ylabel('Average % of Animals Bingeing')

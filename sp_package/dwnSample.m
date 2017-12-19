@@ -21,7 +21,17 @@ function [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq)
 chans = size(LFPTs.data,1);
 % Count number of data points
 tStamps = size(LFPTs.data,2);
-% Set-up output data
+%% Check appropriate dsf with data
+% Check that dsf is divisor of adfreq
+if mod(adfreq,dsf) ~= 0
+    error([num2str(adfreq) ' (adfreq) is not divisible by ',num2str(dsf),' (dsf).'])
+end
+% % Check that dsf is divisor of data length
+% if mod(tStamps,dsf) ~= 0
+%     error([num2str(tStamps) ' (length of data) is not divisible by ',num2str(dsf),' (dsf).'])
+% end
+%% Set up output and downsample 
+% Set up output data
 dwnData = zeros(chans,tStamps/dsf);
 for iC = 1:chans
     dwnData(iC,:) = decimate(LFPTs.data(iC,:),dsf);

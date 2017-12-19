@@ -1,4 +1,4 @@
-function [cfg] = lassoNetCfg(naive,naiveType,rand,normalize,foldGen,cvIterations,minTerm)
+function [cfg] = lassoNetCfg(naive,naiveType,rand,normalize,foldGen,cvIterations,minTerm,weights)
 %% Generates cfg used in lassoNet.m
 %__________________________________________________________________________
 % INPUTS: 
@@ -19,6 +19,8 @@ function [cfg] = lassoNetCfg(naive,naiveType,rand,normalize,foldGen,cvIterations
 % minTerm = which error term should be used to pick best model; format:
 %   string, either '1se' for lambda+1 standard deviation or 'min' for
 %   minimum lambda
+% weights = weights to be assigned to predictors; format: column vector
+%   with the same number of rows as input data
 %__________________________________________________________________________
 % OUTPUTS:
 % cfg = config structure used in lassoNet.m
@@ -37,3 +39,4 @@ cfg.normalize = normalize;
 cfg.foldGen = foldGen;
 cfg.cvIterations = cvIterations;
 cfg.minTerm = minTerm;
+cfg.weights = weights;

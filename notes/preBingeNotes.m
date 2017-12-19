@@ -1,25 +1,52 @@
+%% Get time from eoi
+for ii = 1:61
+   eoi(ii,:) = {'binge (s',[-4-ii 1-ii]}; 
+end
+test = cat(1,eoi{:,2});
+time = test(:,2)-2.5;
+%%
+load('preBingeModelData.mat')
+newTrainY = cell(20,1);
+newTrainX = cell(20,1);
+for ii = 1:size(allTrainY,1)
+    for jj = 1:size(allTrainY,2)
+        inds = logicFind(1,allTrainY{ii,jj},'==');
+        newTrainY{ii} = [newTrainY{ii};allTrainY{ii,jj}(inds,1).*jj];
+        newTrainX{ii} = [newTrainX{ii};allTrainX{ii,jj}(inds,:)];
+    end
+end
+newTestY = cell(20,1);
+newTestX = cell(20,1);
+for ii = 1:size(allTestY,1)
+    for jj = 1:size(allTestY,2)
+        inds = logicFind(1,allTestY{ii,jj},'==');
+        newTestY{ii} = [newTestY{ii};allTestY{ii,jj}(inds,1).*time(jj)];
+        newTestX{ii} = [newTestX{ii};allTestX{ii,jj}(inds,:)];
+    end
+end
 %% Get fileNames of preBinge data
-fNames = fileSearch('C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBinge3\','.mat');
+fNames = fileSearch('C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBinge\','.mat');
 for ii = 1:size(fNames,2)
     names(ii,:) = strsplit(fNames{ii},'_');
 end
 %% Combine prebinge data with non-overlapping non-binge data
 for ii = 1:size(names,1)
-    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBinge3\',names{ii,1},'_',names{ii,2},'_binge (s.mat'])
-    preCoh = coh;
-    prePow = psdTrls;
-    preTrls = trls;
+    disp(num2str(ii))
 %     load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBinge4\',names{ii,1},'_',names{ii,2},'_binge (s.mat'])
 %     preCoh = [preCoh,coh];
 %     prePow = [prePow,psdTrls];
 %     preTrls = [preTrls,trls];
-    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\baselines\',names{ii,1},'_',names{ii,2},'_binge_vs_notbinge.mat'])
+    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\binge_notbinge\',names{ii,1},'_',names{ii,2},'_binge_vs_notbinge.mat'])
     notCoh = coh;
     notPow = psdTrls;
     notTrls = trls;
-    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\toProcess\',names{ii,1},'_',names{ii,2},'.mat'],'eventTs')
+    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\mat\',names{ii,1},'_',names{ii,2},'.mat'],'eventTs')
     ind = logicFind(1,cell2mat(cellfun(@(x) strncmpi('binge (s',x,8),eventTs.label,'UniformOutput',0)),'==');
     times{ii} = [eventTs.t{ind}*hist.adfreq,eventTs.t{ind+1}*hist.adfreq];
+    load(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBinge\',names{ii,1},'_',names{ii,2},'_',names{ii,3}])
+    preCoh = coh;
+    prePow = psdTrls;
+    preTrls = trls;
     clear coh psdTrls trls
     %% Check that pre trials do no overlap with binges
     for k = 1:size(prePow,2)
@@ -37,8 +64,8 @@ for ii = 1:size(names,1)
         trls{1,k}.sampleinfo = preTrls{1,k}.sampleinfo(~overlap,:);
         
         psdTrls{1,k}.Pow = prePow{1,k}.Pow(:,:,~overlap);
-        psdTrls{1,k}.F = prePow{1,end}.F;
-        psdTrls{1,k}.hammSize = prePow{1,end}.hammSize;
+        psdTrls{1,k}.F = hist.powF;
+        psdTrls{1,k}.hammSize = hist.hammSize;
         psdTrls{1,k}.bandPow = prePow{1,k}.bandPow(:,:,~overlap);
         psdTrls{1,k}.totPow = prePow{1,k}.totPow(:,:,~overlap);
         psdTrls{1,k}.relPow = prePow{1,k}.relPow(:,:,~overlap);
@@ -66,8 +93,8 @@ for ii = 1:size(names,1)
     trls{1,k+1}.sampleinfo = notTrls{1,2}.sampleinfo(~overlap,:);
     
     psdTrls{1,k+1}.Pow = notPow{1,2}.Pow(:,:,~overlap);
-    psdTrls{1,k+1}.F = notPow{1,2}.F;
-    psdTrls{1,k+1}.hammSize = notPow{1,2}.hammSize;
+    psdTrls{1,k+1}.F = hist.powF;
+    psdTrls{1,k+1}.hammSize = hist.hammSize;
     psdTrls{1,k+1}.bandPow = notPow{1,2}.bandPow(:,:,~overlap);
     psdTrls{1,k+1}.totPow = notPow{1,2}.totPow(:,:,~overlap);
     psdTrls{1,k+1}.relPow = notPow{1,2}.relPow(:,:,~overlap);
@@ -81,5 +108,5 @@ for ii = 1:size(names,1)
     coh{1,k+1}.total = notCoh{1,2}.total(:,:,~overlap);
     overlap = [];
     %%
-    save(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBingeCombined4\',names{ii,1},'_',names{ii,2},'.mat'],'trls','psdTrls','coh')
+    save(['C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBingeCombined\',names{ii,1},'_',names{ii,2},'.mat'],'trls','psdTrls','coh')
 end

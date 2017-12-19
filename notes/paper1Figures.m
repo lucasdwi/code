@@ -1,42 +1,113 @@
 %% Build and test (LOOCV) univariate models for both shell and core all (resp 1&3)
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1data.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\paper1data.mat')
 c = 1;
 for k = [1,3]
     for ii = 1:size(x,2)
+        m = 1;
         for jj = 1:2:24
             inds = 1:24;
             inds = inds(~ismember(inds,jj:jj+1));
-            mdl = fitglm(x(inds,ii),y(inds,k),'Distribution','Binomial');
+            mdl{c}{ii,m} = fitglm(x(inds,ii),y(inds,k),'Distribution','Binomial');
 %             p(ii,jj,c) = mdl.Coefficients.pValue(2);
 %             r(ii,jj,c) = mdl.Rsquared.Ordinary;
-            prob(ii,jj:jj+1,c) = predict(mdl,x(jj:jj+1,ii));
+            prob(ii,jj:jj+1,c) = predict(mdl{c}{ii,m},x(jj:jj+1,ii));
+            m = m+1;
         end
         [rocx(ii,:,c),rocy(ii,:,c),~,a(ii,c)] = perfcurve(y(:,k),prob(ii,:,c),1);
     end
     c = c+1;
 end
+%% Build hold 6 out for both shell and core
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\paper1data.mat')
+c = 1;
+for k = [1,3]
+    for ii = 1:size(x,2)
+        m = 1;
+        for jj = 1:100
+            inds = randperm(24,24);
+            mdl{c}{ii,m} = fitglm(x(inds(1:18),ii),y(inds(1:18),k),'Distribution','Binomial'); 
+            prob{c}(ii,jj,:) = predict(mdl{c}{ii,m},x(inds(19:24),ii));
+            acc(ii,jj,c) = sum(round(squeeze(prob{c}(ii,jj,:))) == y(inds(19:24),k))./6;
+            m = m+1;
+        end
+        fprintf('%d ', ii)
+        %         disp([num2str(k),num2str(ii)])
+    end
+    c = c+1;
+end
+%% Average accuracy
+mA = squeeze(mean(acc,2));
+sA = squeeze(std(acc,[],2));
+%% Set threshold at 0.5 and get accuracy
+pred = round(prob);
+acc = sum(pred == cat(3,repmat(y(:,1),1,60)',repmat(y(:,3),1,60)'),2)/24;
+max(acc)
+%% Get coefficient direction
+for m =1:2
+    for ii = 1:60
+        for jj = 1:100
+            odds(m,ii,jj) = table2array(mdl{m}{ii,jj}.Coefficients(2,1));
+        end
+    end
+end
+% odds = exp(mean(odds,3))>1;
 %%
-[shellUni,shellInds] = sort(a(:,1),'descend');
-[coreUni,coreInds] = sort(a(:,2),'descend');
+[shellUni,shellInds] = sort(mA(:,1),'descend');
+[coreUni,coreInds] = sort(mA(:,2),'descend');
 figure
 hold on
 scatter(1:60,coreUni,'ok')
 scatter(1:60,shellUni,'or')
 nameVect = names({'SL','CL','SR','CR'},{'d','t','a','b','lg','hg'});
 sigVars = [nameVect(shellInds)',nameVect(coreInds)'];
-
+varDir = [odds(shellInds),odds(coreInds)];
+shellAcc = mA(shellInds,1);
+coreAcc = mA(coreInds,2);
 %%
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\paper1Data.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\paper1Data.mat')
 for ii = 1:size(x2,2)
+    k = 1;
     for jj = 1:2:20
         inds = 1:20;
         inds = inds(~ismember(inds,jj:jj+1));
-        mdl = fitglm(x2(inds,ii),y2(inds,1),'Distribution','Binomial');
-        prob(ii,jj:jj+1) = predict(mdl,x2(jj:jj+1,ii));
+        mdl{ii,k} = fitglm(x2(inds,ii),y2(inds,1),'Distribution','Binomial');
+        prob(ii,jj:jj+1) = predict(mdl{ii,k},x2(jj:jj+1,ii));
+        k = k+1;
     end
     [rocx(ii,:),rocy(ii,:),~,a(ii)] = perfcurve(y2,prob(ii,:),1);
 end
+for ii = 1:60
+    for jj = 1:10
+        odds(ii,jj) = table2array(mdl{ii,jj}.Coefficients(2,1));
+    end
+end
+odds = exp(mean(odds,2))>1;
 [cvsUni,cvsInds] = sort(a,'descend');
+cvsDir = odds(cvsInds);
+%%
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\paper1Data.mat')
+for ii = 1:size(x2,2)
+    for jj = 1:100
+        inds = randperm(20,20);
+        mdl{ii,jj} = fitglm(x2(inds(1:15),ii),y2(inds(1:15)),'Distribution','Binomial');
+        prob(ii,jj,:) = predict(mdl{ii,jj},x2(inds(16:20),ii));
+        acc(ii,jj) = sum(round(squeeze(prob(ii,jj,:))) == y2(inds(16:20)))./5;
+    end
+%     [rocx(ii,:),rocy(ii,:),~,a(ii)] = perfcurve(y2,prob(ii,:),1);
+end
+%%
+mA = mean(acc,2);
+for ii = 1:60
+    for jj = 1:10
+        odds(ii,jj) = exp(table2array(mdl{ii,jj}.Coefficients(2,1)));
+    end
+end
+odds = mean(odds,2)>1;
+[cvsUni,cvsInds] = sort(mA,'descend');
+cvsDir = odds(cvsInds);
+nameVect = names({'SL','CL','SR','CR'},{'d','t','a','b','lg','hg'});
+cvsVars = nameVect(cvsInds);
+cvsDir = odds(cvsInds);
 %%
 cd('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\new folder\rand\')
 randData.allErr = [];
@@ -48,6 +119,7 @@ load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\new folder\rea
 realData.allErr = allLambda{1,1}.allErr;
 randData.allAcc = (1-randData.allErr).*100;
 realData.allAcc = (1-realData.allErr).*100;
+
 %% Plot real and random histograms
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\cvMeanBWHist.mat')
 subtitles = {'Shell All','Core All'};
@@ -93,11 +165,15 @@ load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\coreVshell\rea
 realData.err = allLambda{1,1}.allErr;
 realData.acc = (1-realData.err).*100;
 %% 
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\singleModels\real.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\lasso\singleModels\real.mat')
 [shellSurv,shellInd] = sort(allBeta{1,1}.survBeta(1,:),'descend');
 [coreSurv,coreInd] = sort(allBeta{1,1}.survBeta(2,:),'descend');
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper1\finalData\lasso\coreVshell\real.mat')
+% Get directions
+shellDir = allBeta{1,1}.signBeta(1,shellInd)';
+coreDir = allBeta{1,1}.signBeta(2,coreInd)';
+load('C:\Users\Pythia\Documents\GreenLab\data\paper1\finalData\lasso\coreVshell\real.mat')
 [cvsSurv,cvsInd] = sort(allBeta{1,1}.survBeta(1,:),'descend');
+cvsDir = allBeta{1,1}.signBeta(1,cvsInd)';
 %%
 figure
 hold on

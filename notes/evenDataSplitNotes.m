@@ -1,17 +1,18 @@
 % Uses ADASYN method to ensure 50-50 split in training set
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\bingeNotBingeTrial.mat','data')
-load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\allbingeNotData.mat','data')
+% load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\allbingeNotData.mat','data')
+load('C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\bingeNotData.mat')
 %%
-di = 1;
+di = 4;
 for r = 1:20
     nOne = cell2mat(cellfun(@(x) size(x,1),data{1,di}(:,1),'UniformOutput',0));
     nZero = cell2mat(cellfun(@(x) size(x,1),data{1,di}(:,2),'UniformOutput',0));
     d = nOne./(nOne+nZero);
-    trainSize = 500;
+    trainSize = 63;
 %     trainOneN = round(trainSize.*d);
 %     trainZeroN = round(trainSize.*(1-d));
     testSize = .2*(trainSize/.8);
-    testOneN = round(testSize.*d);
+    testOneN = ceil(testSize.*d);
     testZeroN = round(testSize.*(1-d));
     for ii = 1:size(data{1,di},1)
         % Separate each animals test-set
@@ -27,9 +28,13 @@ for r = 1:20
         yOneLeft{r,ii} = ones(nOne(ii)-testOneN(ii),1);
         yZeroLeft{r,ii} = zeros(nZero(ii)-testZeroN(ii),1);
         % Apply ADASYN to each set
-        [newOneX{r,ii},newOneY{r,ii}] = ADASYN([xOneLeft{r,ii};xZeroLeft{r,ii}],[yOneLeft{r,ii};yZeroLeft{r,ii}],1,5,5,0);
-        % Randomly extract n (trainSize*.50) samples from combined new and old ones
-        trainSize = 46;
+        [newOneX{r,ii},newOneY{r,ii}] = ADASYN([xOneLeft{r,ii};xZeroLeft{r,ii}],[yOneLeft{r,ii};yZeroLeft{r,ii}],1,5,5,0);     
+        % Apply manual 
+%         n = size(xZeroLeft{r,ii},1)-size(xOneLeft{r,ii},1);
+%         newOneX{r,ii} = normOversample(xOneLeft{r,ii},n);
+%         newOneY{r,ii} = ones(n,1);
+        % Randomly extract samples from combined new and old ones
+%         trainSize = 500;
         thisTrainOneInd = randperm(size(xOneLeft{r,ii},1)+size(newOneX{r,ii},1),round(trainSize/2));
         thisTrainZeroInd = randperm(size(xZeroLeft{r,ii},1),round(trainSize/2));
         thisCatX = [xOneLeft{r,ii};newOneX{r,ii}];
@@ -45,7 +50,7 @@ for r = 1:20
 end
 %% Prebinge data
 % Collate data
-[data,samp] = collateData('C:\Users\Lucas\Desktop\GreenLab\data\paper2\preBingeCombined2\',{'base'},{'pow','coh'},'trl');
+% [data,samp] = collateData('C:\Users\Pythia\Documents\GreenLab\data\paper2\preBingeCombined\',{'base'},{'pow','coh'},'trl','');
 %% Split into training and testing sets
 % load('C:\Users\Lucas\Desktop\GreenLab\data\paper2\analyzed\preBingeRaw.mat')
 for di = 1:size(data{1,1},2)-1
@@ -110,14 +115,6 @@ for ni = 1:length(n)
     end
     trainX{ni} = thisTrainX;
     trainY{ni} = thisTrainY;
-end
-%% Rand dist and imputer (manual bootstrapping)
-x = data{1,1}{1,1};
-for ii = 1:60
-   m = mean(x(:,ii));
-   s = std(x(:,ii));
-   pd = makedist('Normal','mu',m,'sigma',s);
-   r(:,ii) = random(pd,1,598);
 end
 %% Splits data into equally sized train and test sets with original
 % distributions maintained

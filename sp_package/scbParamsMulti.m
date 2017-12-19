@@ -1,27 +1,42 @@
 function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsMulti(file)
 %%
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\toProcess\';
-% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\angela\mat\nicks\';
-%sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\megan\baseData\';
-%sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';
-% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\raw\';
+% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\mike\toProcess\';
+sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\mat\';
+% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\mat\nicks\';
+%sdir = 'C:\Users\Pythia\Documents\GreenLab\data\megan\baseData\';
+%sdir = 'C:\Users\Pythia\Documents\GreenLab\data\WilderBinge\channel_renamed\';
+% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\twoSiteStim\mat\';
+% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\mat\';
+% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\toProcess\';
 %file = 'H10RegChowNov23';
 file = file;
 filter = 'y';
 dsf = 5;
 thresh = 2; 
 onset = 0.0125;
-offset = 40;
+offset = 20;
 foi = [1 2 100];
 % bands = {'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 bands = {'delta',[1,4];'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
+% bands = {'lgam',[45,65]};
 cycles = 3;
 ftimwin = [];
 overlap = 0.5;
 cohMethod = 'mat';
-eoi = {'binge',[0 5];'rest',[0 5]};
+% eoi = {'all',[0 5]};
+% eoi = {'rest',[0 5]};
+% eoi = {'Base',[0 5];'Int1',[0 5];'Int2',[0 5];'Int3',[0 5];'Int4',[0 5];'Int5',[0 5];'Post',[0 5]};
+eoi = {'binge',[0 5];'notbinge',[0 5]};
 % for ii = 1:61
 %    eoi(ii,:) = {'binge (s',[-4-ii 1-ii]}; 
 % end
-% eoi = {'binge (s',[-60 -55]};%{'binge (s',[-11 -6];'binge (s',[-12 -7];'binge (s',[-13 -8];'binge (s',[-14 -9];'binge (s',[-15 -10];'binge (s',[-16 -11];'binge (s',[-17 -12];'binge (s',[-18 -13];'binge (s',[-19 -14];'binge (s',[-20 -15];'binge (s',[-21 -16];'binge (s',[-22 -17]};
-saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\processed\';
+% for ii = 1:31
+%    eoi(ii,:) = {'binge (s',[-1+ii 4+ii]}; 
+% end
+% for ii = 1:61
+%    eoi(ii,:) = {'binge (e',[-10+ii -5+ii]}; 
+% end
+% saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\processed';
+% saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\';
+% saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed\';
+saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\processed2048\';

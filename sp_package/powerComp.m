@@ -1,4 +1,4 @@
-function [psdTrls,powerPlots] = powerComp(trlData,adfreq,chans,bands,filter,foi,eoi)
+function [psdTrls,powerPlots,hist] = powerComp(trlData,adfreq,chans,bands,filter,foi,eoi,disp)
 %% Uses pwelch to compute power and plots overall PSD per channel and 
 % either a distribution of power per frequency band for each channel or a 
 % relative change in each frequency band 
@@ -11,6 +11,7 @@ function [psdTrls,powerPlots] = powerComp(trlData,adfreq,chans,bands,filter,foi,
 % chans = number of channels; format = integer
 % comp = events to analyze; format = integer or integer-pair of event tags
 %   (Approach = 1; Binge = 2; Rest = 3) 
+
 
 % Outputs:
 % psdTrls = power data structure for each event; contains PSD for each
@@ -76,64 +77,69 @@ for ii = 1:length(trls)
             % Returns two-sided Welch PSD estimate at fois
             [Pxx,F] = pwelch(trls{ii}.trial(k,:,j),hamming(hammSize),[],(foi(1):foi(2):foi(3)),adfreq);
             % Convert PSD into dB and store
-%             psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
+            %             psdTrls.(events{ii}).Pow{1,j}(k,:) = (10*log10(Pxx))';
             psdTrls{ii}.Pow(k,:,j) = (10*log10(Pxx))';
-        
-        if strcmpi(filter,'y')
-            notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
-%             psdTrls.(events{ii}).Pow{1,j}(:,notchInd(1):notchInd(2)) = NaN;
-            psdTrls{ii}.Pow(k,notchInd(1):notchInd(2),j) = NaN;
-            psdTrls{ii}.Pow(k,notchInd(1):notchInd(2),j) = interp1(find(~isnan(psdTrls{ii}.Pow(k,:,j))),psdTrls{ii}.Pow(k,~isnan(psdTrls{ii}.Pow(k,:,j)),j),find(isnan(psdTrls{ii}.Pow(k,:,j))),'linear');
-%             for c = 1:chans
-%                 psdTrls.(events{ii}).Pow{1,j}(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),psdTrls.(events{ii}).Pow{1,j}(c,~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),find(isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),'linear');
-%             end
-        end
+            
+            if strcmpi(filter,'y')
+                notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
+                %             psdTrls.(events{ii}).Pow{1,j}(:,notchInd(1):notchInd(2)) = NaN;
+                psdTrls{ii}.Pow(k,notchInd(1):notchInd(2),j) = NaN;
+                psdTrls{ii}.Pow(k,notchInd(1):notchInd(2),j) = interp1(find(~isnan(psdTrls{ii}.Pow(k,:,j))),psdTrls{ii}.Pow(k,~isnan(psdTrls{ii}.Pow(k,:,j)),j),find(isnan(psdTrls{ii}.Pow(k,:,j))),'linear');
+                %             for c = 1:chans
+                %                 psdTrls.(events{ii}).Pow{1,j}(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),psdTrls.(events{ii}).Pow{1,j}(c,~isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),find(isnan(psdTrls.(events{ii}).Pow{1,j}(c,:))),'linear');
+                %             end
+            end
         end
     end
 end
-% Only need one of the frequency vectors
-psdTrls{ii}.F = F;
-psdTrls{ii}.hammSize = hammSize;
+% Also store frequency vectors and hammSize
+hist.powF = F;
+hist.hammSize = hammSize;
 %% Plot PSDs
 % Setup notch info and interpolate over data
 % notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
+
+% Set up figure
+if strcmpi(disp,'y')
+    powerPlots{1} = figure('Position',[1 1 1500 500]);
+    ax = cell(1,length(events));
+end
 % Find average overall PSD and plot
-powerPlots{1} = figure('Position',[1 1 1500 500]);
-ax = cell(1,length(events));
 for ii = 1:length(events)
     psdTrls{ii}.Overall = mean(psdTrls{ii}.Pow,3);
     psdTrls{ii}.OverallStd = std(psdTrls{ii}.Pow,0,3);
     % NaN and interpolate over notch filter
-%     if strcmpi(filter,'y')
-%         psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
-%         for c = 1:chans
-%              psdTrls.(events{ii}).Overall(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Overall(c,:))),psdTrls.(events{ii}).Overall(c,~isnan(psdTrls.(events{ii}).Overall(c,:))),find(isnan(psdTrls.(events{ii}).Overall(c,:))),'linear');
-%         end
-%     end
-    % Check number of events and set up subplots accordingly
-    if length(events) == 1
-        subplot(1,2,ii)
-    elseif length(events) == 2
-        subplot(1,3,ii)
-    elseif length(events) > 2
-        subplot(2,ceil(length(events)/2),ii)
+    %     if strcmpi(filter,'y')
+    %         psdTrls.(events{ii}).Overall(:,notchInd(1):notchInd(2)) = NaN;
+    %         for c = 1:chans
+    %              psdTrls.(events{ii}).Overall(c,notchInd(1):notchInd(2)) = interp1(find(~isnan(psdTrls.(events{ii}).Overall(c,:))),psdTrls.(events{ii}).Overall(c,~isnan(psdTrls.(events{ii}).Overall(c,:))),find(isnan(psdTrls.(events{ii}).Overall(c,:))),'linear');
+    %         end
+    %     end
+    if strcmpi(disp,'y')
+        % Check number of events and set up subplots accordingly
+        if length(events) == 1
+            subplot(1,2,ii)
+        elseif length(events) == 2
+            subplot(1,3,ii)
+        elseif length(events) > 2
+            subplot(2,ceil(length(events)/2),ii)
+        end
+        for j = 1:chans
+            hold on;
+            ax{ii} = plot(F,psdTrls{ii}.Overall(j,:));
+        end
+        if ii == 1
+            ylabel('Power (dB)');
+        end
+        xlim([0 foi(3)]);
+        xlabel('Frequency (Hz)');
+        title(eoi(ii));
+        % Linkaxes of both event subplots
+        if length(events) == 2 && ii == 2
+            linkaxes([ax{1,1}.Parent,ax{1,2}.Parent],'y');
+        end
     end
-    for j = 1:chans
-        hold on; 
-        ax{ii} = plot(F,psdTrls{ii}.Overall(j,:));
-    end 
-    if ii == 1
-        ylabel('Power (dB)');
-    end
-    xlim([0 foi(3)]);
-    xlabel('Frequency (Hz)');
-    title(eoi(ii));
 end
-% Linkaxes of both event subplots
-if length(events) == 2
-linkaxes([ax{1,1}.Parent,ax{1,2}.Parent],'y');
-end
-hold off;
 %% Calculate total power in frequency bands of interest and normalize by 
 % total power across all bands. N.B. This includes space between bands and
 % so total percent will not equal 100%.
@@ -156,7 +162,7 @@ for ii = 1:length(trls)
 %         psdTrls{ii}.totPow(:,:,k) = repmat(trapz(psdTrls{ii}.Pow(:,bInd(1,1):bInd(end,2),k),2)',size(bands,1),1,1);
     end
     psdTrls{ii}.totPow = repmat(trapz(psdTrls{ii}.Overall(:,bInd(1,1):bInd(end,2),:),2)',size(bands,1),1,nTrials{ii});
-    % Use element-wise division to obtain percent of total power wuithin
+    % Use element-wise division to obtain percent of total power within
     % each band
     psdTrls{ii}.relPow = psdTrls{ii}.bandPow./psdTrls{ii}.totPow;
 end
@@ -177,16 +183,7 @@ if length(trls) == 2
    [~,~,pAdj] = fdr_bh(p,0.05,'dep');
 end
 %% Plot average power differences
-% If one event, use stacked bargraph to visualize percent of total power
-% per frequency band per channel
-
-    if length(events) == 1
-%         subplot(1,2,2)
-%         bar(psdTrls{1,1}.relPow.*100,'stacked');
-%         set(gca,'XTickLabel',trls{1,1}.label);
-%         title('Distribution of power across frequency bands');
-%         xlabel('Channel'); ylabel('Percent of total power');
-    end
+if strcmpi(disp,'y')
     % Plot average percent change from event 2 to event 1 with 2 sigma confidence bars
     if length(events) == 2
         subplot(1,3,3)
@@ -196,52 +193,8 @@ end
         set(l,'Location','northwest');
         title(['Change in ',eoi{1,1},' from ',eoi{2,1}]);
         xlabel('Frequency Band'); ylabel(['Number of standard deviations from ',eoi{2,1}]);
-        % Set color scheme
-%         for ii = 1:chans
-%             h(1,ii).FaceColor = clrs{ii};
-%         end
     end
     tightfig(powerPlots{1});
-%% T-Test: Average total band powers between events
-% if length(events) == 2
-%     powerArray1 = cat(3,psdTrls.event1.Pow{2,:});
-%     powerArray2 = cat(3,psdTrls.event2.Pow{2,:});
-%     %hy = cell(length(bandNames),chans); p = cell(length(bandNames),chans);
-%     hy = cell(size(bands,1),chans); p = cell(size(bands,1),chans);
-%     for ii = 1:chans
-%         %for j = 1:length(bandNames)
-%         for j = 1:size(bands,1)
-%             [hy{j,ii,1},p{j,ii,1}] = ttest2(powerArray1(j,ii,:),powerArray2(j,ii,:));
-%         end
-%     end
-% end
-% %% Plot histogram of average total power in bands of both events
-% if length(events) == 2
-%     powerPlots{2} = figure('Position',[1 1 1226 472]);
-%     hBar = cell(1,chans);
-%     for ii = 1:chans
-%         subplot(1,chans,ii)
-%         [hBar{ii}] = barwitherr([psdTrls.event1.Std(:,ii),psdTrls.event2.Std(:,ii)],[psdTrls.event1.Avg(:,ii),psdTrls.event2.Avg(:,ii)]);
-%         set(gca,'XTick',1:size(bands,1),'XTickLabel',{'\delta','\theta','\alpha','\beta','l\gamma','h\gamma'})
-%         title([trls{1}.label{ii}],'FontSize',9);
-%         hold on
-%         %for j = 1:length(bandNames)
-%         for j = 1:size(bands,1)
-%             if hy{j,ii,1} == 1
-%                 if max(hBar{ii}(1).YData(j),hBar{ii}(2).YData(j)) > 0
-%                     plot(j,max(hBar{ii}(1).YData(j)+psdTrls.event1.Std(j,ii),hBar{ii}(2).YData(j)+psdTrls.event2.Std(j,ii))+0.2*(hBar{ii}(1).Parent.YTick(end)/length(hBar{ii}(1).Parent.YTick)),'*k');
-%                 else
-%                     plot(j,min(hBar{ii}(1).YData(j)-psdTrls.event1.Std(j,ii),hBar{ii}(2).YData(j)-psdTrls.event2.Std(j,ii))+0.2*(hBar{ii}(1).Parent.YTick(1)/length(hBar{ii}(1).Parent.YTick)),'*k');
-%                 end
-%             end
-%             if ii == 1
-%                 ylabel('Total Power (dBs)');
-%             end
-%         end
-%     end
-%     l = legend(eoi{:,1}); 
-%     set(l,'Position',[0.909 0.828 0.089 0.095]);
-%     axes('Position',[0 0 1 1],'Xlim',[0 1],'Ylim',[0 1],'Box','off','Visible','off','Units','normalized','clipping','off');
-%     text(0.5,1,'\bf Total average power','HorizontalAlignment','Center','VerticalAlignment','top');
-% end
-
+else
+    powerPlots = [];
+end

@@ -28,7 +28,7 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 %   in decimal form (1-percent; e.g. 90% overlap = 0.1)
 % eoi = events of interest alongside window around that event to be
 %   consider a single epoch; format: cell {'tag1',[0 3];'tag2',[-1.5 1.5]}
-%   indicates to use a 3 second window around tag1 (interval) and a 3
+%   indicates to use a 3 second window startint at tag1 (interval) and a 3
 %   second window centered at the scalar tag2.
 %   N.B.: if all the data use the tag 'all', otherwise use tags
 %   corresponding to event markers.
@@ -117,10 +117,10 @@ tic
 disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
 chans = size(LFPTs.data,1);
-[psdTrls,powerPlots] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi);
+[psdTrls,powerPlots,powHist] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi,'y');
 toc
 %% Calculate power correlations - requires at least 2 trials otherwise 
-% inputs NaN
+% gives NaNs
 tic
 disp('Calculating power corrleations using powerCorr.m...')
 [r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
@@ -155,7 +155,8 @@ hist.thresh = thresh; hist.onset = onset; hist.offset = offset;
 hist.foi = foi; hist.bands = bands; hist.cycles = cycles; 
 hist.ftimwin = ftimwin; hist.overlap = 1-overlap; 
 hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent;
-hist.adfreq = adfreq; hist.chk_nan = chk_nan;
+hist.adfreq = adfreq; hist.chk_nan = chk_nan; hist.powF = powHist.powF; 
+hist.hammSize = powHist.hammSize;
 
 if exist('bingeSize','var')
    hist.bingeSize = bingeSize; 

@@ -21,6 +21,6 @@ for iFile = 1:size(fNames,2)
         [~,sd] = Pl2tomvdmGenFile(fNames{iFile});
         % Extract variables from sd to save
         ad = sd.ad; adfreq = sd.adfreq; eventTs = sd.eventTs; fn = sd.fn; lfpchan = sd.lfpchan; LFPTs = sd.LFPTs; n = sd.n; pl2 = sd.pl2; TimeSampEr = sd.TimeSampEr; ts = sd.ts; WBchan = sd.WBchan;  %#ok<NASGU>
-        save(strcat(name, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan');
+        save(strcat(name, '.mat'), 'ad','adfreq','eventTs','fn','lfpchan','LFPTs','n','pl2','TimeSampEr','ts','WBchan','-v7.3');
     end
 end

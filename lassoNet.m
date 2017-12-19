@@ -3,35 +3,37 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 % input documentation for details on different options for analysis.
 %__________________________________________________________________________
 % INPUTS
-% x = matrix of predictors; format = observations (animal) x predictor
-% (feature)
-% y = matrix of response variables; format = observations (animal) x
+% x = matrix of predictors; format: observations (animal) x predictor
+%     (feature)
+% y = matrix of response variables; format: observations (animal) x
 %     response; if more than one goes through each separately (perhaps add
 %     multinomial later)
-% family = type of regression; format = string: 'binomial', 'multinomial',
-%   or 'gaussian'
-% type = type of error term to use; format = string: 'mse' and 'mae' can be
-%        used by all; 'auc' and 'class' can only be used by binomial
-% alph = elastic net tuning parameter alpha (0 = ridge, 1 = lasso); format
-%         = either integer or vector of values to tune through
-% kfolds = number of folds to be used for k-fold CV; format = integer
-% repeats = number of times to repeat whole procedure; format = integer
+% family = type of regression; format: string: 'binomial', 'multinomial',
+%          or 'gaussian'
+% type = type of error term to use; format: string, 'mse' and 'mae' can be
+%        used by all, 'auc' and 'class' can only be used by binomial
+% alph = elastic net tuning parameter alpha (0 = ridge, 1 = lasso); format:
+%        either integer or vector of values to tune through
+% kfolds = number of folds to be used for k-fold CV; format: integer
+% repeats = number of times to repeat whole procedure; format: integer
 % cfg = configuration structure, includes the following fields
 %       naive = percent of data to be left out entirely for final model
-%               testing; format = decimal (0.9 for 90%) or two structures
+%               testing; format: decimal (0.9 for 90%) or two structures
 %               with first being x and second being y
-%       rand = whether to randomize data; format = string 'y' or 'n',
+%       rand = whether to randomize data; format: string 'y' or 'n',
 %              default is 'n'
-%       normalize = whether to normalize data; format = string 'y' or 'n',
+%       normalize = whether to normalize data; format: string 'y' or 'n',
 %                   default is 'n'
 %       foldGen = whether to generate foldid manually to ensure each fold
 %                 has at least one of each category (used for small
-%                 logistic datasets); format = string 'y' or 'n', default
+%                 logistic datasets); format: string 'y' or 'n', default
 %                 is 'n'
 %       cvIterations = number of iterations for cross-validating alpha and
-%                      lambda; format = integer, default is 100
+%                      lambda; format: integer, default is 100
 %       minTerm = which lambda term to use for optimization; either 'min'
 %                 or '1se'
+%       weight = weights to apply to observations; format: column vector
+%                with same number of rows as x
 %__________________________________________________________________________
 % OUTPUTS
 % allAlpha = structure of alpha tuning data
@@ -59,8 +61,8 @@ if size(x,1) ~= size(y,1)
     error('Inequal predictor and response matrices.')
 end
 % Check regression family
-if ~strcmpi(family,'binomial') && ~strcmpi(family,'gaussian') && ~strcmpi(family,'multinomial')
-    error(['Family, ',family,', not supported; choose either "binomial", "multinomial", or "gaussian".'])
+if ~strcmpi(family,'binomial') && ~strcmpi(family,'gaussian') && ~strcmpi(family,'multinomial') && ~strcmpi(family,'poisson')
+    error(['Family, ',family,', not supported; choose either "binomial", "multinomial", "gaussian", or "poisson".'])
 end
 % Check type of error matches regression family
 if (strcmpi(type,'auc') || strcmpi(type,'class')) && (~strcmpi(family,'binomial') && ~strcmpi(family,'multinomial'))
@@ -201,6 +203,9 @@ for rep = 1:repeats
                 disp(['Tuning alpha through cross-validation: ',num2str(c),' out of ',num2str(size(foldid,1)),' for response variable ',num2str(r),'...'])
                 for a = 1:length(alph)
                     opts.alpha = alph(a);
+                    if ~isempty(cfg.weights)
+                        opts.weights = cfg.weights;
+                    end
                     CVerr = cvglmnet(trainX,trainY(:,r),family,opts,type,[],foldid(c,:,r));
                     % Get index of lambda with lowest misclassification error
                     % (using min rather than min + 1 SE since size of lambda is
@@ -243,6 +248,10 @@ for rep = 1:repeats
             opts.alpha = alph;
         else
             opts.alpha = bestAlpha(1,r);
+        end
+        % If weights exist, add to opts structure
+        if ~isempty(cfg.weights)
+           opts.weights = cfg.weights; 
         end
         % Cycle through cross-validation folds
         for c = 1:cfg.cvIterations

@@ -20,7 +20,7 @@ function [d,delt,r] = distES(dist1,dist2)
 n1 = numel(dist1); n2 = numel(dist2);
 % Get Wilcoxon W statistic
 [~,~,stats] = ranksum(dist1,dist2);
-% Get r-family effect size (Rosenthal 1984; Cohen 1988)
+% Get r-family effect size (Fritz and Morris, 2012)
 r = abs(stats.zval/sqrt(n1+n2));
 % Get Cohen's d from r (Rosenthal 1984; Friedman 1968)
 d = (2*r)/sqrt(1-r.^2);

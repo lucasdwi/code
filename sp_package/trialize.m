@@ -129,13 +129,13 @@ end
 for iB = 1:nBehavior
     for iT = 1:sum(~cellfun(@isempty,intTime(iB,:)))
         % Sums across channels of data to propogate missing data
-        intTime{iB,iT}(isnan(sum(LFPTs.data(:,intTime{iB,iT})))) = NaN;
+        intTime{iB,iT}(isnan(sum(LFPTs.data(:,intTime{iB,iT}),1))) = NaN;
     end
 end
 %% NaN contiguous data intervals less than the minimum trial length, which
 % in the case of two time values in the eoi will be calculated as the time
 % between them
-clnTrls = cell(size(intTime,1),sum(~cellfun(@isempty,intTime(iB,:))));
+clnTrls = cell(size(intTime));%,largest);%sum(~cellfun(@isempty,intTime(iB,:))));
 for iB = 1:nBehavior
     % Get this behaviors minimum interval
     if size(eoi{iB,2},2) == 2
@@ -158,19 +158,20 @@ for iB = 1:nBehavior
             dataStop = horzcat(dataStop,length(intTime{iB,iT})); %#ok<AGROW>
         end
         % Only keep data that is not NaNed and in continuous intervals
-        % longer than minInt (+ 1 for indexing)
-        if ~isnan(sum(intTime{iB,iT})) && (size(intTime{iB,iT},2) >= (minInt*adfreq + 1/adfreq)) 
-            numTrls = floor(size(intTime{iB,iT},2)/(minInt*adfreq + 1/adfreq));
+        % longer than minInt
+        if ~isnan(sum(intTime{iB,iT})) && (size(intTime{iB,iT},2) >= (minInt*adfreq))% + 1/adfreq)) 
+            numTrls = floor(size(intTime{iB,iT},2)/(minInt*adfreq));% + 1/adfreq));
             thisTrls = intTime{iB,iT}(1:((minInt*adfreq)*numTrls));
             clnTrls{iB,iT} = thisTrls;
         else
             thisTrls = [];
             % Run through data intervals
-            for intInd = 1:length(dataStart) 
-                intLen = dataStop(intInd) - dataStart(intInd);
+            for intInd = 1:length(dataStart)
+                % Add one for indexing
+                intLen = length(dataStart(intInd):dataStop(intInd));%dataStop(intInd) - dataStart(intInd);
                 % Double check that each interval is long enough
-                if intLen >= (minInt*adfreq + 1/adfreq) 
-                    numTrls = floor(intLen/(minInt*adfreq + 1/adfreq));
+                if intLen >= (minInt*adfreq)% + 1/adfreq) 
+                    numTrls = floor(intLen/(minInt*adfreq));% + 1/adfreq));
                     thisTrls = horzcat(thisTrls,intTime{iB,iT}(dataStart(intInd):(dataStart(intInd)+((minInt*adfreq)*numTrls))-1)); %#ok<AGROW>
                 end
             end
@@ -198,7 +199,7 @@ thisTrl.sampleinfo = [];
 trls = cell(1,size(eoi,1));
 for iB = 1:size(eoi,1)
     % Check if behavior has any data
-    if any(~cell2mat(cellfun(@isempty,clnTrls(iB,:),'UniformOutput',0)))%~isempty(clnEvents{iB,1})
+    if any(~cell2mat(cellfun(@isempty,clnTrls(iB,:),'UniformOutput',0)))
         % Start counter
         c = 1;
         for iT = 1:size(clnTrls,2)

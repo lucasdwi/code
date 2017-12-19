@@ -30,18 +30,13 @@ for e = 1:size(eoi,1)
             disp(['Calculating combination ',num2str(c)])
             for t = 1:size(trls{1,e}.trial,3)
                 for b = 1:size(bands,1)
-                    [Cxy(c,:,t,b),F1] = mscohere(...
-                        trls{1,e}.trial(cmb(c,1),:,t),...
-                        trls{1,e}.trial(cmb(c,2),:,t),...
-                        hamming(winSize(b)),[],foiV,adfreq);
+                    thisCoh = mscohere
+                    Cxy(c,:,t,b)
+                    [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial(cmb(c,1),:,t),trls{1,e}.trial(cmb(c,2),:,t),hamming(winSize(b)),[],foiV,adfreq);
                     % Interpolate over notch filter data
-                    notchInd = [nearest_idx3(57.5,F1);...
-                        nearest_idx3(62.5,F1)];
+                    notchInd = [nearest_idx3(57.5,F1);nearest_idx3(62.5,F1)];
                     Cxy(c,notchInd(1):notchInd(2),t) = NaN;
-                    Cxy(c,notchInd(1):notchInd(2),t) = interp1(...
-                        find(~isnan(Cxy(c,:,t))),...
-                        Cxy(c,~isnan(Cxy(c,:,t)),t),...
-                        find(isnan(Cxy(c,:,t))),'linear');
+                    Cxy(c,notchInd(1):notchInd(2),t) = interp1(find(~isnan(Cxy(c,:,t))),Cxy(c,~isnan(Cxy(c,:,t)),t),find(isnan(Cxy(c,:,t))),'linear');
                 end
             end
             % Whole data set
