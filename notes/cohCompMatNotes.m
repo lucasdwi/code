@@ -1,5 +1,6 @@
-function [coh] = cohCompMTM(trls,adfreq,NW,eoi,bands,chans,zeroedChannel,vis)
-% Get channel combinations
+function [coh,cohPlots] = cohCompMat(chans,trls,foi,overlap,adfreq,bands,zeroedChannel,eoi,vis)
+%%
+% Get channel pairs for coherence
 cmbs = nchoosek(1:chans,2);
 % Determine combinations to skip due to zeroed channels
 if ~isempty(zeroedChannel)
@@ -10,13 +11,21 @@ end
 % Count number of combinations and bands
 nCmbs = size(cmbs,1);
 nBands = size(bands,1);
+% Create foi vector
+foiV = foi(1):foi(2):foi(3);
+% Calculate window size by finding nearest power of two for 1 second
+[~,winSize] = nearestPow2(adfreq*1.5);
+% Set up window
+window = hamming(winSize);
+% Calculate overlap samples
+overlapSamp = round(overlap*winSize);
 % Preallocate output structure
 coh = cell(1,size(eoi,1));
 for ei = 1:size(eoi,1)
     % Get number of trials
     nTrls = size(trls{1,ei}.trial,3);
     % Preallocate 'Cxy' and 'mBandCoh'
-%     Cxy = zeros(nCmbs,length(foiV),nTrls);
+    Cxy = zeros(nCmbs,length(foiV),nTrls);
     mBandCoh = zeros(nCmbs,nBands,nTrls);
     for ci = 1:nCmbs
         disp(['Event ',num2str(ei),' of ',num2str(size(eoi,1)),...
@@ -27,14 +36,11 @@ for ei = 1:size(eoi,1)
             x = trls{1,ei}.trial(cmbs(ci,1),:,ti);
             y = trls{1,ei}.trial(cmbs(ci,2),:,ti);
             % Calculate coherence
-            [f,thisCxy,~,~,~] = cmtm(x,y,1/adfreq,NW,0,0,0);
-            % Truncate frequeny vector to 100 Hz
-            f = f(1:nearest_idx3(100,f));
-            % Truncate signal and store
-            Cxy(ci,:,ti) = thisCxy(1:nearest_idx3(100,f));
+            [Cxy(ci,:,ti),f] = mscohere(x,y,window,overlapSamp,foiV,...
+                adfreq);
             % Set up notch for 60 Hz line noise
             notchInd = [nearest_idx3(57.5,f);nearest_idx3(62.5,f)];
-             % Interpolate over notch
+            % Interpolate over notch
             samp = [notchInd(1)-1,notchInd(2)+1];
             v = [Cxy(ci,notchInd(1)-1,ti),Cxy(ci,notchInd(2)+1,ti)];
             sampQ = notchInd(1):notchInd(2);
@@ -52,12 +58,11 @@ for ei = 1:size(eoi,1)
     end
     % Normalize 'mBandCoh' by 'mtCxy'
     normBandCoh = mBandCoh./mtCxy;
-    % Setup output structure 'coh'
+    %% Setup output structure 'coh'
     coh{ei}.Cxy = Cxy;
     coh{ei}.mtCxy = mtCxy;
     coh{ei}.mBandCoh = mBandCoh;
     coh{ei}.normBandCoh = normBandCoh;
-    coh{ei}.f = f;
 end
 %% Plot
 if isequal(vis,1)
@@ -74,7 +79,7 @@ if isequal(vis,1)
         hold on
         % Plot mean and 95% confidence interval of coherence for each pair
         for ci = 1:nCmbs
-            h(ci) = shadedErrorBar(coh{ei}.f,squeeze(mean(coh{ei}.Cxy(ci,:,:),3)),...
+            h(ci) = shadedErrorBar(f,squeeze(mean(coh{ei}.Cxy(ci,:,:),3)),...
                 conf(squeeze(coh{ei}.Cxy(ci,:,:)),0.95),{'color',cols{ci,:}},1);
             % Grab legend info
             leg(ci) = h(ci).mainLine;

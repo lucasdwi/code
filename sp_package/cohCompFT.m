@@ -32,7 +32,8 @@ cfg.foi          = foi(1):foi(2):foi(3); % frequencies to use
 if ~isempty(cycles)
     cfg.t_ftimwin    = cycles./cfg.foi;
     minTWin          = min(cfg.t_ftimwin)*overlap;
-    cfg.toi          = eoi{1,2}(1):minTWin:eoi{1,2}(2);
+%     cfg.toi          = eoi{1,2}(1):minTWin:eoi{1,2}(2);
+    cfg.toi = eoi{1,2}(1):eoi{1,2}(2);
 % Or use a constant size for windows with (x%) overlap
 else
     cfg.t_ftimwin    = ones(size(cfg.foi)).*ftimwin;
@@ -59,7 +60,8 @@ if size(eoi,1) == 2
     if ~isempty(cycles)
         cfg.t_ftimwin    = cycles./cfg.foi;
         minTWin          = min(cfg.t_ftimwin)*overlap;
-        cfg.toi          = eoi{2,2}(1):minTWin:eoi{2,2}(2);
+%         cfg.toi          = eoi{2,2}(1):minTWin:eoi{2,2}(2);
+        cfg.toi = eoi{1,2}(1):eoi{1,2}(2);
     % Or use a constant size for windows with (x%) overlap
     else
         cfg.t_ftimwin    = ones(size(cfg.foi)).*ftimwin;
@@ -90,7 +92,7 @@ else if size(eoi,1) == 2
 end
 %% Setup notch info
 % N.B. fds freq axes need to be the same
-notchInd = [nearest_idx(59,fds{1}.freq);nearest_idx(61.5,fds{1}.freq)];
+notchInd = [nearest_idx3(59,fds{1}.freq);nearest_idx3(61.5,fds{1}.freq)];
 % Average across trials and interpolate across notch filter
 for f = size(fds)
     meanCoh = nanmean(fds{f}.cohspctrm(:,:,:),3);

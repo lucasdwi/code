@@ -61,8 +61,8 @@ for ii = 1:20
    ceA(ii,:) = eachData.auc;
    ceX(ii,:) = eachData.rocX;
    ceY(ii,:) = eachData.rocY;
-   % Extract betas
-   betas(ii,:) = concatData.allBeta{1,1}.survBeta;
+   % Extract betas of top model
+   betas(ii,:) = concatData.allBeta{1,1}.betas(concatData.allLambda{1,1}.bestLambdaInds,:);
 end
 % Preallocate
 [ceXM,ceYM,ceXS,ceYS] = deal(zeros(12,size(ceX{1},1)));
@@ -85,8 +85,8 @@ ccACI = conf(ccA,0.95,'tail',2);
 ceACI = conf(ceA',0.95,'tail',2);
 % Get average number of features
 featM = mean(sum(betas~=0,2));
-% Get average feature survival
-betaM = mean(betas,1)';
+% Get survival of top betas
+betaM = mean(betas~=0,1);
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\concatLasso.mat'],'ccA','ccX','ccY','ccAM','ccACI','ccXM','ccYM',...
     'ceA','ceX','ceY','ceAM','ceACI','ceXM','ceYM','ccXfill','ccYfill',...

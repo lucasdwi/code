@@ -121,6 +121,17 @@ for ii = 1:size(data,2)
 end     
 % save(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
 %     'finalNew\bingeNotPreData.mat'],'trlDat','data');
+%% Plot distribution of changes in voracity
+% Load voracity data
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
+    '4conditionBingeSize.mat'])
+% Calculate change in voracity
+vorDiff = [(voracity(:,3)-voracity(:,1))./voracity(:,1);...
+    (voracity(:,2)-voracity(:,1))./voracity(:,1)];
+figure
+scatter(ones(1,24),vorDiff.*100,200,'.k')
+set(gca,'XTick',1,'XTickLabel','')
+ylabel('Percent Change in Voracity (%)')
 %% Find potential noise features
 % Load data created above
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\',...
@@ -159,16 +170,16 @@ pInds = logicFind(0.05,p,'<=');
 %     'pInds');
 %% Plot features with significant correlations with changes in voracity
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
-    'bingeNotData2.mat'])
+    '\finalNew\bingeNotData.mat'])
 nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
-thiscorr = zeros(length(pInds),1);
+thiscorr = cell(length(pInds),1);
 for ii = 1:length(pInds)
     figure
-    % Convert features to gm/ms and %
-    scatter(1000.*vorDiff(~isnan(vorDiff)),100.*feats(:,pInds(ii)),'ok',...
+    % Convert features to %
+    scatter(100.*vorDiff(~isnan(vorDiff)),100.*feats(:,pInds(ii)),'ok',...
         'Filled')
     lsline
-    thiscorr{ii} = fitlm(1000.*vorDiff(~isnan(vorDiff)),...
+    thiscorr{ii} = fitlm(100.*vorDiff(~isnan(vorDiff)),...
         feats(:,pInds(ii)));
     title(nameVect{pInds(ii)})
     text(0,0,['R^2 = ',num2str(round(thiscorr{ii}.Rsquared.Ordinary,2)),...
@@ -177,6 +188,27 @@ for ii = 1:length(pInds)
     xlabel('Change in Voracity (gm/ms)')
     ylabel('Percent Change in Feature')
 end
+%% Plot calories consumed per group
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
+    '4conditionBingeSize.mat'])
+cmb = nchoosek(1:4,2);
+stats = cell(1,6);
+for ii = 1:6
+    % Keep stats for dof and t
+    [~,p(ii),~,stats{ii}] = ttest2(bingeCal(:,cmb(ii,1)),...
+        bingeCal(:,cmb(ii,2)));
+end
+p = p.*6;
+figure
+hold on
+for ii = 1:4
+    scatter(ones(12,1).*ii,bingeCal(:,ii),200,'.k')
+    plot([ii-0.25 ii+0.25],repmat(mean(bingeCal(:,ii),'omitnan'),1,2),'r-')
+end
+group = mat2cell(cmb,ones(1,6),2);
+sigstar(group(p<0.05),p(p<0.05))
+ylabel('Calories (kCal)')
+set(gca,'XTick',1:4,'XTickLabel',{'Base','dep24','Dep48','Chow'})
 %% Set up bingeNotRest data
 % Get trialized data
 [data,~,~] = collateData(['C:\Users\Pythia\Documents\GreenLab'...
@@ -412,6 +444,9 @@ cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
     'preBinge\'])
 % Preallocate
 [preA,preARand] = deal(zeros(20,8));
+% Hardcoded first dimension from know size of roc curves in concatData
+[preX,preY] = deal(zeroes(21207,20));
+[preRandX,preRandY] = deal(zeros(21222,20));
 beta = zeros(20,58);
 for ii = 1:20
    load([num2str(ii),'.mat'])
@@ -435,7 +470,12 @@ h(1) = plot(mean(preX,2),mean(preY,2),'k');
 hold on
 h(2) = plot(mean(preRandX,2),mean(preRandY,2),'--k');
 h(3) = plot(NaN,NaN,'color','none');
-legend(h,{['Actual: ',num2str(round(mean(preA(:,1)),2)),'\pm',num2str(round(conf(preA(:,1)',0.95,'tail',2),2))],['Permuted: ',num2str(round(mean(preARand(:,1)),2)),'\pm',num2str(round(conf(preARand(:,1)',0.95,'tail',2),2))],['d = ',num2str(round(distES(preA(:,1),preARand(:,1)),2))]},'Location','SE')
+legend(h,{['Actual: ',num2str(round(mean(preA(:,1)),2)),'\pm',...
+    num2str(round(conf(preA(:,1)',0.95,'tail',2),2))],...
+    ['Permuted: ',num2str(round(mean(preARand(:,1)),2)),'\pm',...
+    num2str(round(conf(preARand(:,1)',0.95,'tail',2),2))],...
+    ['d = ',num2str(round(distES(preA(:,1),preARand(:,1)),2))]},...
+    'Location','SE')
 %% Plot preBinge through time
 % Get CI and run t-tests
 preACI = conf(preA',0.95,'tail',2);
@@ -569,10 +609,10 @@ ylabel('True Positive Rate')
 % Freq: delta,theta,alpha,beta,lgamma,hgamma
 clear chan pair freq
 chan = [];
-pair = 6;
-freq = 2;
-feat = 'Theta';
-loc = 'CLCR';
+pair = 2;
+freq = 1;
+feat = 'd';
+loc = 'slcl';
 % Get preBinge and notBinge data
 files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
     'preBingeCombined'],'base','in');
@@ -755,9 +795,9 @@ h(1) = plot(ccLogXM,ccLogYM,'-k');
 h(2) = plot(ccLogRandXM,ccLogRandYM,'--k');
 h(3) = plot(NaN,NaN,'Color','none');
 legend(h,{['Real: ',num2str(round(ccLogAM,2)*100),'\pm',...
-    num2str(round(ccLogACI,2)*100),'%'],['Permuted: ',...
-    num2str(round(ccLogRandAM,2)*100),'\pm',...
-    num2str(round(ccLogRandACI,2)*100),'%'],...
+    num2str(round(ccLogACI,2))],['Permuted: ',...
+    num2str(round(ccLogRandAM,2)),'\pm',...
+    num2str(round(ccLogRandACI,2))],...
     ['d = ',num2str(round(d,2))]},'Location','southeast')
 ylim([0 1])
 xlim([0 1])
@@ -974,12 +1014,138 @@ for ii = 1:12
     plot([1 2],diffAUC(:,ii))
 end
 xlim([0.5 2.5])
-set(gca,'XTick',[1:2],'XTickLabel',{'All','LOO'})
+set(gca,'XTick',1:2,'XTickLabel',{'All','LOO'})
 title('AUC Differences: Self-Concat')
 ylabel('AUC Difference')
-%% logCmbs
+%% All states model - permuted
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\indvGen.mat'])
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\baseline500Each6000All50-50.mat'], 'pInds')
+inds = 1:60;
+inds = inds(~ismember(inds,pInds));
+
+for ii = 1:20
+    trainX = genTrainX{ii}(:,inds);
+    trainY = genTrainY{ii}(randperm(length(genTrainY{ii})));
+    testX = genTestX{ii}(:,inds);
+    testY = genTestY{ii}(randperm(length(genTestY{ii})));
+    mdl = fitglm(trainX,trainY,'distribution','binomial') ;
+    prob = predict(mdl,testX);
+    [~,~,~,rndA(ii)] = perfcurve(testY,prob,1);
+end
+% save(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+%     '\allPermuted.mat'],'rndA')
+%% logCmbs - all
 cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\logCmbs\'])
+    '\logCmbs\all\'])
+load('1.mat')
+allA{1} = A;
+load('2.mat')
+allA{2} = A;
+allA{3} = [];
+for ii = 1:20
+   load(['trip',num2str(ii),'.mat'])
+   allA{3} = [allA{3};A(ii,:)];
+end
+monadM = mean(allA{1,1},1)';
+dyadM = mean(allA{1,2},1)';
+triadM = mean(allA{1,3},1)';
+%% Monadic
+% Use performance of permuted full logistic for cutoff
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\allPermuted.mat'])
+[monadMS,monadInd] = sort(monadM,'descend');
+% Sort all monad data by above indices
+monad = allA{1,1}(:,monadInd);
+for ii = 1:length(monadMS)
+   [~,p(ii)] = ttest2(monad(:,ii),rndA); 
+end
+% Apply Bonferroni correction
+p = p.*length(p);
+% Find first monad that is not significantly different from permuted
+worst = logicFind(0.05,p,'>=','first');
+% Find teirs
+monadTier = tier(monad);
+% Remove teirs below worst and add in worst
+monadTier(monadTier>=worst) = [];
+monadTier = [monadTier,worst]';
+% Get feature names
+nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+monadFeats = nameVect(monadInd)';
+%% Dyadic
+% Use performance of permuted full logistic for cutoff
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\allPermuted.mat'])
+[dyadMS,dyadInd] = sort(dyadM,'descend');
+% Sort all monad data by above indices
+dyad = allA{1,2}(:,dyadInd);
+for ii = 1:length(dyadMS)
+   [~,p(ii)] = ttest2(dyad(:,ii),rndA); 
+end
+% Apply Bonferroni correction
+p = p.*length(p);
+% Find first monad that is not significantly different from permuted
+worst = logicFind(0.05,p,'>=','first');
+% Find teirs
+dyadTier = tier(dyad);
+% Remove teirs below worst and add in worst
+dyadTier(dyadTier>=worst) = [];
+dyadTier = [dyadTier,worst]';
+% Get feature names
+nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+cmbs = nchoosek(1:58,2);
+for ii = 1:size(cmbs,1)
+   dyadFeats(ii,1) = nameVect(cmbs(dyadInd(ii),1));
+   dyadFeats(ii,2) = nameVect(cmbs(dyadInd(ii),2));
+end
+%% Triadic
+% Use performance of permuted full logistic for cutoff
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\allPermuted.mat'])
+[triadMS,triadInd] = sort(triadM,'descend');
+% Sort all monad data by above indices
+triad = allA{1,3}(:,triadInd);
+for ii = 1:length(triadMS)
+   [~,p(ii)] = ttest2(triad(:,ii),rndA); 
+end
+% Apply Bonferroni correction
+p = p.*length(p);
+% Find first monad that is not significantly different from permuted
+worst = logicFind(0.05,p,'>=','first');
+% Find teirs
+triadTier = tier(triad);
+% Remove teirs below worst and add in worst
+triadTier(triadTier>=worst) = [];
+triadTier = [triadTier,worst]';
+% Get feature names
+nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+cmbs = nchoosek(1:58,3);
+for ii = 1:size(cmbs,1)
+   triadFeats(ii,1) = nameVect(cmbs(triadInd(ii),1));
+   triadFeats(ii,2) = nameVect(cmbs(triadInd(ii),2));
+   triadFeats(ii,3) = nameVect(cmbs(triadInd(ii),3));
+end
+%% Get frequency of different frequency ranges in monads, dyads, and triads
+freqs = {'d','t','a','b','lg','hg'};
+for ii = 1:size(freqs,2)
+   perc(ii,1) = sum(~cellfun(@isempty,regexp(monadFeats(1:(monadTier(end)-1),:),freqs{ii})))/(monadTier(end)-1);
+   perc(ii,2) = sum(any(~cellfun(@isempty,regexp(dyadFeats(1:(dyadTier(end)-1),:),freqs{ii})),2))/(dyadTier(end)-1);
+   perc(ii,3) = sum(any(~cellfun(@isempty,regexp(triadFeats(1:(triadTier(end)-1),:),freqs{ii})),2))/(triadTier(end)-1);
+   
+   topPerc(ii,1) = sum(~cellfun(@isempty,regexp(monadFeats(1:(monadTier(2)-1),:),freqs{ii})))/(monadTier(2)-1);
+   topPerc(ii,2) = sum(any(~cellfun(@isempty,regexp(dyadFeats(1:(dyadTier(2)-1),:),freqs{ii})),2))/(dyadTier(2)-1);
+   topPerc(ii,3) = sum(any(~cellfun(@isempty,regexp(triadFeats(1:(triadTier(2)-1),:),freqs{ii})),2))/(triadTier(2)-1);
+end
+% figure
+% bar(topPerc'.*100,'stacked')
+% ylabel('Cumulative Percent of Models (%)');
+% set(gca,'XTickLabel',{'Monad','Dyad','Triad'})
+% box off
+
+%% logCmbs - base
+cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\logCmbs\base\'])
 % Preallocate
 [baseAuc,dep24Auc,dep48Auc,chowAuc] = deal(cell(1,2));
 for ii = 1:2
@@ -1017,6 +1183,7 @@ cmbs = cell(1,3);
 [topA,topADep24,topADep48,topAChow,topCI,topCIDep24,topCIDep48,...
     topCIChow] = deal(zeros(58,3));
 topInd = cell(58,3);
+sortInd = cell(1,3);
 for ii  = 1:3
     cmbs{ii} = nchoosek(1:58,ii);
     % Sort each condition by baseline performance
@@ -1674,26 +1841,26 @@ allCI = [baseAllPopACI,baseAllIndACI,dep24AllPopACI,dep24AllIndACI,...
     dep48AllPopACI,dep48AllIndACI,chowAllPopACI,chowAllIndACI];
 %%
 % Run t-tests
-[~,p(1)] = ttest2(mean(baseBaseDiag,1),popBaseBaseA);
-[~,p(2)] = ttest2(mean(baseDep24Diag,1),popBaseDep24A);
-[~,p(3)] = ttest2(mean(baseDep48Diag,1),popBaseDep48A);
-[~,p(4)] = ttest2(mean(baseChowDiag,1),popBaseChowA);
-[~,p(5)] = ttest2(mean(baseDiag,1),popBaseA);
-[~,p(6)] = ttest2(mean(dep24Diag,1),popDep24A);
-[~,p(7)] = ttest2(mean(dep48Diag,1),popDep48A);
-[~,p(8)] = ttest2(mean(chowDiag,1),popChowA);
+[~,p(1),~,stats{1}] = ttest2(mean(baseBaseDiag,1),popBaseBaseA);
+[~,p(2),~,stats{2}] = ttest2(mean(baseDep24Diag,1),popBaseDep24A);
+[~,p(3),~,stats{3}] = ttest2(mean(baseDep48Diag,1),popBaseDep48A);
+[~,p(4),~,stats{4}] = ttest2(mean(baseChowDiag,1),popBaseChowA);
+[~,p(5),~,stats{5}] = ttest2(mean(baseDiag,1),popBaseA);
+[~,p(6),~,stats{6}] = ttest2(mean(dep24Diag,1),popDep24A);
+[~,p(7),~,stats{7}] = ttest2(mean(dep48Diag,1),popDep48A);
+[~,p(8),~,stats{8}] = ttest2(mean(chowDiag,1),popChowA);
 
-[~,p(9)] = ttest2(popBaseBaseA,popBaseA);
-[~,p(10)] = ttest2(mean(baseBaseDiag,1),mean(baseDiag,1));
-[~,p(11)] = ttest2(popBaseDep24A,popDep24A);
-[~,p(12)] = ttest2(mean(baseDep24Diag,1),mean(dep24Diag,1));
-[~,p(13)] = ttest2(popBaseDep48A,popDep48A);
-[~,p(14)] = ttest2(mean(baseDep48Diag,1),mean(dep48Diag,1));
-[~,p(15)] = ttest2(popBaseChowA,popChowA);
-[~,p(16)] = ttest2(mean(baseChowDiag,1),mean(chowDiag,1));
+% [~,p(9),~,stats{9}] = ttest2(popBaseBaseA,popBaseA);
+% [~,p(10),~,stats{10}] = ttest2(mean(baseBaseDiag,1),mean(baseDiag,1));
+% [~,p(11),~,stats{11}] = ttest2(popBaseDep24A,popDep24A);
+% [~,p(12),~,stats{12}] = ttest2(mean(baseDep24Diag,1),mean(dep24Diag,1));
+% [~,p(13),~,stats{13}] = ttest2(popBaseDep48A,popDep48A);
+% [~,p(14),~,stats{14}] = ttest2(mean(baseDep48Diag,1),mean(dep48Diag,1));
+% [~,p(15),~,stats{15}] = ttest2(popBaseChowA,popChowA);
+% [~,p(16),~,stats{16}] = ttest2(mean(baseChowDiag,1),mean(chowDiag,1));
 % Apply correction
-p1 = p(1:4).*16;
-p2 = p(5:8).*16;
+p1 = p(1:4).*8;
+p2 = p(5:8).*8;
 % Set up comparison groups
 comp = {[1,2],[3,4],[5,6],[7,8]};
 % Remove p-values and 'comp' groups if p>0.05
@@ -1706,14 +1873,16 @@ data1 = {popBaseBaseA',mean(baseBaseDiag)',popBaseDep24A',...
     popBaseChowA',mean(baseChowDiag)'};
 data2 = {popBaseA',mean(baseDiag)',popDep24A',mean(dep24Diag)',...
     popDep48A',mean(dep48Diag)',popChowA',mean(chowDiag)'};
-% Plot
+%% Plot
 figure
 subplot(1,2,1)
 hold on
 % Plot raw data with jitter
-plotSpread(data1,'distributionmarker','.','distributioncolors','k')
+% plotSpread(data1,'distributionmarker','.','distributioncolors','k')
 % Plot mean and 95% CI
-scatterErr(1:8,baseM,baseCI,0,'mark','line','col',[0.5 0.5 0.5])
+scatterErr(1:2:8,baseM(1:2:8),baseCI(1:2:8),0,'mark','o','col','k')
+scatterErr(2:2:8,baseM(2:2:8),baseCI(2:2:8),0,'mark','o','col',...
+    [0.5 0.5 0.5])
 % Plot significance bars
 sigstar(comp1,p1,1);
 xlim([0.5 8.5])
@@ -1725,9 +1894,11 @@ title('Baseline')
 
 subplot(1,2,2)
 % Plot raw data with jitter
-plotSpread(data2,'distributionmarker','.','distributioncolors','k')
+% plotSpread(data2,'distributionmarker','.','distributioncolors','k')
 % Plot mean and 95% CI
-scatterErr(1:8,allM,allCI,0,'mark','line','col',[0.5 0.5 0.5])
+scatterErr(1:2:8,allM(1:2:8),allCI(1:2:8),0,'mark','o','col','k')
+scatterErr(2:2:8,allM(2:2:8),allCI(2:2:8),0,'mark','o','col',[0.5 0.5 0.5])
+
 % Plot significance bars
 sigstar(comp2,p2,1);
 xlim([0.5 8.5])
@@ -1863,25 +2034,30 @@ set(gca,'XTick',1:20,'XTickLabel',repmat({'Base','Dep24','Dep48','Chow'}...
 xtickangle(90)
 ylabel('AUC')
 % Run t-tests
-[~,p(1)] = ttest2(mean(logBase,2),mean(uniBase(:,uniInd,:),3));
-[~,p(2)] = ttest2(mean(logDep24,2),mean(uniDep24(:,uniInd,:),3));
-[~,p(3)] = ttest2(mean(logDep48,2),mean(uniDep48(:,uniInd,:),3));
-[~,p(4)] = ttest2(mean(logChow,2),mean(uniChow(:,uniInd,:),3));
+[~,p(1),~,stats{1}] = ttest2(mean(logBase,2),mean(uniBase(:,uniInd,:),3));
+[~,p(2),~,stats{2}] = ttest2(mean(logDep24,2),mean(uniDep24(:,uniInd,:),...
+    3));
+[~,p(3),~,stats{3}] = ttest2(mean(logDep48,2),mean(uniDep48(:,uniInd,:),...
+    3));
+[~,p(4),~,stats{4}] = ttest2(mean(logChow,2),mean(uniChow(:,uniInd,:),3));
 
-[~,p(5)] = ttest2(mean(logBase,2),mean(dyBase(:,dyInd,:),3));
-[~,p(6)] = ttest2(mean(logDep24,2),mean(dyDep24(:,dyInd,:),3));
-[~,p(7)] = ttest2(mean(logDep48,2),mean(dyDep48(:,dyInd,:),3));
-[~,p(8)] = ttest2(mean(logChow,2),mean(dyChow(:,dyInd,:),3));
+[~,p(5),~,stats{5}] = ttest2(mean(logBase,2),mean(dyBase(:,dyInd,:),3));
+[~,p(6),~,stats{6}] = ttest2(mean(logDep24,2),mean(dyDep24(:,dyInd,:),3));
+[~,p(7),~,stats{7}] = ttest2(mean(logDep48,2),mean(dyDep48(:,dyInd,:),3));
+[~,p(8),~,stats{8}] = ttest2(mean(logChow,2),mean(dyChow(:,dyInd,:),3));
 
-[~,p(9)] = ttest2(mean(logBase,2),mean(triBase(:,triInd,:),3));
-[~,p(10)] = ttest2(mean(logDep24,2),mean(triDep24(:,triInd,:),3));
-[~,p(11)] = ttest2(mean(logDep48,2),mean(triDep48(:,triInd,:),3));
-[~,p(12)] = ttest2(mean(logChow,2),mean(triChow(:,triInd,:),3));
+[~,p(9),~,stats{9}] = ttest2(mean(logBase,2),mean(triBase(:,triInd,:),3));
+[~,p(10),~,stats{10}] = ttest2(mean(logDep24,2),...
+    mean(triDep24(:,triInd,:),3));
+[~,p(11),~,stats{11}] = ttest2(mean(logDep48,2),...
+    mean(triDep48(:,triInd,:),3));
+[~,p(12),~,stats{12}] = ttest2(mean(logChow,2),...
+    mean(triChow(:,triInd,:),3));
 
-[~,p(13)] = ttest2(mean(logBase,2),mean(lassoBase,2));
-[~,p(14)] = ttest2(mean(logDep24,2),mean(lassoDep24,2));
-[~,p(15)] = ttest2(mean(logDep48,2),mean(lassoDep48,2));
-[~,p(16)] = ttest2(mean(logChow,2),mean(lassoChow,2));
+[~,p(13),~,stats{13}] = ttest2(mean(logBase,2),mean(lassoBase,2));
+[~,p(14),~,stats{14}] = ttest2(mean(logDep24,2),mean(lassoDep24,2));
+[~,p(15),~,stats{15}] = ttest2(mean(logDep48,2),mean(lassoDep48,2));
+[~,p(16),~,stats{16}] = ttest2(mean(logChow,2),mean(lassoChow,2));
 % Correct p-values
 p = p.*16;
 % Groups
@@ -1890,8 +2066,11 @@ group = {[1,17],[2,18],[3,19],[4,20],[5,17],[6,18],[7,19],[8,20],[9,17],...
 group = group(p<0.05);
 p = p(p<0.05);
 sigstar(group,p)
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\indvGen.mat'])
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\baseline500Each6000All50-50.mat'],'pInds')
+%%
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
+    'finalNew\indvGen.mat'])
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
+    'finalNew\baseline500Each6000All50-50.mat'],'pInds')
 inds = 1:60;
 inds = inds(~ismember(inds,pInds));
 for ii = 1:20
@@ -1909,6 +2088,7 @@ end
 %% Extract betas from models
 dyadBeta = cellfun(@(x) table2array(x.Coefficients(2:3,1)),dyad,'UniformOutput',0);
 clear dyadSign
+dyadSign = zeros(2,8,20);
 for ii = 1:20
    dyadSign(:,:,ii) = cat(2,dyadBeta{ii,:}); 
 end

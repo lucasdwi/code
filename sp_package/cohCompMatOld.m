@@ -1,4 +1,4 @@
-function [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,zeroedChannel,eoi)
+function [coh,cohPlots] = cohCompMatOld(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,zeroedChannel,eoi)
 %% Cycle through trials and calculate coherence
 cmb = nchoosek(1:chans,2);
 nCmb = size(cmb,1);
@@ -29,15 +29,17 @@ for e = 1:size(eoi,1)
         else
             disp(['Calculating combination ',num2str(c)])
             for t = 1:size(trls{1,e}.trial,3)
-                for b = 1:size(bands,1)
-                    thisCoh = mscohere
-                    Cxy(c,:,t,b)
-                    [Cxy(c,:,t),F1] = mscohere(trls{1,e}.trial(cmb(c,1),:,t),trls{1,e}.trial(cmb(c,2),:,t),hamming(winSize(b)),[],foiV,adfreq);
-                    % Interpolate over notch filter data
-                    notchInd = [nearest_idx3(57.5,F1);nearest_idx3(62.5,F1)];
-                    Cxy(c,notchInd(1):notchInd(2),t) = NaN;
-                    Cxy(c,notchInd(1):notchInd(2),t) = interp1(find(~isnan(Cxy(c,:,t))),Cxy(c,~isnan(Cxy(c,:,t)),t),find(isnan(Cxy(c,:,t))),'linear');
-                end
+                [Cxy(c,:,t),F1] = mscohere(...
+                    trls{1,e}.trial(cmb(c,1),:,t),...
+                    trls{1,e}.trial(cmb(c,2),:,t),...
+                    hamming(winSize),[],foiV,adfreq);
+                notchInd = [nearest_idx3(57.5,F1);...
+                    nearest_idx3(62.5,F1)];
+                Cxy(c,notchInd(1):notchInd(2),t) = NaN;
+                Cxy(c,notchInd(1):notchInd(2),t) = interp1(...
+                    find(~isnan(Cxy(c,:,t))),...
+                    Cxy(c,~isnan(Cxy(c,:,t)),t),...
+                    find(isnan(Cxy(c,:,t))),'linear');
             end
             % Whole data set
             % Check for completeness of signal, if NaN exists, skip full-coherence

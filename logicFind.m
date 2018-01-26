@@ -57,7 +57,15 @@ if strcmp(op,'~=')
     end
 end
 if strcmpi(position,'first')
-    inds = inds(1);
+    if isempty(inds)
+        inds = [];
+    else
+        inds = inds(1);
+    end
 elseif strcmpi(position,'last')
-    inds = inds(end);
+    if isempty(inds)
+        inds = [];
+    else
+        inds = inds(end);
+    end
 end

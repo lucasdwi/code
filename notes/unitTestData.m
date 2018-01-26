@@ -36,3 +36,6 @@ LFPTs.label = {'Channel 1','Channel 2'};
 LFPTs.tvec = linspace(0,181.54,length(LFPTs.data));
 LFPTs.cfg.history.mfun = [];
 adfreq = fs;
+%%
+
+%%

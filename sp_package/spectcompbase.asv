@@ -128,13 +128,16 @@ toc
 %% Calculate coherence
 if strcmpi(cohMethod,'mat')
     tic
-    disp('Using mscohere.m to calculate coherence...')
-    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,1,cohMethod,'overlap',overlap);
-    toc
-elseif strcmpi(cohMethod,'mtm')
-    tic
-    disp('Using cmtm.m to calculate coherence...')
-    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,vis,cohMethod,'NW',8);
+    disp('Using cohCompMat.m to calculate coherence...')
+    chans = size(LFPTs.data,1);
+    % Calculate window size
+    if ~isempty(ftimwin)
+        [~,winSize] = nearestPow2(ftimwin*adfreq);
+    elseif ~isempty(cycles)
+        % Uses lowest frequency (first in bands) to compute winSize
+        [~,winSize] = nearestPow2((cycles/bands{1,2}(1))*adfreq);
+    end
+    [coh,cohPlots] = cohCompMat(LFPTs,chans,trls,foi,winSize,overlap,adfreq,bands,zeroedChannel,eoi);
     toc
 end
 %% Create history structure - Stores all inputs used and a few variables

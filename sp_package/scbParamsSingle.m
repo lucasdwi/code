@@ -42,9 +42,9 @@ function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,over
 %% LLD 2017
 %% See above documentation for details on variables.
 
-% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\angela\mat\';
+sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\angela\mat\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\raw\';
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\mike\toProcess\';
+% sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\mike\toProcess\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\megan\baseData\';
 % sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed\';
 %sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\editedWithSleep\';
