@@ -6,7 +6,7 @@ function [filtData] = filter60(data,fs,display)
 % data = data to filter; can either be plain matrix or in structure in
 %   .data field; format: in either case chan X time
 % fs = sampling frequency of data; format: integer 
-% display = whether to plot filter; format: either 'on' or 'off'
+% display = whether to plot filter; format: either 1 or 0
 %__________________________________________________________________________
 % OUTPUTS:
 % filtData = filtered data in same format as input; format: channel X time
@@ -28,9 +28,8 @@ end
 % with 0.5 dB of ripple
 [b,a] = cheby1(2,.5,[59 61]*2/fs,'stop');
 % Plot filter
-if strcmpi('on', display)
+if display == 1
     fvtool(b,a,'Fs',fs);
-    figure; plot(toFilt(1,1:20000));
 end
 % Count number of channels
 chans = size(toFilt,1);

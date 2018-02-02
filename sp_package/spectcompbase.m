@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent)
+function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent)
 %% Preproccesses data and calculates the following metrics: power, 
 %  coherence, and power coupling. Read input documentation for more detail
 %  on the options for these analyses and necessary information to run the
@@ -9,7 +9,7 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 % INPUTS:
 % sdir = source directory of data; format: string
 % file = file name w/o extension; format: string
-% filter = wether or not to use a filter; format: 'y' or 'n'
+% nFilt = wether or not to use a filter; format: 'y' or 'n'
 % dsf = factor with which to downfactor; format: whole integer
 % thresh = threshold for detecting noise artifacts; format: mV (or other
 %   y-axis scale for time series)
@@ -18,12 +18,6 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 % foi = frequencies of interest; format = [lower step upper] in Hz
 % bands = structure with bands of interest starting with lowest; format:
 %   {'band1',[lower upper];'band2',[lower upper];...}
-% cycles = number of cycles to use in creating frequency dependent windows
-%   in ft_freqanalysis; format: integer 
-% ftimwin = size of window to use in ft_freqanalysis; format: number in
-%   seconds; N.B.: during PowerCorr.m ftimwin will be used to compute the
-%   number of cycles at the lowest frequency band of interest and will warn
-%   if less than 3
 % overlap = amount of overlap to use with sliding windows; format: percent
 %   in decimal form (1-percent; e.g. 90% overlap = 0.1)
 % eoi = events of interest alongside window around that event to be
@@ -32,6 +26,7 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 %   second window centered at the scalar tag2.
 %   N.B.: if all the data use the tag 'all', otherwise use tags
 %   corresponding to event markers.
+% disp = whether or not to plot power and coherence; format = 'y' or 'n'
 % saveParent = parent directory path to save plots and files; format:
 %   string N.B.: if directory/file exists will warn about overwritting
 %__________________________________________________________________________
@@ -59,11 +54,19 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 %__________________________________________________________________________
 % USE:
 % DBS Parameter testing
-% sdir='C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\edited\';file='N7_PreStim_9_8_16';filter='y';dsf=5;thresh=2.5;onset=5;offset=17000;minInt=5;foi=[1 2 150];bands={'theta',[4,7];'alpha',[8,13];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};cycles=3;overlap=0.5;eoi={'rest',[0 3]};
+% sdir='C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\edited\';
+% file='N7_PreStim_9_8_16';filter='y';dsf=5;thresh=2.5;onset=5;
+% offset=17000;foi=[1 2 150];bands={'theta',[4,7];'alpha',[8,13];
+% 'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};overlap=0.5;
+% eoi={'rest',[0 3]};
+
 % Behavior-Ephys testing
-% sdir='C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed';file='H10BaseSep27';filter='y';dsf=5;thresh=2.5;onset=5;offset=17000;minInt=3;foi=[1 2 150];bands={'theta',[4,7];'alpha',[8,13];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};cycles=3;ftimwin=[];overlap=0.5;eoi={'binge',[0 3];'rest',[0 3]};
+% sdir='C:\Users\Lucas\Desktop\GreenLab\data\WilderBinge\channel_renamed';
+% file='H10BaseSep27';filter='y';dsf=5;thresh=2.5;onset=5;offset=17000;
+% foi=[1 2 150];bands={'theta',[4,7];'alpha',[8,13];'beta',[15,30];
+% 'lgam',[45,65];'hgam',[70,90]};overlap=0.5;
+% eoi={'binge',[0 3];'rest',[0 3]};
  
-%spectcompbase(sdir,file1,filter,dsf,thresh,onset,offset,minInt,foi,bands,cycles,ftimwin,eventInfo,overlap,comp)
 %% Checks/Initialize
 % Check eventInfo - should be a n x 2 array with n = number of events of
 % interest
@@ -72,27 +75,10 @@ if size(eoi,2) ~= 2
         'eoi, press Ctrl+C to quit or any other key to continue.'])
     pause
 end
-% Checks for either ftimwin or cycles
-if isempty(cycles) && isempty(ftimwin)
-    disp(['You are missing either cycles or ftimwin, press Ctrl+C to '...
-        'quit and re-enter variables'])
-    pause
-end
-% Checks the number of cycles at the lowest frequency band of interest
-% using ftimwin; especially needed for PowerCorr.mat
-if ~isempty(ftimwin)
-    cycFtimwin = ftimwin*bands{1,2}(1);
-    if cycFtimwin < 3
-       disp(['Warning: With this ftimwin, your lowest frequency band '...
-           'will be computed with < 3 cycles; press Ctrl+c to quit and '...
-           'redefine or any other key to continue...'])
-    pause
-    end
-end
 % Check for cohMethod
 if isempty(cohMethod) || (~strcmpi(cohMethod,'mtm') && ~strcmpi(cohMethod,'mat')) 
     error(['Either cohMethod is empty or incorrectly entered, press '...
-        'Ctrl+c to quit and re-define'])
+        'Ctrl+C to quit and re-define'])
 end
 % Check bands for potential overlap
 [bInd] = bandIndices(bands,foi(1):foi(2):foi(3));
@@ -109,15 +95,15 @@ overlap = 1-overlap;
 %% Load file
 cd(sdir);
 disp('Loading file...')
-% Load file
-load(file);
-[LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
+% Load file - just those variables to be used
+load(file,'LFPTs','eventTs','adfreq');
+[LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,...
+    adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
 %% Calculate power spectra and plot 
 tic
 disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
-chans = size(LFPTs.data,1);
-[psdTrls,powerPlots,powHist] = powerComp(trls,adfreq,chans,bands,filter,foi,eoi,'y');
+[psdTrls,powerPlots] = powerComp(trls,adfreq,bands,nFilt,foi,eoi,'y');
 toc
 %% Calculate power correlations - requires at least 2 trials otherwise 
 % gives NaNs
@@ -129,28 +115,27 @@ toc
 if strcmpi(cohMethod,'mat')
     tic
     disp('Using mscohere.m to calculate coherence...')
-    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,1,cohMethod,'overlap',overlap);
+    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,1,...
+        cohMethod,'overlap',overlap);
     toc
 elseif strcmpi(cohMethod,'mtm')
     tic
     disp('Using cmtm.m to calculate coherence...')
-    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,vis,cohMethod,'NW',8);
+    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,...
+        nFilt,vis,cohMethod,'NW',8);
     toc
 end
 %% Create history structure - Stores all inputs used and a few variables
-hist.sdir = sdir; hist.file = file; hist.filter = filter; hist.dsf = dsf;
+hist.sdir = sdir; hist.file = file; hist.filter = nFilt; hist.dsf = dsf;
 hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 
-hist.foi = foi; hist.bands = bands; hist.cycles = cycles; 
-hist.ftimwin = ftimwin; hist.overlap = 1-overlap; 
-hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent;
-hist.adfreq = adfreq; hist.chk_nan = chk_nan; hist.powF = powHist.powF; 
-hist.hammSize = powHist.hammSize;
+hist.foi = foi; hist.bands = bands; hist.overlap = 1-overlap; 
+hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent; 
+hist.adfreq = adfreq; hist.chk_nan = chk_nan;
 
 if exist('bingeSize','var')
    hist.bingeSize = bingeSize; 
 end
 %% Save plots that exist
-tic
 disp('Saving plots...')
 % Get name; file without .ext
 [~,name,~] = fileparts(strcat(sdir,file));
@@ -165,26 +150,17 @@ end
 % Save power plots
 if ~isempty(powerPlots)
     powerPlotNames = {strcat(name,'PSDs'),strcat(name,'TotalPower')};
-    for i = 1:size(powerPlots,2)
-        savefig(powerPlots{i},powerPlotNames{i});
+    for ii = 1:size(powerPlots,2)
+        savefig(powerPlots{ii},powerPlotNames{ii});
     end
 end
-% Save powerCorr plots
-% if ~isempty(STDCorr) && ~isempty(MeanCorr) && ~isempty(TWCorr)
-%     for e = 1:size(eoi,1)
-%         savefig(STDCorr{e},[name,'STDCorr_',eoi{e,1}]);
-%         savefig(MeanCorr{e},[name,'MeanCorr_',eoi{e,1}]);
-%         savefig(TWCorr{e},[name,'TWCorr_',eoi{e,1}]);
-%     end
-% end
 % Save coherence plots
 if ~isempty(cohPlots)
-    cohPlotNames = {strcat(name,'Coh')};
-    for i = 1:size(cohPlots,2)
-        savefig(cohPlots{i},cohPlotNames{i});
+    cohPlotNames = {strcat(name,'Coh'),strcat(name,'NormCoh')};
+    for ii = 1:size(cohPlots,2)
+        savefig(cohPlots{ii},cohPlotNames{ii});
     end
 end
-toc
 %% Save variables and plots
 % Just save processed PSD and coherence data; skip actual TFR data
 % to save space.
@@ -197,7 +173,8 @@ if size(eoi,1) == 1
     end
     % Go to directory
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','coh','hist','trls','LFPTs','r','rVect');
+    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','coh','hist','trls',...
+        'LFPTs','r','rVect');
     % Save input variables
 end
 if size(eoi,1) == 2
@@ -206,7 +183,8 @@ if size(eoi,1) == 2
         mkdir(saveParent);
     end
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls','stdPower','coh','hist','trls','LFPTs','r','rVect');
+    save(strcat(name,'_',eoi{1,1},'_vs_',eoi{2,1},'.mat'),'psdTrls',...
+        'stdPower','coh','hist','trls','LFPTs','r','rVect');
     % Save input variables
 end
 if size(eoi,1) > 2
@@ -215,6 +193,7 @@ if size(eoi,1) > 2
         mkdir(saveParent);
     end
     cd(saveParent)
-    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','stdPower','coh','hist','trls','LFPTs','r','rVect');
+    save(strcat(name,'_',eoi{1,1},'.mat'),'psdTrls','stdPower','coh',...
+        'hist','trls','LFPTs','r','rVect');
 end
 toc

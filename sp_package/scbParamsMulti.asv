@@ -1,4 +1,4 @@
-function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent] = scbParamsMulti(file)
+function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsMulti(file)
 %%
 sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\toProcess\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\mike\toProcess\';
@@ -14,19 +14,19 @@ file = file;
 filter = 'y';
 dsf = 5;
 thresh = 2; 
-onset = 0.2;
-offset = 2;
-foi = [1 1 100];
+onset = 0.0125;
+offset = 40;
+foi = [1 2 200];
 % bands = {'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 bands = {'delta',[1,4];
          'theta',[5,10];
          'alpha',[11,14];
          'beta',[15,30];
-         'lgamma',[45,65];
-         'hgamma',[70,90]};
+         'lgam',[45,65];
+         'hgam',[70,90]};
 overlap = 0.5;
-cohMethod = 'mtm';
-eoi = {'drink',[0 5];'~drink',[0 5]};
+cohMethod = 'mat';
+eoi = {'drinking',[0 5],'notdrinking',[0 5]};
 % eoi = {'rest',[0 5]};
 % eoi = {'Base',[0 5];'Int1',[0 5];'Int2',[0 5];'Int3',[0 5];'Int4',[0 5];'Int5',[0 5];'Post',[0 5]};
 % eoi = {'binge',[0 5];'notbinge',[0 5]};
@@ -39,9 +39,7 @@ eoi = {'drink',[0 5];'~drink',[0 5]};
 % for ii = 1:61
 %    eoi(ii,:) = {'binge (e',[-10+ii -5+ii]}; 
 % end
-vis = 'y';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\processed';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\';
 % saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed\';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\processedAll\';
-saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\processed\';

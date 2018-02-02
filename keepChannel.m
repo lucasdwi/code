@@ -21,6 +21,10 @@ function keepChannel(sdir,searchStr,varargin)
 % filename, and keep channels 2,5,6, and 8.
 %__________________________________________________________________________
 % LLD 2017
+%% Check for channels as varargin
+if nargin == 3
+    chans = varargin{1};
+end
 %% Remove channels from LFPTS.data and .label
 files = [];
 cd(sdir)
@@ -38,8 +42,8 @@ for fi = 1:size(files,1)
         % Plots only first 10 seconds of data for speed
         t = adfreq*10;
         plot((1:t)./adfreq,LFPTs.data(iC,1:t))
-        % Constrains y-axis to ±2mV for easier differentiation of good vs. bad
-        % channels
+        % Constrains y-axis to ±2mV for easier differentiation of good vs.
+        % bad channels
         ylim([-2 2])
         title([num2str(iC),': ',LFPTs.label{iC}])
     end
@@ -54,7 +58,9 @@ for fi = 1:size(files,1)
         disp('Saving...')
         LFPTs.data = LFPTs.data(chans,:);
         LFPTs.label = LFPTs.label(1,chans);
-        save(files{fi})
+        % Save all variables except for those used internally
+        save(files{fi},'-regexp',...
+        '^(?!(thisF|files|sdir|searchStr|varargin|chans|fi|iC|nC)$).')
     else
         disp('No channels selected to be saved/removed.')
     end

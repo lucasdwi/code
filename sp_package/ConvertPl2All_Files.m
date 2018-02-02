@@ -1,14 +1,14 @@
 function [fNames] = ConvertPl2All_Files(dir)
-%% Runs Pl2tomvdm.m on all files within the directory. 
+%% Runs Pl2tomvdmGenFile.m on all files within the directory.
+%__________________________________________________________________________
 % INPUTS:
 % dir = source directory of files to be converted; format = string
-
-% OUTPUTS; 
+%__________________________________________________________________________
+% OUTPUTS:
 % fNames = file names that have been converted
-
-%% Written by JJS, edited by LLD (got rid of 'sd' and replaced all MClust
-% functions)
-
+%__________________________________________________________________________
+% Written by JJS, edited by LLD (got rid of 'sd' and replaced all MClust
+% functions) 2017
 %%
 fNames = fileSearch(dir,'pl2');
 for iFile = 1:size(fNames,2)

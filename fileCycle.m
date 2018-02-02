@@ -40,11 +40,11 @@ if strcmp(fun,'scb')
         end
     end
     % Run spectcompbase.m
-    for i = 1:length(files)
+    for ii = 1:length(files)
         tic
-        disp(['Running spectcompbase on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
-        [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsMulti(files{i});
-        [LFPTs,trls,clnTrls,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent);
+        disp(['Running spectcompbase on file ',num2str(ii),' out of ',num2str(length(files)),': ',files{ii}])
+        [sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent] = scbParamsMulti(files{ii});
+        [LFPTs,trls,clnTrls,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent);
         % OLD VERSION[LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,[1 2 150],3,{1,'50%';2,'50%';3,'50%'},[3])
         close all; clearvars -except files i sdir fun;
         toc
@@ -63,11 +63,11 @@ if strcmpi(fun,'pre')
             files = vertcat(files,extractfield(thisF,'name')');
         end
     end
-    for i = 1:length(files)
-        disp(['Running spectcompbase on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
-        load(files{i})
+    for ii = 1:length(files)
+        disp(['Running spectcompbase on file ',num2str(ii),' out of ',num2str(length(files)),': ',files{ii}])
+        load(files{ii})
         [LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,minInt,eoi,eventTs);
-        save(strcat(sdir,'\processed\',files{i},'.mat'),LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq)
+        save(strcat(sdir,'\processed\',files{ii},'.mat'),LFPTs,chk_nan,zeroedChannel,clnTrls,clnEvents,trls,adfreq)
     end
 end
 %% Initialize files to be tabulated, then run through tabulateData.m
@@ -108,14 +108,14 @@ if strcmp(fun,'sleep')
         end
     end
     % Run sleepDetect.m
-    for i = 1:length(files)
+    for ii = 1:length(files)
         tic
-        disp(['Running sleepDetect on file ',num2str(i),' out of ',num2str(length(files)),': ',files{i}])
-        load(files{i})
+        disp(['Running sleepDetect on file ',num2str(ii),' out of ',num2str(length(files)),': ',files{ii}])
+        load(files{ii})
         p = 95; minInt = 30; thresh = 2; onset = 50; offset = 17000; smMethod = 'g';
         [smInstAmp,LFPTs] = sleepDetect(LFPTs,minInt,thresh,onset,offset,adfreq,smMethod);
         % Save outputs
-        thisSave = strcat('C:\Users\Lucas\Desktop\GreenLab\data\TwoSiteStim\smoothed2\',files(i),'InstAmp.mat');
+        thisSave = strcat('C:\Users\Lucas\Desktop\GreenLab\data\TwoSiteStim\smoothed2\',files(ii),'InstAmp.mat');
         save(thisSave{1},'smInstAmp','LFPTs')
         close all; clearvars -except files i sdir fun;
         toc

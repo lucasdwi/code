@@ -1,5 +1,6 @@
 function [LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs)
-%% Applies preproccesing steps: filtering, downsampling, thresholding, and trializing
+%% Applies preproccesing steps: filtering, downsampling, thresholding, and 
+% trializing
 % INPUTS:
 % LFPTs = local field potential data structure; format: the following 
 %   fields from Pl2tomvdmGenFile.m are necessary: 
@@ -59,7 +60,7 @@ function [LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,ad
 % LLD 2016-17
 %% Filter out 60 cycle line noise
 disp('Applying 60 Hz filter with filter60.m...')
-[LFPTs.data] = filter60(LFPTs,adfreq,'off');
+[LFPTs.data] = filter60(LFPTs,adfreq,0);
 %% Downsample signal
 disp('Downsampling signal with dwnSample.m...')
 [LFPTs,adfreq] = dwnSample(LFPTs,dsf,adfreq);
@@ -67,7 +68,8 @@ disp('Downsampling signal with dwnSample.m...')
 disp('Removing noise artifacts with threshFilt.m...')
 % Uses largest eoi minimum interval as minInt
 minInt = max(diff(cell2mat(eoi(:,2)),1,2));
-[LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq);
+[LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,...
+    minInt,adfreq);
 %% NaN Sleep Intervals
 % if exist('sleep')
 %     for sind = 1:size(sleep.t{1,1},1)

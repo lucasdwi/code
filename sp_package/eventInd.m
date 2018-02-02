@@ -39,9 +39,8 @@ for ei = 1:size(eoi,1)
           'eventTs.label; make sure that spelling is correct in both '... 
           'eoi and eventTs.label.']) 
    end
-   % If 2, assume that one is start and other end
+   % If 2, assume that one is start and the other is end
    if length(inds) == 2
-      % Find which one corresponds to 
       % Check if first label has 'Start' in it, if not make sure it has
       % 'End'
        if ~isempty(cell2mat(strfind(eventTs.label(inds(1)),'Start')))

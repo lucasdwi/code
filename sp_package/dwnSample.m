@@ -26,10 +26,12 @@ tStamps = size(LFPTs.data,2);
 if mod(adfreq,dsf) ~= 0
     error([num2str(adfreq) ' (adfreq) is not divisible by ',num2str(dsf),' (dsf).'])
 end
-% % Check that dsf is divisor of data length
-% if mod(tStamps,dsf) ~= 0
-%     error([num2str(tStamps) ' (length of data) is not divisible by ',num2str(dsf),' (dsf).'])
-% end
+% Check that dsf is divisor of data length, if it isn't then truncate data
+if mod(tStamps,dsf) ~= 0
+    LFPTs.data = LFPTs.data(:,1:end-mod(tStamps,dsf));
+    LFPTs.tvec = LFPTs.tvec(:,1:end-mod(tStamps,dsf));
+    tStamps = size(LFPTs.data,2);
+end
 %% Set up output and downsample 
 % Set up output data
 dwnData = zeros(chans,tStamps/dsf);
