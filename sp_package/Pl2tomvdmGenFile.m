@@ -22,8 +22,8 @@ end
 % Load lfp ad data and labels into tsd format struct called LFPTs
     %Remove all empty and wide band ad channels
     lfpchan = nan(length(pl2.AnalogChannels), 1);
-for j = 1:length(pl2.AnalogChannels) %create logical of good channels
-    lfpchan(j,1) = pl2.AnalogChannels{j,1}.NumValues > 0 & freqs(j,1)<5000;
+for jj = 1:length(pl2.AnalogChannels) %create logical of good channels
+    lfpchan(jj,1) = pl2.AnalogChannels{jj,1}.NumValues > 0 & freqs(jj,1)<5000;
 end
 lfpchan = find(lfpchan); %convert logical to indexes of good channels
 %%
@@ -31,10 +31,10 @@ lfpchan = find(lfpchan); %convert logical to indexes of good channels
     LFPTs = tsd([]);
     
     LFPTs.data = nan(length(lfpchan),pl2.AnalogChannels{lfpchan(1),1}.NumValues);%empty data array
-    for i = 1:length(lfpchan)%fill data array from all the lfpchan
-        LFPTs.label{1,i} = pl2.AnalogChannels{lfpchan(i),1}.Name;
-        temp = PL2Ad(filenamein, lfpchan(i));
-        LFPTs.data(i,:) = temp.Values;
+    for ii = 1:length(lfpchan)%fill data array from all the lfpchan
+        LFPTs.label{1,ii} = pl2.AnalogChannels{lfpchan(ii),1}.Name;
+        temp = PL2Ad(filenamein, lfpchan(ii));
+        LFPTs.data(ii,:) = temp.Values;
     end
     
     % Add time vector to LFPTs.tvec
@@ -50,8 +50,8 @@ lfpchan = find(lfpchan); %convert logical to indexes of good channels
     % Load WB ad data and labels into tsd format struct called WBTs
         %Remove all empty and lfp ad channels
         WBchan = nan(length(pl2.AnalogChannels), 1);
-    for j = 1:length(pl2.AnalogChannels) %create logical of good channels
-        WBchan(j,1) = pl2.AnalogChannels{j,1}.NumValues > 0 & freqs(j,1)>5000;
+    for jj = 1:length(pl2.AnalogChannels) %create logical of good channels
+        WBchan(jj,1) = pl2.AnalogChannels{jj,1}.NumValues > 0 & freqs(jj,1)>5000;
     end
     WBchan = find(WBchan); %convert logical to indexes of good channels
 %%
@@ -59,10 +59,10 @@ if (isempty(WBchan)) == 0
 
     WBTs = tsd([]);
     WBTs.data = nan(length(WBchan),pl2.AnalogChannels{WBchan(1),1}.NumValues);%empty data array
-    for i = 1:length(WBchan)%fill data array from all the WBchan
-        WBTs.label{1,i} = pl2.AnalogChannels{WBchan(i),1}.Name;
-        temp = PL2Ad(filenamein, WBchan(i));
-        WBTs.data(i,:) = temp.Values;
+    for ii = 1:length(WBchan)%fill data array from all the WBchan
+        WBTs.label{1,ii} = pl2.AnalogChannels{WBchan(ii),1}.Name;
+        temp = PL2Ad(filenamein, WBchan(ii));
+        WBTs.data(ii,:) = temp.Values;
     end
 
 % Add time vector to WBTs.tvec
@@ -83,10 +83,10 @@ end
 %%
 % get all event timestamps and labels from PL2 file and put into ts struct
 eventTs = ts([]);
-for i = 1:length(pl2.EventChannels)
-    eventTs.label{1,i} = pl2.EventChannels{i,1}.Name;
-    temp = PL2EventTs(filenamein, i);
-    eventTs.t{1,i} = temp.Ts;
+for ii = 1:length(pl2.EventChannels)
+    eventTs.label{1,ii} = pl2.EventChannels{ii,1}.Name;
+    temp = PL2EventTs(filenamein, ii);
+    eventTs.t{1,ii} = temp.Ts;
 end
 
 % added by JJS. 2016-03-17.

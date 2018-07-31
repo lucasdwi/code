@@ -41,12 +41,21 @@ function [allAlpha,allLambda,allBeta,cvFitsArray,accArray,hist] = lassoNet(x,y,f
 %          meanAlpha = 
 %          minAlphaErr = 
 % allLambda = structure of lambda tuning data
-%           lamErrAvg = 
-%           lamErrSd = 
-%           minLam = 
-%           minLamErr = 
-%           bestLambda = 
-%           bestLambdaInds = 
+%           lamErr = error associated with tuned lambdas (either smallest
+%               lambda or smallest lambda + 1 S.E.); nx1 where n = number
+%               of CV iterations
+%           lamErrAvg = mean of lamErr
+%           lamErrSd = standard deviation of lamErr
+%           minLam = values of tuned lambdas (either smallest or +1 S.E.);
+%               nx1 where n = number of CV iterations
+%           minLamErr = error associated with bestLambda
+%           bestLambda = lambda with smallest error in minLam (max if auc)
+%           bestLambdaInds = index of bestLambda
+%           allErr = average of the mean cross-validated errors per
+%               iteration; 1 value comes from each iteration which is the
+%               mean of that iterations cvms
+%           allErrAvg = mean of allErr
+%           allErrSd = standard deviation of allErr
 % allBeta = structure of beta data
 %         betas = 
 %         survBeta = 

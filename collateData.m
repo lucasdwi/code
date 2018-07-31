@@ -83,74 +83,88 @@ for sI = 1:nStr
         % Add one to counter
         count = count + 1;
         for iE = 1:size(trls,2)
-            thisData{iE} = [];
-            % Normalized power - reshapes into row vector with columns of
-            % the following pattern: c1b1,c1b2,c1b3,c1b4,c2b1,...
-            if sum(strcmpi(vars,'pow')) == 1
-                if strcmpi(dat,'trl')
-                    if strcmpi(norm,'rel')
-                        [b,c,t] = size(psdTrls{iE}.relPow);
-                        % Reshape and transpose
-                        thisPow = reshape(psdTrls{iE}.relPow,b*c,t)';
+            if ~isempty(trls{iE})
+                thisData{iE} = [];
+                % Normalized power - reshapes into row vector with columns
+                % of the following pattern: c1b1,c1b2,c1b3,c1b4,c2b1,...
+                if sum(strcmpi(vars,'pow')) == 1
+                    if strcmpi(dat,'trl')
+                        if strcmpi(norm,'rel')
+                            [b,c,t] = size(psdTrls{iE}.relPow);
+                            % Reshape and transpose
+                            thisPow = reshape(psdTrls{iE}.relPow,b*c,t)';
+                        else
+                            [b,c,t] = size(psdTrls{iE}.bandPow);
+                            % Reshape and transpose
+                            thisPow = reshape(psdTrls{iE}.bandPow,b*c,t)';
+                        end
                     else
-                        [b,c,t] = size(psdTrls{iE}.bandPow);
-                        % Reshape and transpose
-                        thisPow = reshape(psdTrls{iE}.bandPow,b*c,t)';
+                        [b,c] = size(psdTrls{iE}.avgRelPow);
+                        if strcmpi(norm,'rel')
+                            % Reshape
+                            thisPow = reshape(psdTrls{iE}.avgRelPow,1,b*c);
+                        else
+                            % Average and reshape
+                            thisPow = reshape(mean(...
+                                psdTrls{iE}.bandPow,3),1,b*c);
+                        end
                     end
-                else
-                    [b,c] = size(psdTrls{iE}.avgRelPow);
-                    if strcmpi(norm,'rel')
+                    % Store power
+                    thisData{iE} = [thisData{iE},thisPow]; %#ok<*AGROW>
+                end
+                % Normalized coherence - reshapes into row vector with
+                % columns of the following pattern: c1c2b1, c1c2b2, c1c2b3,
+                % c1c2b4, c1c3b1...
+                if sum(strcmpi(vars,'coh')) == 1
+                    if strcmpi(dat,'trl')
+                        if strcmpi(norm,'rel')
+%                             [cmb,b,t] = size(coh{iE}.rel);
+                            [cmb,b,t] = size(coh{iE}.normBandCoh);
+                            % Permute coh.rel into a similar pattern as
+                            % power
+%                             thisCoh = reshape(permute(...
+%                                 coh{iE}.rel,[2,1,3]),cmb*b,t)';
+                            thisCoh = reshape(permute(...
+                                coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
+                        else
+                            [cmb,b,t] =  size(coh{iE}.mBandCoh);
+                            % Permute coh.rel into a similar pattern as
+                            % power
+                            thisCoh = reshape(permute(...
+                                coh{iE}.mBandCoh,[2,1,3]),cmb*b,t)';
+                        end
+                    else
+                        [cmb,b,~] = size(coh{iE}.normBandCoh);
+%                         [cmb,b,~] = size(coh{iE}.rel);
+                        if strcmpi(norm,'rel')
+                            % Mean and permute coh.rel
+%                             thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
+                            thisCoh = reshape(permute(mean(...
+                                coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
+                        else
+                            % Mean and permute coh.band
+                            thisCoh = reshape(permute(mean(...
+                                coh{iE}.band,3),[2,1]),1,cmb*b);
+                        end
+                    end
+                    % Store coherence
+                    thisData{iE} = [thisData{iE},thisCoh];
+                end
+                % Power correlation [only available for avg data sets] -
+                % reshapes into following pattern: c1c2b1, c1c2b2, c1c2b3,
+                % c1c2b4, c1c3b1...
+                if sum(strcmpi(vars,'corr')) == 1
+                    if strcmpi(dat,'avg')
+                        [b,cor] = size(rVect{iE});
                         % Reshape
-                        thisPow = reshape(psdTrls{iE}.avgRelPow,1,b*c);
-                    else
-                        % Average and reshape
-                        thisPow = reshape(mean(psdTrls{iE}.bandPow,3),1,b*c);
+                        thisCorr = reshape(rVect{iE},1,b*cor);
                     end
+                    % Store power correlations
+                    thisData{iE} = [thisData{iE},thisCorr];
                 end
-                % Store power
-                thisData{iE} = [thisData{iE},thisPow]; %#ok<*AGROW>
+                % Grab sampleInfo for timing
+                thisSamp{iE} = trls{1,iE}.sampleinfo;
             end
-            % Normalized coherence - reshapes into row vector with columns
-            % of the following pattern:
-            % c1c2b1,c1c2b2,c1c2b3,c1c2b4,c1c3b1...
-            if sum(strcmpi(vars,'coh')) == 1
-                if strcmpi(dat,'trl')
-                    if strcmpi(norm,'rel')
-                        [cmb,b,t] = size(coh{iE}.rel);
-                        % Permute coh.rel into a similar pattern as power
-                        thisCoh = reshape(permute(coh{iE}.rel,[2,1,3]),cmb*b,t)';
-                    else
-                        [cmb,b,t] =  size(coh{iE}.band);
-                        % Permute coh.rel into a similar pattern as power
-                        thisCoh = reshape(permute(coh{iE}.band,[2,1,3]),cmb*b,t)';
-                    end
-                else
-                    [cmb,b,~] = size(coh{iE}.rel);
-                    if strcmpi(norm,'rel')
-                        % Mean and permute coh.rel
-                        thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
-                    else
-                        % Mean and permute coh.band
-                        thisCoh = reshape(permute(mean(coh{iE}.band,3),[2,1]),1,cmb*b);
-                    end
-                end
-                % Store coherence
-                thisData{iE} = [thisData{iE},thisCoh];
-            end
-            % Power correlation [only available for avg data sets] -
-            % reshapes into following pattern:
-            % c1c2b1,c1c2b2,c1c2b3,c1c2b4,c1c3b1...
-            if sum(strcmpi(vars,'corr')) == 1
-                if strcmpi(dat,'avg')
-                    [b,cor] = size(rVect{iE});
-                    % Reshape
-                    thisCorr = reshape(rVect{iE},1,b*cor);
-                end
-                % Store power correlations
-                thisData{iE} = [thisData{iE},thisCorr];
-            end
-            % Grab sampleInfo for timing
-            thisSamp{iE} = trls{1,iE}.sampleinfo;
         end
         data{sI} = [data{sI};thisData];
         samp{sI} = [samp{sI};thisSamp];

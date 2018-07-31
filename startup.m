@@ -1,6 +1,8 @@
 %% Addpaths
 % Code
 addpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\'))
+% Remove fieldtrip
+rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\fieldtrip-master\'))
 % Data
 addpath(genpath('C:\Users\Pythia\Documents\GreenLab\data\'))
 cd('C:\Users\Pythia\Documents\GreenLab')

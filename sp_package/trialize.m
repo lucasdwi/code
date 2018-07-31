@@ -56,7 +56,9 @@ for ii = 1:nEvent
 end
 % Remove ~ from eoi so eventInd.m runs; if the positive version of event
 % also exists, there will be a repeat which is fine
-eoi{neg,1} = eoi{neg,1}(2:end);
+if any(neg)
+    eoi{neg,1} = eoi{neg,1}(2:end);
+end
 %% Prepares and runs eventInd.m to find indices of events to use.
 % If behavior of interest is entire file, 'all', create new events/times
 if strcmpi(eoi(:,1),'all')
@@ -71,7 +73,9 @@ else
     [eventInds] = eventInd(eventTs,eoi);
 end
 % Re-negate events to avoid confusion
-eoi{neg,1} = ['~',eoi{neg,1}];
+if any(neg)
+    eoi{neg,1} = ['~',eoi{neg,1}];
+end
 %% Get timestamps for all trials of each behavior
 % Preallocate intTime array using the size of the data if looking
 % at 'all' data

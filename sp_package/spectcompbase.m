@@ -103,7 +103,7 @@ load(file,'LFPTs','eventTs','adfreq');
 tic
 disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
-[psdTrls,powerPlots] = powerComp(trls,adfreq,bands,nFilt,foi,eoi,'y');
+[psdTrls,powerPlots] = powerComp(trls,adfreq,bands,nFilt,foi,eoi,vis);
 toc
 %% Calculate power correlations - requires at least 2 trials otherwise 
 % gives NaNs
@@ -130,7 +130,7 @@ hist.sdir = sdir; hist.file = file; hist.filter = nFilt; hist.dsf = dsf;
 hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 
 hist.foi = foi; hist.bands = bands; hist.overlap = 1-overlap; 
 hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent; 
-hist.adfreq = adfreq; hist.chk_nan = chk_nan;
+hist.adfreq = adfreq; hist.chk_nan = chk_nan; hist.eventTs = eventTs;
 
 if exist('bingeSize','var')
    hist.bingeSize = bingeSize; 

@@ -81,8 +81,12 @@ for ii = 1:size(names,1)
         overlap = [];
     end
     %% Find notTrls that do not overlap with preTrls
+    samps = [];
+    for jj = 1:size(trls,2)
+        samps = [samps;trls{1,jj}.sampleinfo];
+    end
     for jj = 1:size(notTrls{1,2}.sampleinfo,1)
-        thisTrl = ismember(trls{1,1}.sampleinfo,notTrls{1,2}.sampleinfo(jj,1):notTrls{1,2}.sampleinfo(jj,2));
+        thisTrl = ismember(samps,notTrls{1,2}.sampleinfo(jj,1):notTrls{1,2}.sampleinfo(jj,2));
         overlap(jj) = any(thisTrl(:) == 1);
     end
     %% Extract non-overlapping trials

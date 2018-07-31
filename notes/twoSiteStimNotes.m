@@ -1,5 +1,5 @@
 searchStr = {'5Hz_Pre','in';'5Hz_Post','in'};%'10Hz_Pre','in';'10Hz_Post','in'};
-sdir = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed';
+sdir = 'C:\Users\Pythia\Documents\GreenLab\data\twoSiteStim\processed';
 for sI = 1:size(searchStr,1)
     [files{sI}] = fileSearch(sdir,searchStr{sI,1},searchStr{sI,2});
     for fi = 1:size(files{sI},2)
@@ -99,7 +99,9 @@ subplot(2,2,4)
 imagesc(1:60,1:0.2:200,aN{1,1}(1:60,1:500,1)')
 %% Examine first 3 minutes post stim relative to the average pre stim
 % 3 min = 180 sec = 36 5 sec trials
-[~,fNames] = fileSearch({'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed\'},{'pre','post'});
+fNames{1} = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\twoSiteStim\processed\','pre');
+fNames{2} = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\twoSiteStim\processed\','post');
+%%
 % Set number of trials from the beginning to look at in post file
 n = 12;
 % Takes advantage of automatic ordering from fileSearch to keep both fName
@@ -107,13 +109,13 @@ n = 12;
 for fi = 1:numel(fNames{1,1})
     load(fNames{1,1}{1,fi},'psdTrls','coh')
     % Grab mean and std from pre
-    preMeanPow = psdTrls.event1.Overall;
-    preSdPow = psdTrls.event1.OverallStd;
+    preMeanPow = psdTrls{1,1}.Overall;
+    preSdPow = psdTrls{1,1}.OverallStd;
     preMeanCoh = coh{1,1}.mCxy;
     preSdCoh = coh{1,1}.sdCxy;
     load(fNames{1,2}{1,fi},'psdTrls','coh')
     % Grab first n psds from post
-    postPow = cat(3,psdTrls.event1.Pow{1,1:n});
+    postPow = cat(3,psdTrls{1,1}.Pow(1,:,1:n));
     postCoh = cat(3,coh{1,1}.Cxy(:,:,1:n));
     % Normalize each post trial by mean and std of pre
     for ni = 1:n
@@ -150,7 +152,7 @@ for fi = 1:numel(fNames{1,1})
     figure
     for si = 1:4
         subplot(2,2,si)
-        imagesc(sq(pAdjSignPow(si,:,:,fi)),[cMinPow cMaxPow])
+        imagesc(squeeze(pAdjSignPow(si,:,:,fi)),[cMinPow cMaxPow])
     end
     % Plot Coherence
     cMaxCoh = max(max(max(max(pAdjSignCoh))));
@@ -158,6 +160,6 @@ for fi = 1:numel(fNames{1,1})
     figure
     for si = 1:size(pAdjSignCoh,1)
         subplot(3,2,si)
-        imagesc(sq(pAdjSignCoh(si,:,:,fi)),[cMinCoh cMaxCoh])
+        imagesc(squeeze(pAdjSignCoh(si,:,:,fi)),[cMinCoh cMaxCoh])
     end
 end

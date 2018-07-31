@@ -23,3 +23,27 @@ for ii = 1:6
     xlim([0.5 6.5])
     box off
 end
+%%
+files = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\','male','ex','Plots','ex');
+mFemale = [];
+sFemale = [];
+for ii = 1:size(files,2)
+    load(files{ii},'coh')
+    mFemale = cat(1,mFemale,coh{1}.mCxy(6,:));
+%     sFemale = cat(1,sFemale,coh{1}.sdCxy(1,:));
+end
+files = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\','male','in');
+mMale = [];
+sMale = [];
+for ii = 1:size(files,2)
+    load(files{ii},'coh')
+    mMale = cat(1,mMale,coh{1}.mCxy(6,:));
+%     sMale = cat(1,sMale,coh{1}.sdCxy(1,:));
+end
+figure
+hold on
+shadedErrorBar(coh{1}.freq,mean(mFemale,1),std(mFemale,[],1),'-r',1)
+shadedErrorBar(coh{1}.freq,mean(mMale,1),std(mMale,[],1),'-b',1)
+xlabel('Frequency (Hz)')
+ylabel('Coherence')
+title('lNac-rNAc')

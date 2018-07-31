@@ -22,7 +22,7 @@ n1 = numel(dist1); n2 = numel(dist2);
 [~,~,stats] = ranksum(dist1,dist2);
 % Get r-family effect size (Fritz and Morris, 2012)
 r = abs(stats.zval/sqrt(n1+n2));
-% Get Cohen's d from r (Rosenthal 1984; Friedman 1968)
+% Get Cohen's d from r (Fritz et al. 2012)
 d = (2*r)/sqrt(1-r.^2);
 % Convert Wilcoxon W to Mann-Whitney U
 u = stats.ranksum-(n1*(n1+1))/2;

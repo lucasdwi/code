@@ -439,6 +439,19 @@ p = p.*12;
 % Plot square
 plot(samp(logicFind(0.05,p,'>','first'))./12,mA(logicFind(0.05,p,'>',...
     'first')),'sq','MarkerSize',9,'Color',[0.5 0.5 0.5])
+%% Load CV iteration data
+err = zeros(3,23);
+c = 1;
+its = [10:10:100,200:100:1000,1500:500:3000];
+for ii = its
+   load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\baseBingeSize\cv\baseBingeSize',num2str(ii),'cv.mat']) 
+   for jj = 1:3
+       err(jj,c) = mean(real{jj,c}.err);
+   end
+   c = c+1;
+end
+figure
+plot(its,err)
 %% Load preBinge files
 cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
     'preBinge\'])
@@ -608,11 +621,11 @@ ylabel('True Positive Rate')
 % Channels: SL,SR,CL,CR; SLSR,SLCL,SLCR,SRCL,SRCR,CLCR
 % Freq: delta,theta,alpha,beta,lgamma,hgamma
 clear chan pair freq
-chan = [];
-pair = 2;
+chan = 1;
+pair = [];
 freq = 1;
 feat = 'd';
-loc = 'slcl';
+loc = 'sl';
 % Get preBinge and notBinge data
 files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
     'preBingeCombined'],'base','in');
@@ -703,10 +716,34 @@ else
     sPost = std(postCoh,[],1,'omitnan');
 end
 
-% Plot
+%% Plot
 figure
 hold on
 shadedErrorBar(1:61,fliplr(mPre.*100),fliplr(sPre.*100))
+shadedErrorBar(61:64,fliplr(mBinge(28:31).*100),fliplr(sBinge(28:31).*100),...
+    {'color',[0 0.45 0.74]})
+shadedErrorBar(65:92,fliplr(mBinge(1:28).*100),fliplr(sBinge(1:28).*100),...
+    {'color','b'})
+shadedErrorBar(102:110,mPost(1:9).*100,sPost(1:9).*100,...
+    {'color',[0 0.45 0.74]})
+shadedErrorBar(111:162,mPost(10:61).*100,sPost(10:61).*100)
+plot(1:92,ones(1,92).*mNot*100,'k')
+plot(1:92,ones(1,92).*mean(mBinge)*100,'--','color',[0 0.45 0.74])
+plot(102:162,ones(1,61).*mNot*100,'k')
+plot(102:162,ones(1,61).*mean(mBinge)*100,'--','color',[0 0.45 0.74])
+xlim([1 162])
+set(gca,'XTick',[1:10:51,61.5,71:10:91,101,110.5,121:10:162],...
+    'XTickLabel',[-62.5:10:-12.5,0,12.5:10:32.5,-12.5,0,12.5:10:52.5])
+title([loc,' ',feat]);
+ylabel(['% ',feat])
+text(162,mean(mBinge)*100,'Binge','color',[0 0.45 0.74])
+text(162,mNot*100,'Other')
+xlabel('Time')
+box off
+%% New plot
+figure
+hold on
+shadedErrorBar(1:62,fliplr(mPre.*100),fliplr(sPre.*100))
 shadedErrorBar(62:92,fliplr(mBinge.*100),fliplr(sBinge.*100),...
     {'color',[0 0.45 0.74]})
 shadedErrorBar(102:110,mPost(1:9).*100,sPost(1:9).*100,...
@@ -1024,7 +1061,7 @@ load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\baseline500Each6000All50-50.mat'], 'pInds')
 inds = 1:60;
 inds = inds(~ismember(inds,pInds));
-
+rndA = zeros(1,20);
 for ii = 1:20
     trainX = genTrainX{ii}(:,inds);
     trainY = genTrainY{ii}(randperm(length(genTrainY{ii})));
@@ -1095,6 +1132,7 @@ dyadTier = [dyadTier,worst]';
 % Get feature names
 nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
 cmbs = nchoosek(1:58,2);
+dyadFeats = zeros(nchoosek(58,2),2);
 for ii = 1:size(cmbs,1)
    dyadFeats(ii,1) = nameVect(cmbs(dyadInd(ii),1));
    dyadFeats(ii,2) = nameVect(cmbs(dyadInd(ii),2));
@@ -1121,6 +1159,7 @@ triadTier = [triadTier,worst]';
 % Get feature names
 nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
 cmbs = nchoosek(1:58,3);
+triadFeats = zeros(nchoosek(1:58,3));
 for ii = 1:size(cmbs,1)
    triadFeats(ii,1) = nameVect(cmbs(triadInd(ii),1));
    triadFeats(ii,2) = nameVect(cmbs(triadInd(ii),2));
@@ -1128,6 +1167,7 @@ for ii = 1:size(cmbs,1)
 end
 %% Get frequency of different frequency ranges in monads, dyads, and triads
 freqs = {'d','t','a','b','lg','hg'};
+topPerc = zeros(length(freqs),3);
 for ii = 1:size(freqs,2)
    perc(ii,1) = sum(~cellfun(@isempty,regexp(monadFeats(1:(monadTier(end)-1),:),freqs{ii})))/(monadTier(end)-1);
    perc(ii,2) = sum(any(~cellfun(@isempty,regexp(dyadFeats(1:(dyadTier(end)-1),:),freqs{ii})),2))/(dyadTier(end)-1);
@@ -1282,12 +1322,12 @@ xlabel('Feature')
 % Concatenate data
 means = [topA(1,1),topADep24(1,1),topADep48(1,1),topAChow(1,1),topA(1,2)...
     ,topADep24(1,2),topADep48(1,2),topAChow(1,2),topA(1,3),...
-    topADep24(1,3),topADep48(1,3),topAChow(1,3)];
+    topADep24(1,3),topADep48(1,3),topAChow(1,3),baseM(1:2:8)];
 cis = [topCI(1,1),topCIDep24(1,1),topCIDep48(1,1),topCIChow(1,1),...
     topCI(1,2),topCIDep24(1,2),topCIDep48(1,2),topCIChow(1,2),topCI(1,3)...
-    ,topCIDep24(1,3),topCIDep48(1,3),topCIChow(1,3)];
-scatterErr(1:12,means,cis,1)
-set(gca,'XTick',1:12,'XTickLabel',repmat({'Base','Dep24','Dep48','Chow'}...
+    ,topCIDep24(1,3),topCIDep48(1,3),topCIChow(1,3),baseCI(1:2:8)];
+scatterErr(1:16,means,cis,1)
+set(gca,'XTick',1:16,'XTickLabel',repmat({'Base','Dep24','Dep48','Chow'}...
     ,1,3))
 xtickangle(90)
 title('Logistics Across Condition')
@@ -1918,12 +1958,23 @@ aM = cell2mat(cellfun(@(x) mean(mean(x,2)),a,'UniformOutput',0));
 aCI = cell2mat(cellfun(@(x) conf(mean(x,2)',0.95,'tail',2),a,...
     'UniformOutput',0));
 % aS = cell2mat(cellfun(@(x) std(x),a,'UniformOutput',0));
+for ii = 1:11
+    load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
+        'finalNew\lno\perm',num2str(ii),'.mat'])
+    aPerm{ii} = lno.a;
+end
+aPermM = cell2mat(cellfun(@(x) mean(mean(x,2)),aPerm,'UniformOutput',0));
+aPermCI = cell2mat(cellfun(@(x) conf(mean(x,2)',0.95,'tail',2),aPerm,...
+    'UniformOutput',0));
 % Get data for concatLog models
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\concatLog.mat'],'ccLogA','ccLogAM','ccLogACI')
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\concatLogRand.mat'],'ccLogRandAM','ccLogRandACI')
 figure
 scatterErr(1:12,[ccLogAM,aM],[ccLogACI,aCI],0)
-% scatterErr(1:12,[ccLogAM,aM],[std(ccLogA),aS],1)
+hold on
+scatterErr(1:12,[ccLogRandAM,aPermM],[ccLogRandACI,aPermCI],0)
 set(gca,'XTick',1:12,'XTickLabel',0:11)
 xlabel('Number of Animals Left Out')
 ylabel('AUC')

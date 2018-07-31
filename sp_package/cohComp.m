@@ -15,8 +15,8 @@ function [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,nFilt,
 %   = integer
 % foi = frequencies of interest; format = [low frequency, step, high
 %   frequency]
-% nFilt = whether or not a filter was applied and signal should be
-%   interpolated; format = 'y' or 'n'
+% nFilt = frequencies to interpolate over to account for notch filter; if
+%   no notch filter was applied, leave empty; format = [low high]
 % vis = whether or not to visualize results; format = 0 (n) or 1 (y)
 % method = which method to use for calculating coherence; format = either
 %   'mat' for mscohere or 'mtm' for multitaper method
@@ -121,9 +121,11 @@ for ei = logicFind(0,empt,'==')
                 % Truncate signal and store
                 Cxy(ci,:,ti) = thisCxy(1:nearest_idx3(foi(end),f));
             end
-            if strcmpi(nFilt,'y')
+            % Check if notch filter needs to be interpolated over
+            if ~isempty(nFilt)
                 % Set up notch for 60 Hz line noise
-                notchInd = [nearest_idx3(57.5,f);nearest_idx3(62.5,f)];
+                notchInd = [nearest_idx3(nFilt(1),f);...
+                    nearest_idx3(nFilt(2),f)];
                 % Interpolate over notch
                 samp = [notchInd(1),notchInd(2)];
                 v = [Cxy(ci,notchInd(1),ti),Cxy(ci,notchInd(2),ti)];
@@ -238,4 +240,6 @@ if strcmpi(vis,'y')
             legend(h,legLabel)
         end
     end
+else
+    cohPlots = [];
 end

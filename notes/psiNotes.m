@@ -32,7 +32,15 @@ catRestTrl = [];
 for ti = 1:size(trls{1,2}.trial,2)
     catRestTrl = [catRestTrl;trls{1,2}.trial{1,ti}'];
 end
-
+%%
+cs = [];
+for ii = 1:size(data,3)
+   for jj = 1:size(data,1)
+       for k = 1:size(data,1)
+           cs(ii,jj,k,:) = cpsd(data(jj,:,ii),data(k,:,ii),hanning(800),400,1:100,400);
+       end
+   end
+end
 %% Run PSI
 % Generate freq axis for binning
 f = 400*(0:1000)/2000;

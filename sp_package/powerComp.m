@@ -10,13 +10,12 @@ function [psdtrlData,powerPlots] = powerComp(trlData,adfreq,bands,nFilt,foi,eoi,
 % bands = cell array defining frequency band names and ranges; format =
 % cell with first column as strings with band names and second column as
 %   frequency ranges in Hz; e.g. ['theta',[4 10];'lgam',[45 65]]
-% nFilt = whether or not a 60 Hz notch filter was applied to data and thus
-%   the power spectra should be interpolated over notch; format = 'y' or
-%   'n'
+% nFilt = frequencies to interpolate over to account for notch filter; if
+%   no notch filter was applied, leave empty; format = [low high]
 % foi = frequencies of interest; format = integer row vector [low step
 %   high]
 % eoi = events of interest
-% disp = whether or not to plot power spectra; format = 'y' or 'n'
+% vis = whether or not to plot power spectra; format = 'y' or 'n'
 %__________________________________________________________________________
 % Outputs:
 % psdtrlData = power data structure for each event; contains PSD for each
@@ -63,8 +62,10 @@ for ii = logicFind(0,empt,'==')
             [Pxx,F] = pwelch(data,win,[],fVect,adfreq);
             % Convert PSD into dB and store
             psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
-            if strcmpi(nFilt,'y')
-                notchInd = [nearest_idx3(57.5,F);nearest_idx3(62.5,F)];
+            % Check if notch filter needs to be interpolated over
+            if ~isempty(nFilt)
+                notchInd = [nearest_idx3(nFilt(1),F);...
+                    nearest_idx3(nFilt(2),F)];
                 notch = notchInd(1):notchInd(2);
                 psdtrlData{ii}.Pow(k,notch,jj) = NaN;
                 % Set up interp1 inputs
@@ -106,6 +107,8 @@ if strcmpi(vis,'y')
         xlabel('Frequency (Hz)');
         title(eoi(ii));
     end
+else
+    powerPlots = [];
 end
 %% Calculate total power in frequency bands of interest and normalize by 
 % total power across all bands. N.B. This includes space between bands and
@@ -131,8 +134,8 @@ for ii = logicFind(0,empt,'==')
     % (i.e. the bands don't matter here)
     data = trapz(psdtrlData{ii}.Overall(:,bInd(1,1):bInd(end,2),:),2)';
     psdtrlData{ii}.totPow = repmat(data,size(bands,1),1,nTrials(ii));
-    % Use element-wise division to obtain percent of total power within
-    % each band
+    % Use element-wise division to obtain percent of total power across
+    % bands
     psdtrlData{ii}.relPow = psdtrlData{ii}.bandPow./psdtrlData{ii}.totPow;
 end
 %% Get average relative power

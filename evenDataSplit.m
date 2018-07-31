@@ -47,7 +47,7 @@ function [all,each,rnd,weights] = evenDataSplit(data,trainSize,testSize,method,r
 % DEPENDENCIES:
 % ADASYN.mat
 %__________________________________________________________________________
-% LLD 2017
+% LLD 2017-2018
 %% Initialize/Preallocate
 eachTestX = cell(rep,size(data,1));
 eachTestY = cell(rep,size(data,1));

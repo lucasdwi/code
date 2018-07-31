@@ -184,7 +184,97 @@ end
 load('uniA.mat')
 mNaccA = squeeze(mean(naccA,2))';
 mPfcA = squeeze(mean(pfcA,2))';
+%% Separate NAc responders from mPFC responders (decreased drinking)
+data = collateData('C:\Users\Pythia\Documents\GreenLab\data\angela\3second\all\',{'N20';'N24';'N25';'N29';'AH12';'AH16'},{'pow','coh'},'avg','rel');
+nacData = [];
+for ii = 1:size(data,2)
+    for jj = 1:size(data{ii},1)
+        nacData = [nacData;data{ii}{jj}];
+    end
+end
+data = collateData('C:\Users\Pythia\Documents\GreenLab\data\angela\3second\all\',{'N33';'AH11';'AH20'},{'pow','coh'},'avg','rel');
+pfcData = [];
+for ii = 1:size(data,2)
+    for jj = 1:size(data{ii},1)
+        pfcData = [pfcData;data{ii}{jj}];
+    end
+end
+xData = [nacData;pfcData];
+yData = [ones(size(nacData,1),1);zeros(size(pfcData,1),1)];
+% save('nacVpfc.mat','xData','yData')
+%%
+load('C:\Users\Pythia\Documents\GreenLab\data\angela\nacVpfcModel.mat')
+rndAcc = [];
+for ii = 1:10
+    rndAcc = [rndAcc;1-rndData.allLambda{ii}.allErr];
+end
+doubleHist(1-allData.allLambda{1}.allErr,rndAcc,'xlab','Accuracy','main','NAc vs. mPFC: Optimal Site for Decreased Drinking','loc','ne')
+%% Log models - nacVpfc
+load('C:\Users\Pythia\Documents\GreenLab\data\angela\nacVpfc.mat')
+for ii = 1:60
+   mdl = fitglm(xData(:,ii),yData,'distribution','binomial');
+   p(ii) = mdl.Coefficients{2,4};
+   r(ii) = mdl.Rsquared.Ordinary;
+   d(ii) = exp(mdl.Coefficients{2,1});
+end
+[rSort,sortInd] = sort(r,'descend');
+nameVect = names({'SL','SR','PL','PR'},{'d','t','a','b','lg','hg'});
+topFeat = nameVect(sortInd)';
+sortDir = d(sortInd)';
+%% Log models
+load('C:\Users\Pythia\Documents\GreenLab\data\angela\angelaAllData.mat')
+for ii = 1:60
+    % NAc
+    mdl = fitglm(avgData(:,ii),nacc(:,1),'distribution','binomial');
+    nacR(ii) = mdl.Rsquared.Ordinary;
+    nacD(ii) = exp(mdl.Coefficients{2,1});
+    % mPFC
+    mdl = fitglm(avgData([1:16,19:end],ii),pfc(:,1),'distribution','binomial');
+    pfcR(ii) = mdl.Rsquared.Ordinary;
+    pfcD(ii) = exp(mdl.Coefficients{2,1});
+end
+nameVect = names({'SL','SR','PL','PR'},{'d','t','a','b','lg','hg'});
+[sNacR,nacRInd] = sort(nacR,'descend');
+[sPfcR,pfcRInd] = sort(pfcR,'descend');
+sNacR = sNacR';
+sPfcR = sPfcR';
+nacVar = nameVect(nacRInd)';
+pfcVar = nameVect(pfcRInd)';
+nacDirSort = nacD(nacRInd)'>1;
+pfcDirSort = pfcD(pfcRInd)'>1;
+%% Predict response from baseline drinking
+% Import the data
+[~, ~, raw0_0] = xlsread('C:\Users\Pythia\Documents\GreenLab\data\angela\BAve and Stim Response_For ephys analysis.xlsx','Sheet1','B2:B14');
+[~, ~, raw0_1] = xlsread('C:\Users\Pythia\Documents\GreenLab\data\angela\BAve and Stim Response_For ephys analysis.xlsx','Sheet1','D2:D14');
+[~, ~, raw0_2] = xlsread('C:\Users\Pythia\Documents\GreenLab\data\angela\BAve and Stim Response_For ephys analysis.xlsx','Sheet1','F2:F14');
+raw = [raw0_0,raw0_1,raw0_2];
+raw(cellfun(@(x) ~isempty(x) && isnumeric(x) && isnan(x),raw)) = {''};
 
+% Replace non-numeric cells with NaN
+R = cellfun(@(x) ~isnumeric(x) && ~islogical(x),raw); % Find non-numeric cells
+raw(R) = {NaN}; % Replace non-numeric cells
+
+% Create output variable
+data = reshape([raw{:}],size(raw));
+
+mdl = fitglm(data(:,1),data(:,2),'distribution','binomial');
+mdl2 = fitglm(data(:,1),data(:,3),'distribution','binomial');
+
+figure
+plot(data(:,1),data(:,2),'o')
+box off
+set(gca,'YTick',0:1,'YTickLabel',{'Other','Decrease'})
+ylim([-0.1 1.1])
+title('NAc: Decrease vs. Other')
+xlabel('Baseline Drinking (g/kg)')
+
+figure
+plot(data(:,1),data(:,3),'o')
+box off
+set(gca,'YTick',0:1,'YTickLabel',{'Other','Decrease'})
+ylim([-0.1 1.1])
+title('mPFC: Decrease vs. Other')
+xlabel('Baseline Drinking (g/kg)')
 %% PFC Drinking
 % cd('C:\Users\Pythia\Documents\GreenLab\data\angela\')
 % load('PFCDrinkRest.mat')

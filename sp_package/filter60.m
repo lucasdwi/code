@@ -1,4 +1,4 @@
-function [filtData] = filter60(data,fs,display)
+function [filtData] = filter60(data,fs,display,varargin)
 %% Uses second order Chebychev type I notch filter to remove 60 cycle line 
 % noise
 %__________________________________________________________________________
@@ -17,6 +17,18 @@ function [filtData] = filter60(data,fs,display)
 % sampled at 2 kHZ and does not display filter used.
 %__________________________________________________________________________
 % LLD 2016-17
+%% Parse inputs
+p = inputParser;
+p.CaseSensitive = false;
+addRequired(p,'data');
+addRequired(p,'fs');
+addRequired(p,'display');
+
+addParameter(p,'low',59);
+addParameter(p,'high',61);
+addParameter(p,'order',2);
+addParameter(p,'ripple',05);
+parse(p,data,fs,display,varargin{:})
 %% Check if input data is structure or matrix and put into toFilt variable
 if isa(data,'struct')
    toFilt = data.data; 
@@ -26,7 +38,7 @@ end
 %%
 % Create second order Chebychev Type I stopband filter from 59 to 61 Hz
 % with 0.5 dB of ripple
-[b,a] = cheby1(2,.5,[59 61]*2/fs,'stop');
+[b,a] = cheby1(p.Results.order,p.Results.ripple,[p.Results.low p.Results.high]*2/fs,'stop');
 % Plot filter
 if display == 1
     fvtool(b,a,'Fs',fs);
