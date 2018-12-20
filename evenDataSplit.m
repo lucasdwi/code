@@ -98,14 +98,15 @@ for r = 1:rep
             % Randomally generate indices of ones and zeros for test-sets
             thisTestOneInd = randperm(nOne(ii),testOneN(ii));
             thisTestZeroInd = randperm(nZero(ii),testZeroN(ii));
-            % Pull ones and zeros found above into test-sets out so there is no
-            % overlap between test and training sets
+            % Pull ones and zeros found above into test-sets out so there
+            % is no overlap between test and training sets
             eachTestX{r,ii} = [data{ii,1}(thisTestOneInd,:);...
                 data{ii,2}(thisTestZeroInd,:)];
-            eachTestY{r,ii} = [ones(testOneN(ii),1);zeros(testZeroN(ii),1)];
+            eachTestY{r,ii} = [ones(testOneN(ii),1);...
+                zeros(testZeroN(ii),1)];
             % Find leftover data indices
-            xOneLeft{r,ii} = data{ii,1}(~ismember(1:nOne(ii),thisTestOneInd)...
-                ,:);
+            xOneLeft{r,ii} = data{ii,1}(~ismember(1:nOne(ii),...
+                thisTestOneInd),:);
             xZeroLeft{r,ii} = data{ii,2}(~ismember(1:nZero(ii),...
                 thisTestZeroInd),:);
             % Pull leftover data out
@@ -115,19 +116,22 @@ for r = 1:rep
             if ~isempty(method) && size(xOneLeft{r,ii},1) < trainSize/2
                 if strcmpi(method,'ADA')
                     % Apply ADASYN to each set
-                    [newOneX{r,ii},newOneY{r,ii}] = ADASYN([xOneLeft{r,ii};...
-                        xZeroLeft{r,ii}],[yOneLeft{r,ii};yZeroLeft{r,ii}],1.5,5,5,0);
+                    [newOneX{r,ii},newOneY{r,ii}] = ADASYN([...
+                        xOneLeft{r,ii};xZeroLeft{r,ii}],[yOneLeft{r,ii};...
+                        yZeroLeft{r,ii}],1.5,5,5,0);
                     % Subsample new data s.t. new+old = trainSize/2
-                    newOneX{r,ii}(trainSize/2-size(xOneLeft{r,ii},1)+1:end,:) = [];
-                    newOneY{r,ii}(trainSize/2-size(xOneLeft{r,ii},1)+1:end,:) = [];
+                    newOneX{r,ii}(trainSize/2-size(xOneLeft{r,ii},1)+1:...
+                        end,:) = [];
+                    newOneY{r,ii}(trainSize/2-size(xOneLeft{r,ii},1)+1:...
+                        end,:) = [];
                 elseif strcmpi(method,'gauss')
                     % Apply manual
                     n = size(xZeroLeft{r,ii},1)-size(xOneLeft{r,ii},1);
                     newOneX{r,ii} = normOversample(xOneLeft{r,ii},n);
                     newOneY{r,ii} = ones(n,1);
                 end
-                % Randomally generate indices of ones and zeros to be used in
-                % training set
+                % Randomally generate indices of ones and zeros to be used
+                % in training set
                 thisTrainOneInd = randperm(size(xOneLeft{r,ii},1)+...
                     size(newOneX{r,ii},1),trainOneN(ii));
                 thisTrainZeroInd = randperm(size(xZeroLeft{r,ii},1),...
@@ -151,8 +155,9 @@ for r = 1:rep
             % Randomize test and training Ys
             eachTestYRand{r,ii} = eachTestY{r,ii}(randperm(testOneN(ii)+...
                 testZeroN(ii),testOneN(ii)+testZeroN(ii)));
-            eachTrainYRand{r,ii} = eachTrainY{r,ii}(randperm(trainOneN(ii)+...
-                trainZeroN(ii),trainOneN(ii)+trainZeroN(ii)));
+            eachTrainYRand{r,ii} = eachTrainY{r,ii}...
+                (randperm(trainOneN(ii)+trainZeroN(ii),trainOneN(ii)+...
+                trainZeroN(ii)));
         end
     end
     % Concatenate 'each' sets into 'all'

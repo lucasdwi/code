@@ -381,7 +381,7 @@ yData = [yData;zeros(6,1);ones(4,1)];
 % 'yData','xData')
 %%
 % Load and plot lasso results - male
-load('C:\Users\Pythia\Documents\GreenLab\data\angela\highLowModelMale.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\angela\highLowModeMale.mat')
 realErr = []; rndErr = [];
 for ii = 1:100
     realErr = [realErr;allData.allLambda{ii}.allErr];
@@ -389,15 +389,7 @@ for ii = 1:100
 end
 doubleHist(1-realErr,1-rndErr,'nBin',20,...
     'xlab','Accuracy','main','High vs. Low')
-% Load and plot lasso results - male/female
-load('C:\Users\Pythia\Documents\GreenLab\data\angela\highLowModelMaleFemale.mat')
-realErr = []; rndErr = [];
-for ii = 1:100
-    realErr = [realErr;allData.allLambda{ii}.allErr];
-    rndErr = [rndErr;rndData.allLambda{ii}.allErr];
-end
-doubleHist(1-realErr,1-rndErr,'nBin',20,...
-    'xlab','Accuracy','main','High vs. Low')
+
 %% Make single feature high v. low models
 load('C:\Users\Pythia\Documents\GreenLab\data\angela\highLow.mat')
 for ii = 1:size(xData,2)

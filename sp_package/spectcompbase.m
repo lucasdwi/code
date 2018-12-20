@@ -1,4 +1,4 @@
-function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent)
+function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(cfg)
 %% Preproccesses data and calculates the following metrics: power, 
 %  coherence, and power coupling. Read input documentation for more detail
 %  on the options for these analyses and necessary information to run the
@@ -7,28 +7,29 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 %  especially useful for batch processing files.
 %__________________________________________________________________________
 % INPUTS:
-% sdir = source directory of data; format: string
-% file = file name w/o extension; format: string
-% nFilt = wether or not to use a filter; format: 'y' or 'n'
-% dsf = factor with which to downfactor; format: whole integer
-% thresh = threshold for detecting noise artifacts; format: mV (or other
-%   y-axis scale for time series)
-% onset = number of samples to NaN before noise event; format: seconds
-% offset = number of samples to NaN after noise event; format: seconds
-% foi = frequencies of interest; format = [lower step upper] in Hz
-% bands = structure with bands of interest starting with lowest; format:
-%   {'band1',[lower upper];'band2',[lower upper];...}
-% overlap = amount of overlap to use with sliding windows; format: percent
-%   in decimal form (1-percent; e.g. 90% overlap = 0.1)
-% eoi = events of interest alongside window around that event to be
-%   consider a single epoch; format: cell {'tag1',[0 3];'tag2',[-1.5 1.5]}
-%   indicates to use a 3 second window startint at tag1 (interval) and a 3
-%   second window centered at the scalar tag2.
-%   N.B.: if all the data use the tag 'all', otherwise use tags
-%   corresponding to event markers.
-% disp = whether or not to plot power and coherence; format = 'y' or 'n'
-% saveParent = parent directory path to save plots and files; format:
-%   string N.B.: if directory/file exists will warn about overwritting
+% cfg = config structure with the following fields:
+%   sdir = source directory of data; format: string
+%   file = file name w/o extension; format: string
+%   nFilt = wether or not to use a filter; format: 'y' or 'n'
+%   dsf = factor with which to downfactor; format: whole integer
+%   thresh = threshold for detecting noise artifacts; format: mV (or other
+%       y-axis scale for time series)
+%   onset = number of samples to NaN before noise event; format: seconds
+%   offset = number of samples to NaN after noise event; format: seconds
+%   foi = frequencies of interest; format = [lower step upper] in Hz
+%   bands = structure with bands of interest starting with lowest; format:
+%       {'band1',[lower upper];'band2',[lower upper];...}
+%   overlap = amount of overlap to use with sliding windows; format:
+%       percent in decimal form (1-percent; e.g. 90% overlap = 0.1)
+%   eoi = events of interest alongside window around that event to be
+%       consider a single epoch; format: cell {'tag1',[0 3];'tag2',[-1.5 
+%       1.5]} indicates to use a 3 second window startint at tag1
+%       (interval) and a 3 second window centered at the scalar tag2.
+%       N.B.: if all the data use the tag 'all', otherwise use tags
+%       corresponding to event markers.
+%   vis = whether or not to plot power and coherence; format = 'y' or 'n'
+%   saveParent = parent directory path to save plots and files; format:
+%       string N.B.: if directory/file exists will warn about overwritting
 %__________________________________________________________________________
 % OUTPUTS: 
 % LFPTs = local field potential structure containing the following
@@ -66,7 +67,22 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(s
 % foi=[1 2 150];bands={'theta',[4,7];'alpha',[8,13];'beta',[15,30];
 % 'lgam',[45,65];'hgam',[70,90]};overlap=0.5;
 % eoi={'binge',[0 3];'rest',[0 3]};
- 
+%% Unpack cfg
+sdir = cfg.sdir;
+file = cfg.file;
+nFilt = cfg.nFilt;
+dsf = cfg.dsf;
+thresh = cfg.thresh;
+onset = cfg.onset;
+offset = cfg.offset;
+foi = cfg.foi;
+bands = cfg.bands;
+overlap = cfg.overlap;
+cohMethod = cfg.cohMethod;
+skip = cfg.skip;
+eoi = cfg.eoi;
+vis = cfg.vis;
+saveParent = cfg.saveParent;
 %% Checks/Initialize
 % Check eventInfo - should be a n x 2 array with n = number of events of
 % interest
@@ -97,6 +113,10 @@ cd(sdir);
 disp('Loading file...')
 % Load file - just those variables to be used
 load(file,'LFPTs','eventTs','adfreq');
+% Skip channels
+skipInd = ~ismember(1:size(LFPTs.data,1),skip);
+LFPTs.data = LFPTs.data(skipInd,:);
+LFPTs.label = LFPTs.label(skipInd);
 [LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,...
     adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
 %% Calculate power spectra and plot 
@@ -115,8 +135,8 @@ toc
 if strcmpi(cohMethod,'mat')
     tic
     disp('Using mscohere.m to calculate coherence...')
-    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,1,...
-        cohMethod,'overlap',overlap);
+    [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,...
+        nFilt,vis,cohMethod,'overlap',overlap);
     toc
 elseif strcmpi(cohMethod,'mtm')
     tic

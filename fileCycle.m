@@ -43,8 +43,8 @@ if strcmp(fun,'scb')
     for ii = 1:length(files)
         tic
         disp(['Running spectcompbase on file ',num2str(ii),' out of ',num2str(length(files)),': ',files{ii}])
-        [sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent] = scbParamsMulti(files{ii});
-        [LFPTs,trls,clnTrls,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent);
+        [cfg] = scbParamsMulti(files{ii});
+        [LFPTs,trls,clnTrls,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(cfg);
         % OLD VERSION[LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,[1 2 150],3,{1,'50%';2,'50%';3,'50%'},[3])
         close all; clearvars -except files i sdir fun;
         toc

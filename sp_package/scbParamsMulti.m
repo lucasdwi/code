@@ -1,34 +1,53 @@
-function [sdir,file,nFilt,dsf,thresh,onset,offset,foi,bands,overlap,cohMethod,eoi,vis,saveParent] = scbParamsMulti(file)
+function [cfg] = scbParamsMulti(file)
 %%
-sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angelaMIA\splitMat\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\dianaNVHL\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angelaMIA\splitMat\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\stimParam\toProcess\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\dualSite\toProcess\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\mike\toProcess\';
-% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\toProcess\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\mat\nicks\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\megan\baseData\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\WilderBinge\channel_renamed\';
 % sdir = 'C:\Users\Pythia\Documents\GreenLab\data\twoSiteStim\mat\';
-% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\mat\';
-% sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\aaberg\splitMat\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\lsd\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\water\';
+cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\irdm\toProcess\';
 % file = 'H10RegChowNov23';
-file = file;
-nFilt = [57 63];
-dsf = 5;
-thresh = 1; 
-onset = 1;
-offset = 1;
-foi = [1 1 100];
-bands = {'delta',[1,4];
-         'theta',[5,10];
-         'alpha',[11,14];
-         'beta',[15,30];
-         'lgamma',[45,65];
-         'hgamma',[70,90]};
-overlap = 0.5;
-cohMethod = 'mtm';
-eoi = {'all',[0 5]};
-% eoi = [];
+cfg.file = file;
+cfg.nFilt = [57 63];
+cfg.dsf = 5;
+cfg.thresh = 2; 
+cfg.onset = 0.0125;
+cfg.offset = 1;
+cfg.foi = [1 1 100];
+cfg.bands = {'delta',[1,4];
+             'theta',[5,10];
+             'alpha',[11,14];
+             'beta',[15,30];
+             'lgamma',[45,65];
+             'hgamma',[70,90]};
+cfg.overlap = 0.5;
+cfg.cohMethod = 'mat';
+cfg.skip = [];
+% cfg.eoi = [{'binge (s'},[-4,1];{'binge (s'},[-3,2];{'binge (s'},[-2,3];...
+%     {'binge (s'},[-1,4]];
+cfg.eoi = {'all',[0 3]};
+% cfg.eoi = {'~Both',[0 5]};
+% cfg.eoi = {'water',[0 5];'alcohol',[0 5]};
+% cfg.eoi = {'all',[0 5]};
+% cfg.eoi = {'Inter',[0 5]};
+% cfg.eoi = {'pre',[0 5];'post',[0 5]};
+% cfg.eoi = {'drink',[0 5];'~drink',[0 5]};
+% cfg.eoi = {'trial',[-5 0]};
+% for ii = 1:240
+%    cfg.eoi(ii,:) = {'binge (s',[-4-ii 1-ii]}; 
+% end
+% cfg.eoi(end+1,:) = {'~binge',[0 5]};
 % for ii = 1:2
 %     eoi = [eoi;{['Base',num2str(ii),' '],[0 5]}];
 % end
@@ -58,11 +77,19 @@ eoi = {'all',[0 5]};
 % for ii = 1:16
 %     eoi(ii+16,:) = {'drink (e',[ii-6 ii-1]};
 % end
-vis = 'n';
-% saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\processed';
-% saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\';
+cfg.vis = 'n';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\preBingeInfluence\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\dianaNVHL\processed\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\preBinge_240sec\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\processed';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\';
 % saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\twoSiteStim\processed\';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\processedAll\';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\dualSite\processed\';
 % saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\stimParam\';
-saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angelaMIA\processed\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angelaMIA\processed\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\aaberg\processed';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\lsd\processed';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\waterProcessed';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\irdm\processedStim';
+cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\3second\all\';

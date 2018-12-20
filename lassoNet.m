@@ -143,11 +143,13 @@ for rep = 1:repeats
             % Use naiveInd to build test and train sets
             testX = x(naiveInd,:);
             testY = y(naiveInd,:);
+            testWeights = cfg.weights(naiveInd)';
             % Set up index vector
             inds  = 1:size(x,1);
             % Grab train data using those indices not in naiveInd
             trainX = x(~ismember(inds,naiveInd),:);
             trainY = y(~ismember(inds,naiveInd),:);
+            trainWeights = cfg.weights(~ismember(inds,naiveInd))';
         % Otherwise, use dataset provided as test set and complete data in
         % x as training set
         elseif isstruct(cfg.naive)
@@ -164,6 +166,7 @@ for rep = 1:repeats
         % If not using naive set, rename x and y and create empty test matrices
         trainX = x; testX = [];
         trainY = y; testY = [];
+        trainWeights = cfg.weights;
         % Create empty predY and naiveInd
         predY = []; naiveInd = [];
     end
@@ -178,6 +181,7 @@ for rep = 1:repeats
         rng('shuffle')
         thisPerm = randperm(nObv);
         trainY = trainY(thisPerm',:);
+        trainWeights = trainWeights(thisPerm);
     end
     %% Normalize (z-score) data
     if strcmpi(cfg.normalize,'y')
@@ -213,7 +217,7 @@ for rep = 1:repeats
                 for a = 1:length(alph)
                     opts.alpha = alph(a);
                     if ~isempty(cfg.weights)
-                        opts.weights = cfg.weights;
+                        opts.weights = trainWeights;
                     end
                     CVerr = cvglmnet(trainX,trainY(:,r),family,opts,type,[],foldid(c,:,r));
                     % Get index of lambda with lowest misclassification error
@@ -260,7 +264,7 @@ for rep = 1:repeats
         end
         % If weights exist, add to opts structure
         if ~isempty(cfg.weights)
-           opts.weights = cfg.weights; 
+           opts.weights = trainWeights; 
         end
         % Cycle through cross-validation folds
         for c = 1:cfg.cvIterations
@@ -322,7 +326,7 @@ for rep = 1:repeats
         nPred = size(testY,1);
         % Preallocate
         predY = zeros(1,nPred);
-        acc = zeros(1,nResp);
+        acc = [];%zeros(1,nResp);
         % Use best CVfit for each model
         for r = 1:nResp
             % If family is gaussian (continuous), use defualt prediction
@@ -330,7 +334,7 @@ for rep = 1:repeats
             if strcmpi(family,'gaussian')
                 [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm]);
                 % Compare predY to testY: difference
-                acc(r) = predY(r,:) - testY(:,r)';
+                acc(r,:) = predY(r,:) - testY(:,r)';
             % Otherwise, if binomial or multinomial, use 'response' type to
             % get probability of group 1 assignment
             elseif strcmpi(family,'binomial') || strcmpi(family,'multinomial')

@@ -33,7 +33,7 @@ thisF = dir(strcat('*',searchStr,'*'));
 files = vertcat(files,extractfield(thisF,'name')');
 for fi = 1:size(files,1)
     disp(['Loading file ',num2str(fi), ' of ',num2str(size(files,1))])
-    load(files{fi})
+    load(files{fi},'eventTs','pl2','LFPTs','adfreq')
     nC = size(LFPTs.data,1);
     figure
     for iC = 1:nC

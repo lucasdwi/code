@@ -59,7 +59,7 @@ end
 %% Cycle through each searchStr and get file names
 if ~isempty(searchStr)
     for sI = 1:size(searchStr,1)
-        [files{sI}] = fileSearch(sdir,searchStr{sI});
+        [files{sI}] = fileSearch(sdir,searchStr{sI,:});
     end
 else
     files = varargin{1};
@@ -82,9 +82,10 @@ for sI = 1:nStr
         load([sdir,files{sI}{fI}]);
         % Add one to counter
         count = count + 1;
+        thisData = [];
         for iE = 1:size(trls,2)
+            thisData{iE} = [];
             if ~isempty(trls{iE})
-                thisData{iE} = [];
                 % Normalized power - reshapes into row vector with columns
                 % of the following pattern: c1b1,c1b2,c1b3,c1b4,c2b1,...
                 if sum(strcmpi(vars,'pow')) == 1
@@ -128,6 +129,7 @@ for sI = 1:nStr
                                 coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
                         else
                             [cmb,b,t] =  size(coh{iE}.mBandCoh);
+%                             [cmb,b,t] =  size(coh{iE}.band);
                             % Permute coh.rel into a similar pattern as
                             % power
                             thisCoh = reshape(permute(...
@@ -138,13 +140,16 @@ for sI = 1:nStr
 %                         [cmb,b,~] = size(coh{iE}.rel);
                         if strcmpi(norm,'rel')
                             % Mean and permute coh.rel
-%                             thisCoh = reshape(permute(mean(coh{iE}.rel,3),[2,1]),1,cmb*b);
+%                             thisCoh = reshape(permute(mean(...
+%                                 coh{iE}.rel,3),[2,1]),1,cmb*b);
                             thisCoh = reshape(permute(mean(...
                                 coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
                         else
                             % Mean and permute coh.band
                             thisCoh = reshape(permute(mean(...
-                                coh{iE}.band,3),[2,1]),1,cmb*b);
+                                coh{iE}.mBandCoh,3),[2,1]),1,cmb*b);
+%                             thisCoh = reshape(permute(mean(...
+%                                 coh{iE}.band,3),[2,1]),1,cmb*b);
                         end
                     end
                     % Store coherence

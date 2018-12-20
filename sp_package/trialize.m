@@ -157,10 +157,12 @@ end
 
 %% NaN timestamps corresponding to NaNed LFPTs data
 for iE = 1:nEvent
-    if ~isempty(eventTs.t{eventInds(iE,1)})
+    % Skip if event has no timestamps
+    if ~isempty(intTime{iE})
         for iT = 1:sum(~cellfun(@isempty,intTime(iE,:)))
             % Sums across channels of data to propogate missing data
-            intTime{iE,iT}(isnan(sum(LFPTs.data(:,intTime{iE,iT}),1))) = NaN;
+            intTime{iE,iT}(isnan(sum(LFPTs.data(:,intTime{iE,iT}),1))) =...
+                NaN;
         end
     end
 end

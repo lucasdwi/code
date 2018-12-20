@@ -312,9 +312,9 @@ for ii = 1:size(files,2)
         end
     end
 end
-% load('C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\drinkNotRaw.mat')
-% mDrink = mean(catData{1,1}(:,(chan-1)*6+freq));
-% mNot = mean(catData{1,2}(:,(chan-1)*6+freq));
+load('C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\drinkNotRaw.mat')
+mDrink = mean(catData{1,1}(:,(chan-1)*6+freq));
+mNot = mean(catData{1,2}(:,(chan-1)*6+freq));
 figure
 hold on
 shadedErrorBar(12:16,fliplr(mean(pow(:,1:5),1,'omitnan')),fliplr(std(pow(:,1:5),[],1,'omitnan')),{'color',[0 0.45 0.74]})
@@ -327,5 +327,5 @@ shadedErrorBar(21:32,mean(pow(:,21:32),1,'omitnan'),std(pow(:,21:32),[],1,'omitn
 % shadedErrorBar(19:32,mean(pow(:,19:32),1,'omitnan'),std(pow(:,19:32),[],1,'omitnan'))
 set(gca,'XTick',[2:2:16,17:2:32],'XTickLabel',[-11.5:2:2.5,-2.5:2:12.5])
 xtickangle(90)
-% plot([1 32],[mDrink mDrink],'--','color',[0 0.45 0.74])
-% plot([1 32],[mNot mNot],'--k')
+plot([1 32],[mDrink mDrink],'--','color',[0 0.45 0.74])
+plot([1 32],[mNot mNot],'--k')

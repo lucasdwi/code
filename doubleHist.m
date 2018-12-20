@@ -51,8 +51,8 @@ h(3) = plot(NaN,NaN,'Marker','none','LineStyle','none');
 % Grab length of x-axis
 xax = get(gca,'xlim');
 len = xax(2)-xax(1);
-% Split into 40 bins
-bin = len/40;
+% Split into n bins
+bin = len/p.Results.nBin;
 % Set binWidths to bin
 set(h(1),'BinWidth',bin);
 set(h(2),'BinWidth',bin);
@@ -63,11 +63,22 @@ t = tinv(0.975,numel(real)-1);
 % Calulate 95% confidence interval
 cR = t*(std(real)/sqrt(numel(real)));
 cP = t*(std(perm)/sqrt(numel(perm)));
+% Determine rounding
+r1 = 0; test = 0;
+while test == 0
+    r1 = r1+1;
+    test = round(cR,r1);
+end
+r2 = 0; test = 0;
+while test == 0
+    r2 = r2+1;
+    test = round(cR,r2);
+end
 % Add legend
 legend(h,['Real: \mu = ',num2str(round(mean(real),2)),'\pm',...
-    num2str(round(cR,2)),p.Results.unit],...
+    num2str(round(cR,r1)),p.Results.unit],...
     ['Permuted: \mu = ',num2str(round(mean(perm),2)),'\pm',...
-    num2str(round(cP,2)),p.Results.unit],...
+    num2str(round(cP,r2)),p.Results.unit],...
     ['d = ',num2str(round(d,2))],...
     'Location',p.Results.loc);
 % Set figure text (title and axis labels)

@@ -33,14 +33,12 @@ else
         if data2 == 0
             % One-sample t-test
             [h(:,c),p(:,c)] = ttest(data1(:,c));
-        else if pair == 0
-                % Across datasets two-sample t-test
-                [h(:,c),p(:,c)] = ttest2(data1(:,c),data2(:,c));
-            else if pair == 1
-                    % Across datasets paired t-test
-                    [h(:,c),p(:,c)] = ttest(data1(:,c),data2(:,c));
-                end
-            end                
+        elseif pair == 0
+            % Across datasets two-sample t-test
+            [h(:,c),p(:,c)] = ttest2(data1(:,c),data2(:,c));
+        elseif pair == 1
+            % Across datasets paired t-test
+            [h(:,c),p(:,c)] = ttest(data1(:,c),data2(:,c));
         end
     end
 end

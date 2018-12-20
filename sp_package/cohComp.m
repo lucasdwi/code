@@ -79,7 +79,7 @@ if strcmpi(method,'mat')
     % Set up window
     window = hamming(winSize);
     % Calculate overlap samples
-    oSamp = round(overlap*winSize);
+    oSamp = round(p.Results.overlap*winSize);
 end
 % Preallocate coh
 coh = cell(1,size(eoi,1));
@@ -134,12 +134,14 @@ for ei = logicFind(0,empt,'==')
             end
         end
     end
-    
-    % Get mean coherence across frequencies per trial per channel pair;
-    % replicate to match dimension of 'mBandCoh'
-    mtCxy = repmat(mean(Cxy,2),1,size(bands,1),1);
     % Get indices for frequency bands
     bandInd = bandIndices(bands,f);
+    % Get mean coherence across frequencies per trial per channel pair;
+    % replicate to match dimension of 'mBandCoh'
+%     mtCxy = repmat(mean(Cxy,2),1,size(bands,1),1);
+    % Only normalize by frequencies in range of analysis
+    mtCxy = repmat(mean(Cxy(:,bandInd(1,1):bandInd(end,2),:),2),1,...
+        size(bands,1),1);
     % Get mean coherence of frequency band per trial per channel pair
     for bi = 1:nBands
         mBandCoh(:,bi,:) = mean(Cxy(:,bandInd(bi,1):bandInd(bi,2),:),2);

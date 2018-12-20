@@ -16,11 +16,13 @@ for ii = 1:20
     mdl = fitglm(trainX,trainY,'distribution','binomial');
     prob = predict(mdl,testX);
     [bbX{ii},bbY{ii},~,bbA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/1200:1,'UseNearest',0);
+    [~,~,~,bbAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Binge -> Drink
     testX = drink.testX{ii}(:,drinkInds);
     testY = drink.testY{ii};
     prob = predict(mdl,testX);
     [bdX{ii},bdY{ii},~,bdA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/1200:1,'UseNearest',0);
+    [~,~,~,bdAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Drink -> Drink
     trainX = drink.trainX{ii}(:,drinkInds);
     trainY = drink.trainY{ii};
@@ -29,12 +31,23 @@ for ii = 1:20
     mdl = fitglm(trainX,trainY,'distribution','binomial');
     prob = predict(mdl,testX);
     [ddX{ii},ddY{ii},~,ddA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/1200:1,'UseNearest',0);
+    [~,~,~,ddAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Drink -> Binge
     testX = binge.testX{ii}(:,bingeInds);
     testY = binge.testY{ii};
     prob = predict(mdl,testX);
     [dbX{ii},dbY{ii},~,dbA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/1200:1,'UseNearest',0);
+    [~,~,~,dbAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
 end
+%% Effect Sizes and conf
+bbES = distES(bbA,bbAperm);
+bbConf = conf(bbA,0.95);
+bdES = distES(bdA,bdAperm);
+bdConf = conf(bdA,0.95);
+ddES = distES(ddA,ddAperm);
+ddConf = conf(ddA,0.95);
+dbES = distES(dbA,dbAperm);
+dbConf = conf(dbA,0.95);
 %%
 figure
 subplot(2,2,1)
@@ -66,7 +79,7 @@ end
 text(0.5,0.25,num2str(round(mean(ddA),2)))
 title('Drink -> Drink')
 %%
-load('C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\baseline500Each6000All50-50v2.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\baseline500Each6000All50-50.mat')
 binge = all;
 bingeRnd = rnd;
 load('C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\drink6000.mat','all','rnd')
@@ -80,19 +93,22 @@ for ii = 1:20
     trainY = [binge.trainY{ii};drink.trainY{ii}];
     testX = [binge.testX{ii}(:,bingeInds);drink.testX{ii}(:,drinkInds)];
     testY = [binge.testY{ii};drink.testY{ii}];
-    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    mdl = fitglm(trainX,trainY(randperm(size(trainY,1))),'distribution','binomial');
     prob = predict(mdl,testX);
     [ggX{ii},ggY{ii},~,ggA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/2400:1,'UseNearest',0);
+    [~,~,~,ggAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Apply gen model to binge
     testX = binge.testX{ii}(:,bingeInds);
     testY = binge.testY{ii};
     prob = predict(mdl,testX);
     [gbX{ii},gbY{ii},~,gbA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/2400:1,'UseNearest',0);
+    [~,~,~,gbAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Apply gen model to drink
     testX = drink.testX{ii}(:,drinkInds);
     testY = drink.testY{ii};
     prob = predict(mdl,testX);
     [gdX{ii},gdY{ii},~,gdA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/2400:1,'UseNearest',0);
+    [~,~,~,gdAperm(ii)] = perfcurve(testY(randperm(size(testY,1))),prob,1);
     % Permuted
     trainX = [binge.trainX{ii}(:,bingeInds);drink.trainX{ii}(:,drinkInds)];
     testX = [binge.testX{ii}(:,bingeInds);drink.testX{ii}(:,drinkInds)];
@@ -102,6 +118,13 @@ for ii = 1:20
     prob = predict(mdl,testX);
     [rndX{ii},rndY{ii},~,rndA(ii)] = perfcurve(testY,prob,1,'TVals',0:1/2400:1,'UseNearest',0);
 end
+%% Effect sizes
+ggES = distES(ggA,ggAperm);
+ggConf = conf(ggA,0.95);
+gbES = distES(gbA,gbAperm);
+gbConf = conf(gbA,0.95);
+gdES = distES(gdA,gdAperm);
+gdConf = conf(gdA,0.95);
 %% Plot the six ROC curves in grid
 figure
 subplot(3,2,1)
@@ -250,24 +273,28 @@ for k = 1%:3
         disp([num2str(k),': ',num2str(ii)])
         for jj = 1:size(cmbs,1)
             % Train and test gen model
-            trainX = [binge.trainX{ii}(:,bingeInds);drink.trainX{ii}(:,drinkInds)];
-            trainY = [binge.trainY{ii};drink.trainY{ii}];
-%             testX = [binge.testX{ii}(:,bingeInds);drink.testX{ii}(:,drinkInds)];
+            genTrainX = [binge.trainX{ii}(:,bingeInds);drink.trainX{ii}(:,drinkInds)];
+            genTrainY = [binge.trainY{ii};drink.trainY{ii}];
+            genTestX = [binge.testX{ii}(:,bingeInds);drink.testX{ii}(:,drinkInds)];
+            genTestY = [binge.testY{ii};drink.testY{ii}];
+            mdl = fitglm(genTrainX(:,cmbs(jj,:)),genTrainY,'distribution','binomial');
+            prob = predict(mdl,genTestX(:,cmbs(jj,:)));
+            [~,~,~,a{k}(ii,jj)] = perfcurve(genTestY,prob,1);
+            % Binge test
             testXbinge = binge.testX{ii}(:,bingeInds);
-            testXdrink = drink.testX{ii}(:,drinkInds);
-%             testY = [binge.testY{ii};drink.testY{ii}];
             testYbinge = [binge.testY{ii}];
-            testYdrink = [drink.testY{ii}];
-            mdl = fitglm(trainX(:,cmbs(jj,:)),trainY,'distribution','binomial');
-%             prob = predict(mdl,testX(:,cmbs(jj,:)));
-%             [~,~,~,a{k}(ii,jj)] = perfcurve(testY,prob,1);
             bingeProb = predict(mdl,testXbinge(:,cmbs(jj,:)));
             [~,~,~,bingeA{k}(ii,jj)] = perfcurve(testYbinge,bingeProb,1);
+            % Drink test
+            testXdrink = drink.testX{ii}(:,drinkInds);
+            testYdrink = [drink.testY{ii}];
             drinkProb = predict(mdl,testXdrink(:,cmbs(jj,:)));
             [~,~,~,drinkA{k}(ii,jj)] = perfcurve(testYdrink,drinkProb,1);            
         end
     end
 end
+drinkAM = mean(drinkA{1},1)';
+bingeAM = mean(bingeA{1},1)';
 %% Sort vars
 nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
 nameVect = nameVect(bingeInds);

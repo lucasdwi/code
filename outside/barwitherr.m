@@ -105,7 +105,7 @@ else
 end
 
     
-% Check that the size of "errors" corresponsds to the size of the y-values.
+% Check that the size of "errors" corresponds to the size of the y-values.
 % Arbitrarily using lower errors as indicative.
 if any(size(values) ~= size(lowerErrors))
     error('The values and errors have to be the same length')

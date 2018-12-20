@@ -15,7 +15,8 @@ for fi = 1:size(files,2)
     % Check that the number of sub-files and expected channels per sub-file
     % matches the total amount of available data
     if ~isequal(size(inds,2)*chan,size(LFPTs.data,1))
-        error('There are a different number of channels than expected by the number of animals.')
+        error(['There are a different number of channels than expected'... 
+            ' by the number of animals.'])
     end
     % Store LFPTs
     oldLFPTs = LFPTs;
@@ -27,6 +28,7 @@ for fi = 1:size(files,2)
         LFPTs.data = oldLFPTs.data(chan*ii-chan+1:chan*ii,:);
         LFPTs.label = oldLFPTs.label(chan*ii-chan+1:chan*ii);
         LFPTs.cfg = oldLFPTs.cfg;
-        save(strjoin([parts{1},nums{inds(ii)},parts{size(inds,2)+ii+1},parts{end}],'_'),'LFPTs','adfreq','eventTs','pl2')
+        save(strjoin([parts{1},nums{inds(ii)},parts{size(inds,2)+ii+1},...
+            parts{end}],'_'),'LFPTs','adfreq','eventTs','pl2')
     end
 end

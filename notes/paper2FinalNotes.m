@@ -10,12 +10,8 @@ preSamp = samp{1,1}(:,1:5:36);
 % Concatenate all 'preData'
 preCat = cat(1,preData{:,1});
 % Generate 20 80/20 splits of pre data
-preTestX = cell(1,20);
-thisTrainX = cell(1,20);
-newPre = cell(1,20);
-preTrainX = cell(1,20);
-preTrainY = cell(1,20);
-preTestY = cell(1,20);
+[preTestX,thisTrainX,newPre,preTrainX,preTrainY,preTestY] = ...
+    deal(cell(1,20));
 % load notFeeding data to use as majority case in ADASYN
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\baseline500Each6000All50-50.mat'],'all')
@@ -271,11 +267,11 @@ for ii = 1:3
 end
 %% Create baseline data set with 500 per animal
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\bingeNotData2.mat'])
+    '\bingeNotData.mat'])
 % load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
 %     '\bingeNotPreData.mat'])
 [all,each,rnd] = evenDataSplit(data{1,1},500,100,'ADA',20); %#ok<ASGLU>
-save('baseline500Each6000All50-50v2.mat','all','each','rnd','pInds')
+% save('baseline500Each6000All50-50v2.mat','all','each','rnd','pInds')
 % save('baselinePre500Each6000All50-50.mat','all','each','rnd')
 %% Create baseline data set with 80/20 split per animal
 % load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
@@ -458,7 +454,7 @@ cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
 % Preallocate
 [preA,preARand] = deal(zeros(20,8));
 % Hardcoded first dimension from know size of roc curves in concatData
-[preX,preY] = deal(zeroes(21207,20));
+[preX,preY] = deal(zeros(21207,20));
 [preRandX,preRandY] = deal(zeros(21222,20));
 beta = zeros(20,58);
 for ii = 1:20
@@ -716,7 +712,7 @@ else
     sPost = std(postCoh,[],1,'omitnan');
 end
 
-%% Plot
+% Plot
 figure
 hold on
 shadedErrorBar(1:61,fliplr(mPre.*100),fliplr(sPre.*100))
@@ -1169,13 +1165,25 @@ end
 freqs = {'d','t','a','b','lg','hg'};
 topPerc = zeros(length(freqs),3);
 for ii = 1:size(freqs,2)
-   perc(ii,1) = sum(~cellfun(@isempty,regexp(monadFeats(1:(monadTier(end)-1),:),freqs{ii})))/(monadTier(end)-1);
-   perc(ii,2) = sum(any(~cellfun(@isempty,regexp(dyadFeats(1:(dyadTier(end)-1),:),freqs{ii})),2))/(dyadTier(end)-1);
-   perc(ii,3) = sum(any(~cellfun(@isempty,regexp(triadFeats(1:(triadTier(end)-1),:),freqs{ii})),2))/(triadTier(end)-1);
+   perc(ii,1) = sum(~cellfun(@isempty,...
+       regexp(monadFeats(1:(monadTier(end)-1),:),freqs{ii})))/...
+       (monadTier(end)-1);
+   perc(ii,2) = sum(any(~cellfun(@isempty,...
+       regexp(dyadFeats(1:(dyadTier(end)-1),:),freqs{ii})),2))/...
+       (dyadTier(end)-1);
+   perc(ii,3) = sum(any(~cellfun(@isempty,...
+       regexp(triadFeats(1:(triadTier(end)-1),:),freqs{ii})),2))/...
+       (triadTier(end)-1);
    
-   topPerc(ii,1) = sum(~cellfun(@isempty,regexp(monadFeats(1:(monadTier(2)-1),:),freqs{ii})))/(monadTier(2)-1);
-   topPerc(ii,2) = sum(any(~cellfun(@isempty,regexp(dyadFeats(1:(dyadTier(2)-1),:),freqs{ii})),2))/(dyadTier(2)-1);
-   topPerc(ii,3) = sum(any(~cellfun(@isempty,regexp(triadFeats(1:(triadTier(2)-1),:),freqs{ii})),2))/(triadTier(2)-1);
+   topPerc(ii,1) = sum(~cellfun(@isempty,...
+       regexp(monadFeats(1:(monadTier(2)-1),:),freqs{ii})))/...
+       (monadTier(2)-1);
+   topPerc(ii,2) = sum(any(~cellfun(@isempty,...
+       regexp(dyadFeats(1:(dyadTier(2)-1),:),freqs{ii})),2))/...
+       (dyadTier(2)-1);
+   topPerc(ii,3) = sum(any(~cellfun(@isempty,...
+       regexp(triadFeats(1:(triadTier(2)-1),:),freqs{ii})),2))/...
+       (triadTier(2)-1);
 end
 % figure
 % bar(topPerc'.*100,'stacked')
@@ -1958,6 +1966,7 @@ aM = cell2mat(cellfun(@(x) mean(mean(x,2)),a,'UniformOutput',0));
 aCI = cell2mat(cellfun(@(x) conf(mean(x,2)',0.95,'tail',2),a,...
     'UniformOutput',0));
 % aS = cell2mat(cellfun(@(x) std(x),a,'UniformOutput',0));
+aPerm = cell(1,11);
 for ii = 1:11
     load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
         'finalNew\lno\perm',num2str(ii),'.mat'])

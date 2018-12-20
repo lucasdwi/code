@@ -371,7 +371,7 @@ eventTs.label{1,6} = 'Post (End)';
 % Separate stim and clean data
 stimInd = []; stim = []; stimStop = []; stimStart = [];
 % stimInd = logicFind(1,~cellfun(@isempty,eventTs.t),'==');
-stim = eventTs.t{1,1};
+stim = eventTs.t{1,13};
 % Get all stops
 stimStop = stim(logicFind(0,round(diff(stim)),'~='));
 % Add last stop since above algorithm skips
