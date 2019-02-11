@@ -142,5 +142,5 @@ if chk_nan ~= 0
     %% Overwrite LFPTs with LFPTsNaN
     LFPTs = LFPTsNaN;
     % Record that LFPTs was processed with threshFilt.m
-    LFPTs.cfg.history.mfun{end+1} = 'threshFilt';
+%     LFPTs.cfg.history.mfun{end+1} = 'threshFilt';
 end

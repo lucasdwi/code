@@ -1,3 +1,16 @@
+%%
+d9 = diff(eventTs.t{1,13});
+d11 = diff(eventTs.t{1,15});
+inds9 = logicFind(11,d9,'>');
+inds11 = logicFind(11,d11,'>');
+inds9 = [1,inds9];
+inds11 = [1,inds11];
+
+inds = max([inds9;inds11]);
+for ii = 1:7
+    t(ii,:) = eventTs.t{13}(inds9(ii)+1:inds9(ii)+101)-eventTs.t{15}(inds11(ii)+1:inds11(ii)+101);
+end
+%%
 stimOff = 10;
 stimOn = 50;
 base = 15*60;

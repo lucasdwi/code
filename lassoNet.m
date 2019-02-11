@@ -74,7 +74,9 @@ if ~strcmpi(family,'binomial') && ~strcmpi(family,'gaussian') && ~strcmpi(family
     error(['Family, ',family,', not supported; choose either "binomial", "multinomial", "gaussian", or "poisson".'])
 end
 % Check type of error matches regression family
-if (strcmpi(type,'auc') || strcmpi(type,'class')) && (~strcmpi(family,'binomial') && ~strcmpi(family,'multinomial'))
+if (strcmpi(type,'auc') || strcmpi(type,'class')) && ...
+        (~strcmpi(family,'binomial') && ~strcmpi(family,'multinomial') ...
+        && ~strcmpi(family,'poisson'))
    error(['Can not use type ',type,' with family ',family,'.'])
 end
 % Check nfolds
@@ -143,13 +145,17 @@ for rep = 1:repeats
             % Use naiveInd to build test and train sets
             testX = x(naiveInd,:);
             testY = y(naiveInd,:);
-            testWeights = cfg.weights(naiveInd)';
+            if ~isempty(cfg.weights)
+                testWeights = cfg.weights(naiveInd)';
+            end
             % Set up index vector
             inds  = 1:size(x,1);
             % Grab train data using those indices not in naiveInd
             trainX = x(~ismember(inds,naiveInd),:);
             trainY = y(~ismember(inds,naiveInd),:);
-            trainWeights = cfg.weights(~ismember(inds,naiveInd))';
+            if ~isempty(cfg.weights)
+                trainWeights = cfg.weights(~ismember(inds,naiveInd))';
+            end
         % Otherwise, use dataset provided as test set and complete data in
         % x as training set
         elseif isstruct(cfg.naive)
@@ -166,7 +172,9 @@ for rep = 1:repeats
         % If not using naive set, rename x and y and create empty test matrices
         trainX = x; testX = [];
         trainY = y; testY = [];
-        trainWeights = cfg.weights;
+        if ~isempty(cfg.weights)
+            trainWeights = cfg.weights;
+        end
         % Create empty predY and naiveInd
         predY = []; naiveInd = [];
     end
@@ -181,7 +189,9 @@ for rep = 1:repeats
         rng('shuffle')
         thisPerm = randperm(nObv);
         trainY = trainY(thisPerm',:);
-        trainWeights = trainWeights(thisPerm);
+        if ~isempty(cfg.weights)
+            trainWeights = trainWeights(thisPerm);
+        end
     end
     %% Normalize (z-score) data
     if strcmpi(cfg.normalize,'y')
@@ -331,7 +341,7 @@ for rep = 1:repeats
         for r = 1:nResp
             % If family is gaussian (continuous), use defualt prediction
             % 'type' ('link')
-            if strcmpi(family,'gaussian')
+            if strcmpi(family,'gaussian') || strcmpi(family,'poisson')
                 [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm]);
                 % Compare predY to testY: difference
                 acc(r,:) = predY(r,:) - testY(:,r)';

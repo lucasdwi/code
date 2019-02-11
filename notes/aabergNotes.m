@@ -1,4 +1,90 @@
+%% New aaberg analysis with animals from Diana
+[data,~,files] = collateData('E:\aaberg\processedNew\three\',...
+    {'Control','in';'THC','in'},{'pow','coh'},'avg','rel');
+% Combine into datasets with either 3 or two recordings per animal
+% Three
+x3 = cat(1,data{1}{:},data{2}{:});
+y3 = [zeros(21,1);ones(30,1)];
+% Two
+inds0 = [1,2,4,5,7,8,10,11,13,14,16,17,19,20];
+inds1 = [1,2,4,5,7,8,10,11,13,14,16,17,19,20,22,23,25,26,28,29];
+x2 = cat(1,data{1}{inds0},data{2}{inds1});
+y2 = [zeros(14,1);ones(20,1)];
+save('E:\aaberg\newModelData.mat','x3','y3','x2','y2')
+%%
 [data,~,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\aaberg\processed\modelData\',{'AC_','in';'AT_','in'},{'pow','coh'},'avg','rel');
+%% Open lasso results
+load('E:\aaberg\newModel_5fold.mat')
+doubleHist((1-real2.err).*100,(1-perm2.err).*100,'xlab','Accuracy (%)','main','2 sample')
+doubleHist((1-real3.err).*100,(1-perm3.err).*100,'xlab','Accuracy','main','3 sample')
+%%
+for ii = 1:70
+    load(['E:\aaberg\doubleDip\newModel_5fold_doub',num2str(ii),'.mat'])
+    aRD(ii) = real2.acc{1}.acc;
+    aPD(ii) = perm2.acc{1}.acc;
+    cvD(ii,:) = real2.err;
+    cvPD(ii,:) = perm2.err;
+    
+    load(['E:\aaberg\tripleDip\newModel_5fold_trip',num2str(ii),'.mat'])
+    aRT(ii) = real3.acc{1}.acc;
+    aPT(ii) = perm3.acc{1}.acc;
+    cvT(ii,:) = real3.err;
+    cvPT(ii,:) = perm3.err;
+end
+%%
+load('E:\aaberg\newModelData.mat')
+for ii = 1:70
+    load(['E:\aaberg\tripleDipRandom\newModel_5fold_trip',num2str(ii),...
+        '.mat'])
+    aRT(ii) = real3.acc{1}.acc;
+    aPT(ii) = perm3.acc{1}.acc;
+    cvT(ii,:) = real3.err;
+    cvPT(ii,:) = perm3.err;
+    [x(ii,:),y(ii,:),~,a(ii)] = perfcurve(y3(real3.hist.testInd),...
+        real3.acc{1}.pred,1,'TVals',0:0.05:1,'UseNearest',0);
+    [xP(ii,:),yP(ii,:),~,aP(ii)] = perfcurve(y3(perm3.hist.testInd),...
+        perm3.acc{1}.pred,1,'TVals',0:0.05:1,'UseNearest',0);
+end
+figure
+plot(mean(x,1),mean(y,1),'-k')
+hold on
+plot(mean(xP,1),mean(yP,1),'--k')
+box off
+title('THC vs. Control')
+xlabel('FPR'); ylabel('TPR')
+legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
+    num2str(round(conf(a,0.95),2))],['Permuted: ',...
+    num2str(round(mean(aP),2)),'\pm',num2str(round(conf(aP,0.95),2))]})
+%% Run single feature - leave two animals out (triple)
+load('E:\aaberg\newModelData.mat')
+zero = reshape(1:21,3,7)';
+one = reshape(22:51,3,10)';
+x = [];
+for ii = 1:7
+    for jj = 1:10
+        x = [x;ii,jj];
+    end
+end
+for ii = 1:size(x,1)
+    disp(num2str(ii))
+    testInds = [zero(x(ii,1),:),one(x(ii,2),:)];
+    allInds = 1:51;
+    trainInds = ~ismember(allInds,testInds);
+    for jj = 1:216
+        mdl = fitglm(x3(trainInds,jj),y3(trainInds),'distribution',...
+            'binomial','binomialsize',sum(trainInds));
+        slope(ii,jj) = table2array(mdl.Coefficients(2,1));
+        prob = predict(mdl,x3(testInds,jj));
+        [~,~,~,a(ii,jj)] = perfcurve(y3(testInds),prob,1);
+    end
+end
+mA = mean(a,1);
+[mASort,sortInd] = sort(mA,'descend');
+mASort = mASort';
+slopeSort = mean(slope(:,sortInd),1)';
+nameVect = names({'rOFC','rIL','rNAc','rPL','lNAc','lPL','lOFC','lIL'},...
+    {'d','t','a','b','lg','hg'});
+feat = nameVect(sortInd)';
 %%
 x = [data{1};data{2}];
 y = [zeros(size(data{1},1),1);ones(size(data{2},1),1)];

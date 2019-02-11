@@ -56,8 +56,11 @@ bin = len/p.Results.nBin;
 % Set binWidths to bin
 set(h(1),'BinWidth',bin);
 set(h(2),'BinWidth',bin);
+% Calculate p value from null distribution
+z = (mean(real)-mean(perm))/std(perm);
+% pValue = 2*normcdf(-abs(z));
 % Calculate effect size (Cohen's d)
-d = distES(real,perm);
+% d = distES(real,perm);
 % Calculate t with 95% two sided 
 t = tinv(0.975,numel(real)-1);
 % Calulate 95% confidence interval
@@ -79,7 +82,7 @@ legend(h,['Real: \mu = ',num2str(round(mean(real),2)),'\pm',...
     num2str(round(cR,r1)),p.Results.unit],...
     ['Permuted: \mu = ',num2str(round(mean(perm),2)),'\pm',...
     num2str(round(cP,r2)),p.Results.unit],...
-    ['d = ',num2str(round(d,2))],...
+    ['z = ',num2str(round(z,4))],...
     'Location',p.Results.loc);
 % Set figure text (title and axis labels)
 title(p.Results.main);

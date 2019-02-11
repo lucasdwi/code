@@ -1,9 +1,9 @@
 function fileSplitter(sdir,searchStr,chan)
 files = fileSearch(sdir,searchStr);
-for fi = 1:size(files,2)
-    load(files{fi})
+for fI = 1:size(files,2)
+    load(files{fI})
     % Grab this filename
-    thisFile = files{fi};
+    thisFile = files{fI};
     % Remove file extension by finding period; '.'
     thisFile = thisFile(1:strfind(thisFile,'.')-1);
     % Split str at all underscores; '_'
@@ -28,6 +28,8 @@ for fi = 1:size(files,2)
         LFPTs.data = oldLFPTs.data(chan*ii-chan+1:chan*ii,:);
         LFPTs.label = oldLFPTs.label(chan*ii-chan+1:chan*ii);
         LFPTs.cfg = oldLFPTs.cfg;
+%         save(strjoin([parts{1},nums{inds(ii)},parts{size(inds,2)+ii+1},...
+%             parts{end}],'_'),'LFPTs','adfreq','eventTs','pl2')
         save(strjoin([parts{1},nums{inds(ii)},parts{size(inds,2)+ii+1},...
             parts{end}],'_'),'LFPTs','adfreq','eventTs','pl2')
     end

@@ -15,15 +15,19 @@ function [cfg] = scbParamsMulti(file)
 % cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\aaberg\splitMat\';
 % cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\lsd\toProcess\';
 % cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\water\';
-cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\toProcess\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angela\toProcess\';
 % cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\irdm\toProcess\';
+% cfg.sdir = 'E:\aaberg\toProcess\';
+% cfg.sdir = 'E:\dualSite\toProcess\dualSite\';
+cfg.sdir = 'E:\dualSite\toProcess\singleSite\';
+% cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\angelaK\toProcess\';
 % file = 'H10RegChowNov23';
 cfg.file = file;
-cfg.nFilt = [57 63];
+cfg.nFilt = [56 64];
 cfg.dsf = 5;
 cfg.thresh = 2; 
 cfg.onset = 0.0125;
-cfg.offset = 1;
+cfg.offset = 0.5;
 cfg.foi = [1 1 100];
 cfg.bands = {'delta',[1,4];
              'theta',[5,10];
@@ -32,11 +36,16 @@ cfg.bands = {'delta',[1,4];
              'lgamma',[45,65];
              'hgamma',[70,90]};
 cfg.overlap = 0.5;
-cfg.cohMethod = 'mat';
+cfg.cohMethod = 'mtm';
 cfg.skip = [];
+cfg.eoi = [{'Base1',[0,5]};{'Base2',[0,5]};{'Stim1',[0,5]}];
+% cfg.eoi = [{'Base1',[0,5]};{'Base2',[0,5]};{'Base3',[0,5]};...
+%     {'Base4',[0,5]};{'Base5',[0,5]};{'Base6',[0,5]};{'Base7',[0,5]};...
+%     {'Base8',[0,5]};{'Stim1',[0,5]};{'Stim2',[0,5]};{'Stim3',[0,5]};...
+%     {'Stim4',[0,5]};{'Stim5',[0,5]};{'Stim6',[0,5]};{'Stim7',[0,5]}]; 
 % cfg.eoi = [{'binge (s'},[-4,1];{'binge (s'},[-3,2];{'binge (s'},[-2,3];...
 %     {'binge (s'},[-1,4]];
-cfg.eoi = {'all',[0 3]};
+% cfg.eoi = {'rest',[0 3]};
 % cfg.eoi = {'~Both',[0 5]};
 % cfg.eoi = {'water',[0 5];'alcohol',[0 5]};
 % cfg.eoi = {'all',[0 5]};
@@ -92,4 +101,7 @@ cfg.vis = 'n';
 % cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\lsd\processed';
 % cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\paper3\waterProcessed';
 % cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\irdm\processedStim';
-cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angela\3second\all\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\maleFemale\3SecondRest\';
+% cfg.saveParent = 'E:\aaberg\processedNew\';
+cfg.saveParent = 'E:\dualSite\processed\';
+% cfg.saveParent = 'C:\Users\Pythia\Documents\GreenLab\data\angelaK\processed\'

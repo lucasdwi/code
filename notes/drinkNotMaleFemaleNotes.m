@@ -78,6 +78,38 @@ end
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
     'maleFemaleDrinkNotData.mat'],'xMaleData','yMaleData','xFemaleData',...
     'yFemaleData')
+%% Run single feature models
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+    'maleFemaleDrinkNotData.mat'])
+for ii = 1:60
+    disp(num2str(ii))
+    for jj = 1:100
+        testInds = randperm(200,20);
+        trainInds = logicFind(1,~ismember(1:200,testInds),'==');
+        % Male
+        maleMdl = fitglm(xMaleData(trainInds,ii,jj),...
+            yMaleData(trainInds,jj),'distribution','binomial',...
+            'binomialsize',180);
+        prob = predict(maleMdl,xMaleData(testInds,ii,jj));
+        [mX(ii,jj,:),mY(ii,jj,:),~,mA(ii,jj)] = perfcurve(...
+            yMaleData(testInds,jj),prob,1);
+        % Female
+        femaleMdl = fitglm(xFemaleData(trainInds,ii,jj),...
+            yFemaleData(trainInds,jj),'distribution','binomial',...
+            'binomialsize',180);
+        prob = predict(femaleMdl,xFemaleData(testInds,ii,jj));
+        [fX(ii,jj,:),fY(ii,jj,:),~,fA(ii,jj)] = perfcurve(...
+            yFemaleData(testInds,jj),prob,1);
+    end
+end
+%%
+[mAS,mInd] = sort(mean(mA,2),'descend');
+maleSortA = mA(mInd,:);
+[fAS,fInd] = sort(mean(fA,2),'descend');
+femaleSortA = fA(fInd,:);
+nameVect = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
+mName = nameVect(mInd)';
+fName = nameVect(fInd)';
 %% Load lasso results
 cd(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\',...
     'maleFemaleDrinkNot\'])

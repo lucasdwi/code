@@ -340,6 +340,24 @@ w = 1./sumN;
 weights = n.*w;
 weights(weights==0) = [];
 save('C:\Users\Pythia\Documents\GreenLab\data\paper3\drinkAmountData.mat','avgData','drink','weights')
+%% Run single feature models
+nTest = 9;
+for ii = 41%1:60
+    for jj = 1:100
+        testInds = randperm(size(avgData,1),nTest);
+        trainInds = ~ismember(1:size(avgData,1),testInds);
+        mdl = fitglm(avgData(trainInds,ii),cell2mat(drink(trainInds,1)));
+        c(jj) = table2array(mdl.Coefficients(2,1));
+        prob = predict(mdl,avgData(testInds,ii));
+        err(ii,jj,:) = cell2mat(drink(testInds,1))-prob;
+        mse(ii,jj) = mean(cell2mat(drink(testInds,1))-prob)^2;
+        r(ii,jj) = mdl.Rsquared.Ordinary;
+    end
+end
+%%
+[sMSE,sInd] = sort(abs(mean(mse,2)),'ascend');
+nameVect = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
+sName = nameVect(sInd)';
 %%
 for ii = 1:100
    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\drinkingAmountsWeighted\',num2str(ii),'.mat'],'accArray','accArrayRand')

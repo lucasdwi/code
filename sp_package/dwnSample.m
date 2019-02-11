@@ -45,4 +45,4 @@ LFPTs.tvec = dwnTvec;
 % Adjust sampling rate
 adfreq = adfreq/dsf;
 % Record that data was downsampled
-LFPTs.cfg.history.mfun{end+1} = 'dwnSample';
+% LFPTs.cfg.history.mfun{end+1} = 'dwnSample';
