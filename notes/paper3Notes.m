@@ -700,6 +700,43 @@ ddPermConf = conf(ddAperm,0.95);
 % dbES = distES(dbA,dbAperm);
 dbConf = conf(dbA,0.95);
 dbPermConf = conf(dbAperm,0.95);
+%% Build dep24 vs. chow models
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
+    '\bingeNotPreData.mat'])
+% Get number of samples from dep24 and chow
+bingeSamp = [cellfun(@(x) size(x,1),data{1,2}([1:3,5:8,10:11],1)),...
+    cellfun(@(x) size(x,1),data{1,4}(:,1))];
+dep = data{1,2}([1:3,5:8,10:11],1);
+chow = data{1,4}(:,1);
+% Find min for each animal
+[minSamp] = min(bingeSamp,[],2);
+for jj = 1:100
+    % Build models between chow and dep24
+    allDep = []; allChow = [];
+    for ii = 1:size(minSamp,1)
+        thisDep = dep{ii}(randperm(size(dep{ii},1),minSamp(ii)),:);
+        allDep = [allDep;thisDep];
+        thisChow = chow{ii}(randperm(size(chow{ii},1),minSamp(ii)),:);
+        allChow = [allChow;thisChow];
+    end
+    % Determine number of samples from chow and dep to use in training
+    halfTrain = round(size(allChow,1)*.8);
+    halfTest = size(allChow,1)-halfTrain;
+    depTrainInds = randperm(size(allDep,1),halfTrain);
+    depTestInds = ~ismember(1:size(allDep,1),depTrainInds);
+    chowTrainInds = randperm(size(allChow,1),halfTrain);
+    chowTestInds = ~ismember(1:size(allChow,1),chowTrainInds);
+    trainX = [allDep(depTrainInds,:);allChow(chowTrainInds,:)];
+    trainY = [zeros(halfTrain,1);ones(halfTrain,1)];
+    testX = [allDep(depTestInds,:);allChow(chowTestInds,:)];
+    testY = [zeros(halfTest,1);ones(halfTest,1)];
+    
+    mdl = fitglm(trainX,trainY,'distribution','binomial','binomialsize',...
+        halfTrain*2);
+    prob = predict(mdl,testX);
+    [dcX(jj,:),dcY(jj,:),~,dcA(jj)] = perfcurve(testY,prob,1);
+end
+% Also build binge not models from 
 %% Build and test generalized models
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\baseline500Each6000All50-50.mat'])

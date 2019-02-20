@@ -1,5 +1,5 @@
 # Outside files
-/outside/*
+#/outside/*
 # Discovery files
 /discovery/*
 # Old files

@@ -306,13 +306,13 @@ end
 %% Try looking at distribution of z-scores
 load('E:\dualSite\dualSiteData.mat')
 % Just grab the NAcS-IL data
-dual = data{1}{[1,2,3,7,8,9,13,14,15,19,20,21,25,26,27,31,32,33],:};
+dual = data{1}([1,2,3,7,8,9,13,14,15,19,20,21,25,26,27,31,32,33],:);
 dualFiles = files([1,2,3,7,8,9,13,14,15,19,20,21,25,26,27,31,32,33]);
 load('E:\dualSite\singleSiteData.mat')
 single = data;
 singleFiles = files;
 for ii = 1:6
-    
+    inds = [-2,-1,0]+3*ii;
 end
 
 for ii = 1:size(dual{1},1)
@@ -329,7 +329,6 @@ for ii = 1:size(dual{1},1)
         stimZ{jj}(:,:) = (dual{1,1}{ii,8+jj}-baseMu)./baseSig;
         p(ii,jj,:) = sum(stimZ{jj}>=0,1)./size(stimZ{jj},1);
     end
-    singleZ = (single)
 end
 %%
 for ii = 1:216
