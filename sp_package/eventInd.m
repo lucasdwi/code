@@ -6,10 +6,10 @@ function [eventInds] = eventInd(eventTs,eoi)
 % the case of scalar, the index will be repeated as if a start and stop
 % exist in order to maintain matrix dimensions.
 %
-% N.B. given behavior labels (1) do NOT need to use the same case and (2)
-% can be the start of a label (i.e. 'rest' will find 'resting'; will only
-% compare the first N characters of labels in eventTs.label where N = the
-% number of characters given in 'eoi' structure
+% N.B. given behavior labels do NOT need to use the same case and (2) need
+% to be the entire name of the event (i.e., 'rest' will NOT find
+% 'resting'); will only compare the first N characters of labels in
+% eventTs.label where N = the number of characters given in 'eoi' structure
 %__________________________________________________________________________
 % INPUTS:
 % eventTs = eventTs variable from converted data file given by
@@ -32,8 +32,11 @@ function [eventInds] = eventInd(eventTs,eoi)
 %% Go through eoi labels
 eventInds = zeros(size(eoi,1),2);
 for ei = 1:size(eoi,1)
-   % Search for eoi label in eventTs.label
-   inds = logicFind(1,strncmpi(eventTs.label,eoi{ei,1},length(eoi{ei,1})),'==');
+   % Search for eoi label in eventTs.label; add space to event name in case
+   % of number events s.t. 'Stim11' would not be found when looking for
+   % 'Stim1'
+   inds = logicFind(1,strncmpi(eventTs.label,[eoi{ei,1},' '],...
+       length(eoi{ei,1})+1),'==');
    if isempty(inds)
       error(['Warning: Behavior ',eoi{ei,1},' could not be found in '...
           'eventTs.label; make sure that spelling is correct in both '... 

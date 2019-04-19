@@ -59,7 +59,7 @@ end
 %% Cycle through each searchStr and get file names
 if ~isempty(searchStr)
     for sI = 1:size(searchStr,1)
-        [files{sI}] = fileSearch(sdir,searchStr{sI,:});
+        [files{sI}] = fileSearch(sdir,searchStr{sI,:})';
     end
 else
     files = varargin{1};
@@ -76,7 +76,7 @@ data = cell(1,nStr);
 samp = cell(1,nStr);
 for sI = 1:nStr
     % Get number of files within given cell
-    nFile = size(files{sI},2);
+    nFile = size(files{sI},1);
     for fI = 1:nFile
         disp(['Adding file ',num2str(count),' of ',num2str(nAllFile)])
         load([sdir,files{sI}{fI}]);
@@ -119,37 +119,37 @@ for sI = 1:nStr
                 if sum(strcmpi(vars,'coh')) == 1
                     if strcmpi(dat,'trl')
                         if strcmpi(norm,'rel')
-%                             [cmb,b,t] = size(coh{iE}.rel);
-                            [cmb,b,t] = size(coh{iE}.normBandCoh);
+                            [cmb,b,t] = size(coh{iE}.rel);
+%                             [cmb,b,t] = size(coh{iE}.normBandCoh);
                             % Permute coh.rel into a similar pattern as
                             % power
-%                             thisCoh = reshape(permute(...
-%                                 coh{iE}.rel,[2,1,3]),cmb*b,t)';
                             thisCoh = reshape(permute(...
-                                coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
+                                coh{iE}.rel,[2,1,3]),cmb*b,t)';
+%                             thisCoh = reshape(permute(...
+%                                 coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
                         else
-                            [cmb,b,t] =  size(coh{iE}.mBandCoh);
-%                             [cmb,b,t] =  size(coh{iE}.band);
+%                             [cmb,b,t] =  size(coh{iE}.mBandCoh);
+                            [cmb,b,t] =  size(coh{iE}.band);
                             % Permute coh.rel into a similar pattern as
                             % power
                             thisCoh = reshape(permute(...
                                 coh{iE}.mBandCoh,[2,1,3]),cmb*b,t)';
                         end
                     else
-                        [cmb,b,~] = size(coh{iE}.normBandCoh);
-%                         [cmb,b,~] = size(coh{iE}.rel);
+%                         [cmb,b,~] = size(coh{iE}.normBandCoh);
+                        [cmb,b,~] = size(coh{iE}.rel);
                         if strcmpi(norm,'rel')
                             % Mean and permute coh.rel
-%                             thisCoh = reshape(permute(mean(...
-%                                 coh{iE}.rel,3),[2,1]),1,cmb*b);
                             thisCoh = reshape(permute(mean(...
-                                coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
+                                coh{iE}.rel,3),[2,1]),1,cmb*b);
+%                             thisCoh = reshape(permute(mean(...
+%                                 coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
                         else
                             % Mean and permute coh.band
-                            thisCoh = reshape(permute(mean(...
-                                coh{iE}.mBandCoh,3),[2,1]),1,cmb*b);
 %                             thisCoh = reshape(permute(mean(...
-%                                 coh{iE}.band,3),[2,1]),1,cmb*b);
+%                                 coh{iE}.mBandCoh,3),[2,1]),1,cmb*b);
+                            thisCoh = reshape(permute(mean(...
+                                coh{iE}.band,3),[2,1]),1,cmb*b);
                         end
                     end
                     % Store coherence

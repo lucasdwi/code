@@ -1,6 +1,6 @@
 %% Grab preBinge data 
-[data,samp,preFiles] = collateData(['C:\Users\Pythia\Documents\GreenLab'...
-    '\data\paper2\preBingeCombined\'],{'base'},{'pow','coh'},'trl','rel');
+[data,samp,preFiles] = collateData('E:\paper2\preBingeCombined\',...
+    {'base'},{'pow','coh'},'trl','rel');
 % Only keep preBinge epochs corresponding to non-overlapping windows (i.e.
 % [-5 0],[-10 -5],[-15 -10],[-20 -15],[-25 -20],[-30 -25],[-35 -30], and
 % [-40 -35]) corresponds to cells 1,6,11,16,21,26,31, and 36 out of the
@@ -9,13 +9,15 @@ preData = data{1,1}(:,1:5:36);
 preSamp = samp{1,1}(:,1:5:36);
 % Concatenate all 'preData'
 preCat = cat(1,preData{:,1});
-% Generate 20 80/20 splits of pre data
-[preTestX,thisTrainX,newPre,preTrainX,preTrainY,preTestY] = ...
-    deal(cell(1,20));
 % load notFeeding data to use as majority case in ADASYN
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\baseline500Each6000All50-50.mat'],'all')
-for ii = 1:20
+% load(['E:\data\paper2\analyzed\finalNew\'...
+%    'baseline500Each6000All50-50.mat'],'all')
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+    '\baseline500Each6000All50-50_100.mat'],'all')
+% Generate 80/20 splits of pre data
+[preTestX,thisTrainX,newPre,preTrainX,preTrainY,preTestY] = ...
+    deal(cell(1,size(all.trainX,2)));
+for ii = 1:size(all.trainX,2)
     % Generate random indices corresponding to 80/20 split
     rI = randperm(size(preCat,1),round(size(preCat,1)*.20));
     % Split data
@@ -52,8 +54,11 @@ end
 d = sum(cellfun(@(x) size(x,1),preData(:,2:8)),1)./(sum(cellfun(...
     @(x) size(x,1),preData(:,2:8)),1)+sum(cellfun(@(x) size(x,1),...
     data{1,1}(:,end)))); 
-save(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\',...
-    'finalNew\preBingeTrainTest.mat'],'pre5','pre40Test','thisTrainX',...
+% save(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\',...
+%     'finalNew\preBingeTrainTest.mat'],'pre5','pre40Test','thisTrainX',...
+%     'newPre','d')
+save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\',...
+    'preBingeTrainTest100.mat'],'pre5','pre40Test','thisTrainX',...
     'newPre','d')
 %% Grab bingeNot data that does not overlap preBinge data 
 % Grabs all binge and rest trial data from baseline, dep24, dep48, and chow
@@ -266,11 +271,10 @@ for ii = 1:3
        'xlab','Accuracy (%)'); 
 end
 %% Create baseline data set with 500 per animal
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\bingeNotData.mat'])
+load(['E:\paper2\analyzed\finalNew\bingeNotData.mat'])
 % load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
 %     '\bingeNotPreData.mat'])
-[all,each,rnd] = evenDataSplit(data{1,1},500,100,'ADA',20); %#ok<ASGLU>
+[all,each,rnd] = evenDataSplit(data{1,1},500,100,'ADA',100); %#ok<ASGLU>
 % save('baseline500Each6000All50-50v2.mat','all','each','rnd','pInds')
 % save('baselinePre500Each6000All50-50.mat','all','each','rnd')
 %% Create baseline data set with 80/20 split per animal

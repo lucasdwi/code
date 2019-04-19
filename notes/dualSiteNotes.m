@@ -189,12 +189,14 @@ allZ = zeros(120,216,7,12,3);
 rC = 1;
 % Set up animal counter
 aC = 1;
+baseZ = [];
 for ii = 1:size(data{1},1)
     disp(num2str(ii))
     % Set up offset counter
     oC = 1;
     % Set up thisZ
     thisZ = [];
+    catBaseZ = [];
     % Find 'Base1 (End)' index in events{ii}
     eI = eventInd(events{ii},{'Base1 (End)'});
     for jj = 9:15 % Indices of the 7 stim chunks
@@ -216,6 +218,11 @@ for ii = 1:size(data{1},1)
         % Calculate standard deviation of last 5 minutes of previous (jj-8)
         % baseline; replicate to same size as stim data
         sig = std(data{1}{ii,jj-8}(baseSplit:end,:),[],1);
+        % Use to get z-scores of baselines
+        thisBaseZ = zeros(60,216);
+        thisBaseZ(thisBaseZ==0) = NaN;
+        thisBaseZ(1:size(data{1}{ii,jj-8}(baseSplit:end,:),1),:) = ...
+            (data{1}{ii,jj-8}(baseSplit:end,:)-mu)./sig;
         % Replicate mu and sig to same size as stim data
         thisMu = repmat(mu,size(data{1}{ii,jj},1),1);
         thisSig = repmat(sig,size(data{1}{ii,jj},1),1);
@@ -250,12 +257,13 @@ for ii = 1:size(data{1},1)
         washTime{ii,oC} = thisWashTime(1:washSplit,:);
         % Put thisStimZ and thisWashZ together
         thisZ = cat(3,thisZ,[thisStimZ;thisWashZ]);
-        
+        catBaseZ = cat(3,catBaseZ,thisBaseZ);
         % Add one to counter
         oC = oC+1;
     end
     % Sort thisZ by ascending offsets using sortI
     allZ(:,:,:,aC,rC) = thisZ(:,:,sortI(ii,:));
+    allBaseZ(:,:,:,aC,rC) = catBaseZ(:,:,sortI(ii,:));
     if rC == 3
         rC = 1;
         aC = aC+1;
@@ -265,7 +273,9 @@ for ii = 1:size(data{1},1)
 end
 % Split into NAcS-OFC and NAcS-IL matrices
 nacs_ofc = allZ(:,:,:,2:2:12,:);
+nacs_ofc_base = allBaseZ(:,:,:,2:2:12,:);
 nacs_il = allZ(:,:,:,1:2:12,:);
+nacs_il_base = allBaseZ(:,:,:,1:2:12,:);
 %%
 load('E:\dualSite\z.mat')
 m_nacs_il = squeeze(mean(nacs_il(1:60,:,:,:,:),1,'omitnan'));
@@ -288,12 +298,120 @@ for ii = 1:0.5:6
 end
 posThresh = squeeze(sum(m_nacs_il >= 2,4)>=2);
 negThresh = squeeze(sum(m_nacs_il <= -2,4)>=2);
+[x,y,z] = ind2sub(size(negThresh),logicFind(1,negThresh,'=='));
+for ii = 1:6
+    figure
+    imagesc(squeeze(negThresh(:,:,ii)))
+    colormap viridis
+end
+% Check if any of these features are the same across animals
+test = sum(negThresh,3);
 % Get indices of those features surviving
 % features x offsets x animals x z-score threshold
 [x,y,z,a] = ind2sub(size(days),logicFind(0,days,'~='));
 for ii = 1:7
    figure
    imagesc(squeeze(days(181,:,4,:)))
+end
+%% Try getting proportion of z scores above(below) 0
+% time x feature x offset x animal x recording
+over = nacs_il>=0;
+overBase = nacs_il_base>=0;
+overBaseCount = squeeze(sum(overBase,1,'omitnan'));
+overBaseN = squeeze(sum(~isnan(nacs_il_base),1));
+overBaseP = overBaseCount./overBaseN;
+overStimCount = squeeze(sum(over(1:60,:,:,:,:),1,'omitnan'));
+overStimN = squeeze(sum(~isnan(nacs_il(1:60,:,:,:,:)),1));
+overStimP = overStimCount./overStimN;
+overWashCount = squeeze(sum(over(61:120,:,:,:,:),1,'omitnan'));
+overWashN = squeeze(sum(~isnan(nacs_il(61:120,:,:,:,:)),1));
+overWashP = overWashCount./overWashN;   
+
+for ii = 1:216
+    for jj = 1:7
+        for k = 1:6
+            for m = 1:3
+                [~,bs(ii,jj,k,m)] = prop_test([overBaseCount(ii,jj,k,m),overStimCount(ii,jj,k,m)],[overBaseN(ii,jj,k,m),overStimN(ii,jj,k,m)],false);
+                [~,bw(ii,jj,k,m)] = prop_test([overBaseCount(ii,jj,k,m),overWashCount(ii,jj,k,m)],[overBaseN(ii,jj,k,m),overWashN(ii,jj,k,m)],false);
+            end
+            [~,bsP(ii,jj,k)] = prop_test([sum(overBaseCount(ii,jj,k,:),4),sum(overStimCount(ii,jj,k,:),4)],[sum(overBaseN(ii,jj,k,:),4),sum(overStimN(ii,jj,k,:),4)],false);
+        end
+    end
+end
+bsInds = bs*27216<=0.05;
+bwInds = bw*27216<=0.05;
+bothInds = bsInds==1 & bwInds==1;
+%% Look at single site effects - IL, NAcS, OFC
+% Combine all IL baselines
+rC = 1;
+aC = 1;
+for ii = 1:18
+%     ilBase{ii} = cat(1,data{1,1}{3*ii-2:3*ii,1});
+    ilBase = data{1,1}{ii,1};
+    ilBaseZ{aC,rC} = (ilBase-mean(ilBase,1))./std(ilBase,[],1);
+    ilBaseOver{aC,rC} = ilBaseZ{aC,rC}>=0;
+%     ilBaseP(aC,rC,:) = sum(ilBaseOver{aC,rC},1)/size(ilBaseOver{aC,rC},1);
+
+%     ilStim{ii} = cat(1,data{1,1}{3*ii-2:3*ii,3});
+    ilStim = data{1,1}{ii,3};
+    ilStimZ{aC,rC} = (ilStim-mean(ilBase,1))./std(ilBase,[],1);
+    ilStimOver{aC,rC} = ilStimZ{aC,rC}>=0;
+%     ilStimP(aC,rC,:) = sum(ilStimOver{aC,rC},1)/size(ilStimOver{aC,rC},1);
+%     for jj = 1:216
+%         [~,ilP(aC,rC,jj)] = prop_test([sum(ilBaseOver{aC,rC}(:,jj),1),sum(ilStimOver{aC,rC}(:,jj),1)],[size(ilBaseOver{aC,rC},1),size(ilStimOver{aC,rC},1)],false);
+%     end
+
+%     nacsBase{ii} = cat(1,data{1,2}{3*ii-2:3*ii,1});
+    nacsBase = data{1,2}{ii,1};
+    nacsBaseZ{aC,rC} = (nacsBase-mean(nacsBase,1))./std(nacsBase,[],1);
+    nacsBaseOver{aC,rC} = nacsBaseZ{aC,rC}>=0;
+%     nacsBaseP(aC,rC,:) = sum(nacsBaseOver{aC,rC},1)/size(nacsBaseOver{aC,rC},1);
+    
+%     nacsStim{ii} = cat(1,data{1,2}{3*ii-2:3*ii,3});
+    nacsStim = data{1,2}{ii,3};
+    nacsStimZ{aC,rC} = (nacsStim-mean(nacsBase,1))./std(nacsBase,[],1);
+    nacsStimOver{aC,rC} = nacsStimZ{aC,rC}>=0;
+%     nacsStimP(aC,rC,:) = sum(nacsStimOver{aC,rC},1)/size(nacsStimOver{aC,rC},1);
+%     for jj = 1:216
+%         [~,nacsP(aC,rC,jj)] = prop_test([sum(nacsBaseOver{aC,rC}(:,jj),1),sum(nacsStimOver{aC,rC}(:,jj),1)],[size(nacsBaseOver{aC,rC},1),size(nacsStimOver{aC,rC},1)],false); 
+%     end
+    if rC == 3
+        thisIlBaseOver = cat(1,ilBaseOver{aC,:});
+        ilBaseP(aC,:) = sum(thisIlBaseOver,1)/size(thisIlBaseOver,1);
+        thisIlStimOver = cat(1,ilStimOver{aC,:});
+        ilStimP(aC,:) = sum(thisIlStimOver,1)/size(thisIlStimOver,1);
+        thisNacsBaseOver = cat(1,nacsBaseOver{aC,:});
+        nacsBaseP(aC,:) = sum(thisNacsBaseOver,1)/size(thisNacsBaseOver,1);
+        thisNacsStimOver = cat(1,nacsStimOver{aC,:});
+        nacsStimP(aC,:) = sum(thisNacsStimOver,1)/size(thisNacsStimOver,1);
+        for jj = 1:216
+            [~,ilP(aC,jj)] = prop_test([sum(thisIlBaseOver(:,jj),1),sum(thisIlStimOver(:,jj),1)],[size(thisIlBaseOver,1),size(thisIlStimOver,1)],false);
+            [~,nacsP(aC,jj)] = prop_test([sum(thisNacsBaseOver(:,jj),1),sum(thisNacsStimOver(:,jj),1)],[size(thisNacsBaseOver,1),size(thisNacsStimOver,1)],false); 
+        end
+        rC = 1;
+        aC = aC+1;
+    else
+        rC = rC+1;
+    end
+end
+%% Plot singles and dual site (coincident)
+for ii = 1:6
+    this = [ilStimP(ii,:);nacsStimP(ii,:);squeeze(overStimP(:,2:6,ii))'];
+    this(1,ilP(ii,:)>=0.05/216) = NaN;
+    this(2,nacsP(ii,:)>=0.05/216) = NaN;
+    for jj = 3:7
+        this(jj,bsP(:,jj-1,ii)'>=0.05/216) = NaN;
+    end
+    figure
+    pcolor(padarray(this,1,'post'))
+    title(['Animal ',num2str(ii)])
+    set(gca,'ytick',1.5:7.5,'yticklabel',{'IL','NAcS','IL-NAcS: -10','IL-NAcS: -5','IL-NAcS: 0','IL-NAcS: 5','IL-NAcS: 10'})
+    caxis([0 1])
+    colormap viridis
+%     figure
+%     this = squeeze(overStimP(:,:,ii)');
+%     this(bsP(:,4,ii)'>=0.05/216) = NaN;
+%     pcolor(padarray(this,1,'post')')
 end
 %% 
 for ii = 1:11
@@ -315,19 +433,19 @@ for ii = 1:6
     inds = [-2,-1,0]+3*ii;
 end
 
-for ii = 1:size(dual{1},1)
+for ii = 1:size(dual,1)
     parts = strsplit(dualFiles{ii},'_');
     animal = parts{1};
     site = parts{3};
     
-    baseMu = mean(dual{1,1}{ii,1},1);
-    baseSig = std(dual{1,1}{ii,1},[],1);
+    baseMu = mean(dual{ii,1},1);
+    baseSig = std(dual{ii,1},[],1);
     
-    baseZ = (dual{1,1}{ii,1}-baseMu)./baseSig;
+    baseZ = (dual{ii,1}-baseMu)./baseSig;
     baseP = sum(baseZ>=0,1)./size(baseZ,1);
     for jj = 1:7
-        stimZ{jj}(:,:) = (dual{1,1}{ii,8+jj}-baseMu)./baseSig;
-        p(ii,jj,:) = sum(stimZ{jj}>=0,1)./size(stimZ{jj},1);
+        stimZ{ii,jj}(:,:) = (dual{ii,8+jj}-baseMu)./baseSig;
+        p(ii,jj,:) = sum(stimZ{ii,jj}>=0,1)./size(stimZ{ii,jj},1);
     end
 end
 %%
@@ -417,7 +535,7 @@ end
     'dual'},{'pow','coh'},'trl','raw');
 % IRDM2
 clear z day d
-test = [files{1}(1:10);files{2}(1:8)];
+test = [files{1}(1:10)';files{2}(1:8)'];
 for ii = 1:size(test,1)
     parts = strsplit(test{ii},'_');
     d(ii,1) = parts(end-1);
