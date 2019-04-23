@@ -85,9 +85,9 @@ for sI = 1:nStr
         thisData = [];
         for iE = 1:size(trls,2)
             thisData{iE} = [];
-            if strcmp(dat,'avg') && hist.discrete == 0
-                psdTrls{iE}.avgRelPow = squeeze(mean(psdTrls{iE}.avgRelPow,4,'omitnan'));
-                coh{iE}.normBandCoh = squeeze(mean(coh{iE}.normBandCoh,4,'omitnan'));                
+            if dat == 'avg' && discrete == 0
+                psdTrls{iE}.bandPow = squeeze(mean(psdTrls{iE}.avgRelPow,4));
+                
             end
             if ~isempty(trls{iE})
                 % Normalized power - reshapes into row vector with columns

@@ -159,6 +159,7 @@ hist.thresh = thresh; hist.onset = onset; hist.offset = offset;
 hist.foi = foi; hist.bands = bands; hist.overlap = 1-overlap; 
 hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent; 
 hist.adfreq = adfreq; hist.chk_nan = chk_nan; hist.eventTs = eventTs;
+hist.discrete = discrete; hist.fixed = fixed;
 
 if exist('bingeSize','var')
    hist.bingeSize = bingeSize; 

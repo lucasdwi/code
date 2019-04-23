@@ -66,22 +66,22 @@ for ii = logicFind(0,empt,'==')
             % Convert PSD into dB and store
             psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
             else
-                % Check if NaNed data
-                if isnan(sum(data))
-                    % Calculate number of time windows
-                    nx = size(data,2);
-                    nwin = length(win);
-                    noverlap = nwin/2;
-                    nTime = fix((nx-noverlap)/(nwin-noverlap));
-                    psdtrlData{ii}.Pow(k,:,jj,:) = nan(1,length(fVect),...
-                        1,nTime);
-                else
+%                 % Check if NaNed data
+%                 if isnan(sum(data))
+%                     % Calculate number of time windows
+%                     nx = size(data,2);
+%                     nwin = length(win);
+%                     noverlap = nwin/2;
+%                     nTime = fix((nx-noverlap)/(nwin-noverlap));
+%                     psdtrlData{ii}.Pow(k,:,jj,:) = nan(1,length(fVect),...
+%                         1,nTime);
+%                 else
                 % Compute spectrogram
                 [~,F,t,Pxx] = spectrogram(data,win,[],fVect,adfreq);
                 % Convert into dB and store
                 psdtrlData{ii}.Pow(k,:,jj,:) = reshape((10*log10(abs(...
                     Pxx))),1,100,1,size(Pxx,2));
-                end
+%                 end
             end
             % Check if notch filter needs to be interpolated over
             if ~isempty(nFilt) && exist('F','var')

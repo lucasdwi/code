@@ -26,18 +26,19 @@ cfg = lassoNetCfg([],[],'n','y','n',100,'1se',[]);
 save('C:\Users\Pythia\Documents\GreenLab\data\irdm\basePostReal.mat',...
     'catData','x','y','accArray','allAlpha','allBeta','allLambda',...
     'cvFitsArray','hist')
-%% Pre-Surgery Prediction
+%% Pre-Surgery Prediction - Using even split permuted
 permErr = [];
-for ii = 1:36
-    load(['C:\Users\Pythia\Documents\GreenLab\data\irdm\basePerm\even\'...
+for ii = 1:18
+    load(['C:\Users\Pythia\Documents\GreenLab\data\irdm\basePerm\evenPre\'...
         'irdmBasePerm',num2str(ii),'.mat']) 
-    permErr(ii,:) = allRndLambda{1}.allErr;
+    permErr = [permErr;allRndLambda{1}.allErr];
 end
 load('C:\Users\Pythia\Documents\GreenLab\data\irdm\baseReal.mat')
-doubleHist((1-allLambda{1}.allErr).*100,(1-reshape(permErr,3600,1)).*100)
-%% Post-Surgery Prediction
+doubleHist((1-allLambda{1}.allErr).*100,(1-permErr).*100,'main',...
+    'Pre-Surgery','xlab','Accuracy')
+%% Post-Surgery Prediction - Using even split permuted
 permErr = [];
-for ii = 1:36
+for ii = 1:18
     load(['C:\Users\Pythia\Documents\GreenLab\data\irdm\basePerm\'...
         'evenPost\irdmPostBasePerm',num2str(ii),'.mat'])
     permErr = [permErr;allRndLambda{1}.allErr];
@@ -46,6 +47,9 @@ load('C:\Users\Pythia\Documents\GreenLab\data\irdm\basePostReal.mat',...
     'allLambda')
 doubleHist((1-allLambda{1}.allErr).*100,(1-permErr).*100,'main',...
     'Post-Surgery','xlab','Accuracy')
+%%
+[data,~,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\data\'...irdm\processed\ddt\'],{'IRDM11';'IRDM14';'IRDM15';'IRDM16';'IRDM18';'IRDM21';'IRDM22'},{'pow','coh'},'avg','rel');
+
 %% timings
 eventTs.label = {'levIM','levDEL','head','feeder','ltDEL','ltIM','tone',...
     'TrialInit'};

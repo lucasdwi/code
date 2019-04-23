@@ -1,10 +1,6 @@
 %%
-c = 1;
-allPerm = [];
 for ii = 2:5
     load(['C:\Users\Pythia\Documents\GreenLab\data\diana\animalNumberTest\nvhlBase',num2str(ii),'.mat'])
-    allPerm(c,:) = thesePerm;
-    c = c+1;
 end
 %% New aaberg analysis with animals from Diana
 [data,~,files] = collateData('E:\aaberg\processedNew\three\',...

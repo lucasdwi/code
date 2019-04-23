@@ -28,7 +28,7 @@ save('C:\Users\Pythia\Documents\GreenLab\data\irdm\basePostReal.mat',...
     'cvFitsArray','hist')
 %% Pre-Surgery Prediction - Using even split permuted
 permErr = [];
-for ii = 1:36
+for ii = 1:18
     load(['C:\Users\Pythia\Documents\GreenLab\data\irdm\basePerm\evenPre\'...
         'irdmBasePerm',num2str(ii),'.mat']) 
     permErr = [permErr;allRndLambda{1}.allErr];
@@ -38,7 +38,7 @@ doubleHist((1-allLambda{1}.allErr).*100,(1-permErr).*100,'main',...
     'Pre-Surgery','xlab','Accuracy')
 %% Post-Surgery Prediction - Using even split permuted
 permErr = [];
-for ii = 1:36
+for ii = 1:18
     load(['C:\Users\Pythia\Documents\GreenLab\data\irdm\basePerm\'...
         'evenPost\irdmPostBasePerm',num2str(ii),'.mat'])
     permErr = [permErr;allRndLambda{1}.allErr];
@@ -47,6 +47,18 @@ load('C:\Users\Pythia\Documents\GreenLab\data\irdm\basePostReal.mat',...
     'allLambda')
 doubleHist((1-allLambda{1}.allErr).*100,(1-permErr).*100,'main',...
     'Post-Surgery','xlab','Accuracy')
+%%
+[data,~,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\data'...
+    '\irdm\processed\ddt\'],{'IRDM11';'IRDM14';'IRDM15';'IRDM16';...
+    'IRDM18';'IRDM21';'IRDM22'},{'pow','coh'},'avg','rel');
+allZ = cell(1,size(data,2));
+for ii = 1:size(data,2)
+    thisCat = cat(1,data{1,ii}{:});
+    thisZ = zscore(thisCat);
+    
+    allZ{ii} = thisZ;
+end
+
 %% timings
 eventTs.label = {'levIM','levDEL','head','feeder','ltDEL','ltIM','tone',...
     'TrialInit'};

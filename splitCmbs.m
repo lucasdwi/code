@@ -1,40 +1,60 @@
-function [allCmbs] = splitCmbs(group1,group2)
+function [allCmbs] = splitCmbs(group1,group2,varargin)
+p = inputParser;
+p.CaseSensitive = false;
+addRequired(p,'group1')
+addRequired(p,'group2')
+addParameter(p,'n',[],@isnumeric);
+parse(p,group1,group2,varargin{:});
 %%
 cmbs1 = [];
-if isodd(numel(group1))
-    cmbsUp = nchoosek(group1,ceil(numel(group1)/2));
-    cmbsDown = nchoosek(group1,floor(numel(group1)/2));
-    c = 1;
-    for ii = 1:size(cmbsUp,1)
-        cmbs1{c,1} = cmbsUp(ii,:);
-        c = c+1;
-    end
-    for ii = 1:size(cmbsDown,1)
-        cmbs1{c,1} = cmbsDown(ii,:);
-        c = c+1;
+if isempty(p.Results.n)
+    if isodd(numel(group1))
+        cmbsUp = nchoosek(group1,ceil(numel(group1)/2));
+        cmbsDown = nchoosek(group1,floor(numel(group1)/2));
+        c = 1;
+        for ii = 1:size(cmbsUp,1)
+            cmbs1{c,1} = cmbsUp(ii,:);
+            c = c+1;
+        end
+        for ii = 1:size(cmbsDown,1)
+            cmbs1{c,1} = cmbsDown(ii,:);
+            c = c+1;
+        end
+    else
+        cmbs = nchoosek(group1,ceil(numel(group1)/2));
+        for ii = 1:size(cmbs,1)
+            cmbs1{ii,1} = cmbs(ii,:);
+        end
     end
 else
-    cmbs = nchoosek(group1,ceil(numel(group1)/2));
+    cmbs = nchoosek(group1,p.Results.n);
     for ii = 1:size(cmbs,1)
         cmbs1{ii,1} = cmbs(ii,:);
     end
 end
 %%
 cmbs2 = [];
-if isodd(numel(group2))
-    cmbsUp = nchoosek(group2,ceil(numel(group2)/2));
-    cmbsDown = nchoosek(group2,floor(numel(group2)/2));
-    c = 1;
-    for ii = 1:size(cmbsUp,1)
-        cmbs2{c,1} = cmbsUp(ii,:);
-        c = c+1;
-    end
-    for ii = 1:size(cmbsDown,1)
-        cmbs2{c,1} = cmbsDown(ii,:);
-        c = c+1;
+if isempty(p.Results.n)
+    if isodd(numel(group2))
+        cmbsUp = nchoosek(group2,ceil(numel(group2)/2));
+        cmbsDown = nchoosek(group2,floor(numel(group2)/2));
+        c = 1;
+        for ii = 1:size(cmbsUp,1)
+            cmbs2{c,1} = cmbsUp(ii,:);
+            c = c+1;
+        end
+        for ii = 1:size(cmbsDown,1)
+            cmbs2{c,1} = cmbsDown(ii,:);
+            c = c+1;
+        end
+    else
+        cmbs = nchoosek(group2,ceil(numel(group2)/2));
+        for ii = 1:size(cmbs,1)
+            cmbs2{ii,1} = cmbs(ii,:);
+        end
     end
 else
-    cmbs = nchoosek(group2,ceil(numel(group2)/2));
+    cmbs = nchoosek(group2,p.Results.n);
     for ii = 1:size(cmbs,1)
         cmbs2{ii,1} = cmbs(ii,:);
     end
