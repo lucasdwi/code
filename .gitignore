@@ -1,7 +1,7 @@
 # Outside files
-/outside/fieldtrip-master/
-/outside/AlexanderCFC/
-/outisde/jlab/
+#/outside/fieldtrip-master/
+#/outside/AlexanderCFC/
+#/outisde/jlab/
 
 # Discovery files
 /discovery/*
