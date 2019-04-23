@@ -1,4 +1,4 @@
-function fileSplitter(sdir,searchStr,chan)
+function fileSplitter(sdir,searchStr,chan,nAnimal,nEvent)
 files = fileSearch(sdir,searchStr);
 for fI = 1:size(files,2)
     load(files{fI})
@@ -8,10 +8,8 @@ for fI = 1:size(files,2)
     thisFile = thisFile(1:strfind(thisFile,'.')-1);
     % Split str at all underscores; '_'
     parts = strsplit(thisFile,'_');
-    % Find all parts that are numbers
-    nums = regexp(parts,'\d+(\.)?(\d+)','match');
-    % Find all number parts excluding the date
-    inds = logicFind(1,~cellfun(@isempty,nums(1:end-1)),'==');
+    % Grab date
+    d = parts{end};
     % Check that the number of sub-files and expected channels per sub-file
     % matches the total amount of available data
     if ~isequal(size(inds,2)*chan,size(LFPTs.data,1))
@@ -21,7 +19,7 @@ for fI = 1:size(files,2)
     % Store LFPTs
     oldLFPTs = LFPTs;
     % Go through each sub-file, pull out LFPTs data and save
-    for ii = 1:size(inds,2)
+    for ii = 1:size(nAnimal,2)
         clear LFPTs;
         LFPTs.type = oldLFPTs.type;
         LFPTs.tvec = oldLFPTs.tvec;

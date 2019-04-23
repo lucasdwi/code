@@ -1,4 +1,4 @@
-function [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,nFilt,vis,method,varargin)
+function [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,nFilt,vis,method,discrete,varargin)
 %% Calculates coherence using either a single hamming window and mscohere
 % or the multitaper method proposed by Percival and Walden.
 %__________________________________________________________________________
@@ -50,12 +50,13 @@ addRequired(p,'foi');
 addRequired(p,'filter');
 addRequired(p,'vis');
 addRequired(p,'method');
+addRequired(p,'discrete');
 % Needed for 'mtm' method
 addParameter(p,'NW',8);
 % Needed for 'mat' method
 addParameter(p,'overlap',0.5);
 parse(p,trls,adfreq,eoi,bands,zeroedChannel,foi,nFilt,vis,method,...
-    varargin{:});
+    discrete,varargin{:});
 %%
 % Count channels using first non-empty trls struct
 empt = cellfun(@isempty,trls);
@@ -85,28 +86,35 @@ end
 coh = cell(1,size(eoi,1));
 % Go through non-empty trls
 for ei = logicFind(0,empt,'==')
+    disp(['Event ',num2str(ei),' of ',num2str(size(eoi,1))])
+    % Clear out Cxy, thisCxy, and truncCxy
+    Cxy = []; thisCxy = []; truncCxy = [];
     % Get number of trials
     nTrls = size(trls{1,ei}.trial,3);
-    % Preallocate mBandCoh
-    mBandCoh = zeros(nCmbs,nBands,nTrls);
     % Preallocate Cxy depending on method being used
     if strcmpi(method,'mat')
         Cxy = zeros(nCmbs,length(foiV),nTrls);
     % If using mtm, then use formula used to calculate frequency range in
     % cmtm.m
     elseif strcmpi(method,'mtm')
-        n = size(trls{1,ei}.trial,2);
+        if discrete
+            n = size(trls{1,ei}.trial,2);
+        else
+            [~,winSize] = nearestPow2(adfreq); 
+            n = 1+winSize;
+        end
         dt = 1/adfreq;
         s = 0:1/(n*dt):1/dt-1/(n*dt);
         pls = 2:(n+1)/2+1;
+        if rem(n,2)==1
+            pls = pls(1:end-1);
+        end
         s = s(pls);
-        Cxy = zeros(nCmbs,nearest_idx3(foi(end),s),nTrls);
+        if discrete
+            Cxy = zeros(nCmbs,nearest_idx3(foi(end),s),nTrls);
+        end
     end
-    
     for ci = 1:nCmbs
-        disp(['Event ',num2str(ei),' of ',num2str(size(eoi,1)),...
-            ': Calculating coherence for channel pair ',...
-            num2str(cmbs(ci,1)),'-',num2str(cmbs(ci,2))])
         for ti = 1:nTrls
             % Set up the two signals
             x = trls{1,ei}.trial(cmbs(ci,1),:,ti);
@@ -115,11 +123,46 @@ for ei = logicFind(0,empt,'==')
             if strcmpi(method,'mat')
                 [Cxy(ci,:,ti),f] = mscohere(x,y,window,oSamp,foiV,adfreq);
             elseif strcmpi(method,'mtm')
-                [f,thisCxy,~,~,~] = cmtm(x,y,1/adfreq,p.Results.NW,0,0,0);
+                if discrete
+                    [f,thisCxy,~,~,~] = cmtm(x,y,1/adfreq,...
+                        p.Results.NW,0,0,0);
+                    % Truncate signal and store
+                    Cxy(ci,:,ti) = thisCxy(1:nearest_idx3(foi(end),f));
+                else
+                    % Convert winSize from seconds to samples
+%                     winSizeSamp = winSize*adfreq;
+                    % Set up counter and start
+                    c = 0;
+                    start = 1;
+                    while 1+c*winSize*p.Results.overlap+winSize ...
+                            < size(trls{1,ei}.trial,2)
+                        start = 1+c*winSize*p.Results.overlap;
+                        stop = start+winSize;
+                        x = trls{1,ei}.trial(cmbs(ci,1),start:stop,ti);
+                        y = trls{1,ei}.trial(cmbs(ci,2),start:stop,ti);
+                        % Check for any NaNs in either x or y, if exist
+                        % skip and put NaNs in thisCxy
+                        if isnan(sum(x)) || isnan(sum(y))
+                           thisCxy(:,c+1) = nan(length(s),1);
+                           % Store midpoint time
+                           thisT(:,c+1) = (start+stop)/2;
+                        % Otherwise, calculate coherence
+                        else
+                        [f,thisCxy(:,c+1)] = cmtm(x,y,1/adfreq,...
+                            p.Results.NW,0,0,0);
+                        % Store midpoint time
+                        thisT(:,c+1) = (start+stop)/2;
+                        end
+                        c = c+1;
+                    end
+                    % Truncate Cxy to desired frequency range
+                    truncCxy = thisCxy(1:nearest_idx3(foi(end),f),:);
+                    % Reshape truncCxy and populate Cxy
+                    Cxy(ci,:,ti,:) = reshape(truncCxy,1,size(truncCxy,1)...
+                        ,1,size(truncCxy,2));
+                end
                 % Truncate frequeny vector to end of foi
                 f = f(1:nearest_idx3(foi(end),f));
-                % Truncate signal and store
-                Cxy(ci,:,ti) = thisCxy(1:nearest_idx3(foi(end),f));
             end
             % Check if notch filter needs to be interpolated over
             if ~isempty(nFilt)
@@ -128,9 +171,13 @@ for ei = logicFind(0,empt,'==')
                     nearest_idx3(nFilt(2),f)];
                 % Interpolate over notch
                 samp = [notchInd(1),notchInd(2)];
-                v = [Cxy(ci,notchInd(1),ti),Cxy(ci,notchInd(2),ti)];
-                sampQ = notchInd(1):notchInd(2);
-                Cxy(ci,sampQ,ti) = interp1(samp,v,sampQ,'linear');
+                % Cycle through windows
+                for wi = 1:size(Cxy,4)
+                    v = [Cxy(ci,notchInd(1),ti,wi),Cxy(ci,notchInd(2),ti...
+                        ,wi)];
+                    sampQ = notchInd(1):notchInd(2);
+                    Cxy(ci,sampQ,ti,wi) = interp1(samp,v,sampQ,'linear');
+                end
             end
         end
     end
@@ -140,11 +187,18 @@ for ei = logicFind(0,empt,'==')
     % replicate to match dimension of 'mBandCoh'
 %     mtCxy = repmat(mean(Cxy,2),1,size(bands,1),1);
     % Only normalize by frequencies in range of analysis
-    mtCxy = repmat(mean(Cxy(:,bandInd(1,1):bandInd(end,2),:),2),1,...
+    mtCxy = repmat(mean(Cxy(:,bandInd(1,1):bandInd(end,2),:,:),2),1,...
         size(bands,1),1);
+    % Preallocate mBandCoh
+    if discrete
+            mBandCoh = zeros(nCmbs,nBands,nTrls);
+    else
+        mBandCoh = zeros(nCmbs,nBands,nTrls,size(Cxy,4));
+    end
     % Get mean coherence of frequency band per trial per channel pair
     for bi = 1:nBands
-        mBandCoh(:,bi,:) = mean(Cxy(:,bandInd(bi,1):bandInd(bi,2),:),2);
+        mBandCoh(:,bi,:,:) = mean(Cxy(:,bandInd(bi,1):bandInd(bi,2),:,:)...
+            ,2);
     end
     % Normalize 'mBandCoh' by 'mtCxy'
     normBandCoh = mBandCoh./mtCxy;
@@ -154,6 +208,7 @@ for ei = logicFind(0,empt,'==')
     coh{ei}.mBandCoh = mBandCoh;
     coh{ei}.normBandCoh = normBandCoh;
     coh{ei}.f = f;
+    coh{ei}.t = thisT;
 end
 %% Plot
 if strcmpi(vis,'y')

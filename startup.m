@@ -1,8 +1,10 @@
 %% Addpaths
 % Code
-addpath(genpath('C:\Users\GreenLab\Documents\GitHub'))
-% Remove fieldtrip
-% rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\fieldtrip-master\'))
+addpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\'))
+% Remove fieldtrip and chronux
+rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\fieldtrip-master\'))
+rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\chronux_2_11\'))
+
 % Data
 % addpath(genpath('C:\Users\Pythia\Documents\GreenLab\data\'))
 cd('C:\Users\GreenLab\desktop')

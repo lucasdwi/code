@@ -1,4 +1,4 @@
-function [sdir,file,filter,dsf,thresh,onset,offset,foi,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsSingle
+function [sdir,file,filter,dsf,thresh,onset,offset,foi,fixed,bands,cycles,ftimwin,overlap,cohMethod,eoi,saveParent] = scbParamsSingle
 %% Populates workspace with input variables for spectcompbase.m
 %__________________________________________________________________________
 % INPUTS:
@@ -56,9 +56,11 @@ filter = 'y';
 dsf = 5;
 thresh = 2; 
 onset = 0.0125;
-offset = 5;
+offset = 1;
+discrete = 0;
 % minInt = 5;
-foi = [1 2 100];
+foi = [1 1 100];
+fixed = 1;
 % foi = [70 2 90];
 % bands = {'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
 bands = {'delta',[1,4];'theta',[5,10];'alpha',[11,14];'beta',[15,30];'lgam',[45,65];'hgam',[70,90]};
@@ -67,7 +69,8 @@ cycles = 3;
 ftimwin = [];
 overlap = 0.5;
 cohMethod = 'mat';
-eoi = {'Base',[0 5];'Int1',[0 5];'Int2',[0 5];'Int3',[0 5];'Int4',[0 5];'Int5',[0 5];'Post',[0 5]};
+eoi = {'Base',[0 0.25];'Stim1',[0 0.25];'Stim2',[0 0.25]};
+% eoi = {'Base',[0 5];'Int1',[0 5];'Int2',[0 5];'Int3',[0 5];'Int4',[0 5];'Int5',[0 5];'Post',[0 5]};
 % eoi = {'binge',[0 5];'notbinge',[0 5]};
 % eoi = {'binge (s',[-5 0]};%'binge (s',[-6 -1];'binge (s',[-7 -2];'binge (s',[-8 -3];'binge (s',[-9 -4];'binge (s',[-10 -5]};
 saveParent = 'C:\Users\Lucas\Desktop\GreenLab\data\paper2\test\';

@@ -122,7 +122,7 @@ for ii = 1:60
     formula = [formula,watAlc.Properties.VariableNames{ii},'+'];
 end
 formula = ['group~',formula,'(1|ID)'];
-% Build linear mixed model with group as random effect
+% Build linear mixed model with ID as random effect
 for ii = 1:100
     testInds = randperm(size(allData,1),nTest);
     trainInds = ~ismember(1:size(allData,1),testInds);
@@ -374,7 +374,7 @@ for ii = 1:size(files,2)
     LFPTs.label = LFPTs.label([3,4,5,8]);
     save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\waterAlcohol\NAcPL\',files{ii}],'LFPTs','eventTs','pl2','adfreq')
 end
-%% Grab water/alcohol data\
+%% Grab water/alcohol data
 % All channels
 % [data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
 %     'data\paper3\waterAlcohol\processedOld\'],{'.mat'},{'pow','coh'},'trl',...
@@ -415,10 +415,12 @@ for ii = 1:size(data,1)
     animal{ii,1} = repmat({files{1,1}{ii}(4:5)},n(ii,1),1);
     animal{ii,2} = repmat({files{1,1}{ii}(4:5)},n(ii,2),1);
 end
-% Only keep 10 water of animal 4
-data{4,1} = data{4,1}(1:20,:);
-animal{4,1} = animal{4,1}(1:20,:);
-
+% % Only keep 20 water of animal 4
+% data{4,1} = data{4,1}(1:20,:);
+% animal{4,1} = animal{4,1}(1:20,:);
+% Only keep 20 water of animal 5
+data{5,1} = data{5,1}(1:20,:);
+animal{5,1} = animal{5,1}(1:20,:);
 water = array2table(zscore(cat(1,data{inds,1})));
 water(:,end+1) = cell2table(cat(1,animal{inds,1}));
 water(:,end+1) = array2table(zeros(size(water,1),1));
@@ -479,8 +481,6 @@ for ii = 1:10
 end
 %% Sort mean logistic AUCs
 glmeLogAM = mean(glmeLogA,1);
-
-
 %% Grab data for drinkNot
 [data,~,~] = collateData(['C:\Users\Pythia\Documents\GreenLab\data\'...
     'paper3\drinkNot\'],{'.mat'},{'pow','coh'},'trl','rel');
@@ -493,23 +493,23 @@ catData{1,2} = cat(1,data{1,1}{:,2});
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
     'drinkNotRaw.mat'])
 % Use all data
-[all,~,rnd,~] = evenDataSplit(catData,18494,4624,'ADA',20); %#ok
+[all,~,rnd,~] = evenDataSplit(catData,18494,4624,'ADA',100); %#ok
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'concatData.mat'],'all','rnd')
+    'concatData100.mat'],'all','rnd')
 % Or foce into same sample size as bingeNot data
-[all,~,rnd,~] = evenDataSplit(catData,6000,1200,'ADA',20);
+[all,~,rnd,~] = evenDataSplit(catData,6000,1200,'ADA',100);
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drink6000.mat'],'all','rnd')
+    'drink6000_100.mat'],'all','rnd')
 %% Build drinkNot models using drink6000.mat for comparison to bingeNot
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drink6000.mat'])
+    'drink6000_100.mat'])
 % load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
 %     'concatData.mat'])
 % Preallocate
-[x,y,xRand,yRand] = deal(cell(1,20));
-[a,aRand] = deal(zeros(1,20));
-for n = 1:20
-    disp([num2str(n),' of 20'])
+[x,y,xRand,yRand] = deal(cell(1,100));
+[a,aRand] = deal(zeros(1,100));
+for n = 1:100
+    disp([num2str(n),' of 100'])
     % Set up training data
     trainX = all.trainX{n};
     trainY = all.trainY{n};
@@ -540,6 +540,8 @@ mX = mean(cat(2,x{:}),2);
 mY = mean(cat(2,y{:}),2);
 mRandX = mean(cat(2,xRand{:}),2);
 mRandY = mean(cat(2,yRand{:}),2);
+% save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+%     'drinkNotModel100.mat'],'concatData','aRand','xRand','yRand')
 %% Plot
 figure
 hold on
@@ -623,13 +625,116 @@ set(gca,'Xtick',1:5)
 xlabel('Test Animal'); ylabel('AUC')
 legend({'Female Model','Male Model'},'location','nw')
 title('Female')
+%% Build dep24 vs. chow models
+load(['E:\paper2\analyzed\finalNew\bingeNotPreData.mat'])
+% Get number of samples from dep24 and chow
+bingeSamp = [cellfun(@(x) size(x,1),data{1,2}([1:3,5:8,10:11],1)),...
+    cellfun(@(x) size(x,1),data{1,4}(:,1))];
+dep = data{1,2}([1:3,5:8,10:11],1);
+chow = data{1,4}(:,1);
+% Find min for each animal
+[minSamp] = min(bingeSamp,[],2);
+% Set up formula
+formula = [];
+for ii = 1:60
+    formula = [formula,'trainX',num2str(ii),'+'];
+end
+formula = ['Y~',formula,'(1|ID)'];
+for jj = 1:100
+    % Build models between chow and dep24
+    allDep = []; allChow = []; ID = [];
+    for ii = 1:size(minSamp,1)
+        thisDep = dep{ii}(randperm(size(dep{ii},1),minSamp(ii)),:);
+        allDep = [allDep;thisDep];
+        thisChow = chow{ii}(randperm(size(chow{ii},1),minSamp(ii)),:);
+        allChow = [allChow;thisChow];
+        ID = [ID;ones(minSamp(ii),1).*ii];
+    end
+    % Determine number of samples from chow and dep to use in training
+    halfTrain = round(size(allChow,1)*.8);
+    halfTest = size(allChow,1)-halfTrain;
+    depTrainInds = randperm(size(allDep,1),halfTrain);
+    depTestInds = ~ismember(1:size(allDep,1),depTrainInds);
+    chowTrainInds = randperm(size(allChow,1),halfTrain);
+    chowTestInds = ~ismember(1:size(allChow,1),chowTrainInds);
+    trainX = [allDep(depTrainInds,:);allChow(chowTrainInds,:)];
+    trainY = [zeros(halfTrain,1);ones(halfTrain,1)];
+    testX = [allDep(depTestInds,:);allChow(chowTestInds,:)];
+    testY = [zeros(halfTest,1);ones(halfTest,1)];
+    
+    train = array2table(trainX);
+    train.ID = [ID(depTrainInds,:);ID(chowTrainInds,:)];
+    train.Y = trainY;
+    
+    test = array2table(testX);
+    test.ID = [ID(depTestInds,:);ID(chowTestInds,:)];
+    test.Y = testY;
+    test.Properties.VariableNames = train.Properties.VariableNames;
+    
+%     mdl = fitglm(trainX,trainY,'distribution','binomial','binomialsize',...
+%         halfTrain*2);
+    mdl = fitglme(train,formula,'distribution','binomial',...
+        'binomialsize',halfTrain*2);
+    prob = predict(mdl,test);
+    [dcX(jj,:),dcY(jj,:),~,dcA(jj)] = perfcurve(testY,prob,1);
+    prob = predict(mdl,test(randperm(size(test,1)),:));
+    [dcrX(jj,:),dcrY(jj,:),~,dcrA(jj)] = perfcurve(testY,prob,1);
+end
+figure
+plot(mean(dcX,1),mean(dcY,1))
+hold on
+plot(mean(dcrX,1),mean(dcrY,1),'--k')
+box off
+legend({['Real: ',num2str(round(mean(dcA),2)),'\pm',...
+    num2str(round(conf(dcA,0.95),3))],['Permuted: ',...
+    num2str(round(mean(dcrA),2)),'\pm',num2str(round(conf(dcrA,0.95),3))]})
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR')
+ylabel('TPR')
+title('Dep24 vs. Chow')
+%% Build models comparing dep24 to chow
+load(['E:\paper2\analyzed\finalNew\bingeNotPreData.mat'])
+bingeSamp = [cellfun(@(x) size(x,1),data{1,2}([1:3,5:8,10:11],1)),...
+    cellfun(@(x) size(x,1),data{1,4}(:,1))];
+dep = data{1,2}([1:3,5:8,10:11],1);
+depNot = data{1,2}([1:3,5:8,10:11],2);
+chow = data{1,4}(:,1);
+chowNot = data{1,4}(:,2);
+% Find min for each animal
+[minSamp] = min(bingeSamp,[],2);
+for ii = 1:100
+    allDep = []; allDepNot = []; allChow = []; allChowNot = [];
+    for jj = 1:size(minSamp,1)
+        thisDep = dep{ii}(randperm(size(dep{ii},1),minSamp(ii)),:);
+        allDep = [allDep;thisDep];
+        thisDepNot = depNot{ii}(randperm(size(depNot{ii},1),minSamp(ii)),:);
+        allDepNot = [allDepNot;thisDepNot];
+        
+        thisChow = chow{ii}(randperm(size(chow{ii},1),minSamp(ii)),:);
+        allChow = [allChow;thisChow];
+        thisChowNot = chowNot{ii}(randperm(size(chowNot{ii},1),minSamp(ii)),:);
+        allChowNot = [allChowNot;thisChowNot];
+    end
+    % Determine train and test sizes
+    halfTrain = round(size(allChow,1)*.8);
+    halfTest = size(allChow,1)-halfTrain;
+    % Generate indices
+    
+    % Dep -> Dep
+   
+    % Dep -> Chow
+   
+    % Chow -> Chow
+   
+    % Chow -> Dep
+end
 %% Build models: binge, drink, and across
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\baseline500Each6000All50-50.mat'])
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+    'baseline500Each6000All50-50_100.mat'])
 binge = all;
 % bingeRnd = rnd;
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drink6000.mat'],'all','rnd')
+    'drink6000_100.mat'],'all','rnd')
 drink = all;
 % drinkRnd = rnd;
 % Grab only NAc indices for comparison purposes
@@ -641,9 +746,9 @@ drinkInds = [13:24,55:60];
 tStep = 1/2400;
 % Preallocate
 [bbX,bbY,bbXperm,bbYperm,bdX,bdY,bdXperm,bdYperm,ddX,ddY,ddXperm,...
-    ddYperm,dbX,dbY,dbXperm,dbYperm] = deal(cell(1,20));
-[bbA,bbAperm,bdA,bdAperm,ddA,ddAperm,dbA,dbAperm] = deal(zeros(1,20));
-for ii = 1:20
+    ddYperm,dbX,dbY,dbXperm,dbYperm] = deal(cell(1,100));
+[bbA,bbAperm,bdA,bdAperm,ddA,ddAperm,dbA,dbAperm] = deal(zeros(1,100));
+for ii = 1:100
     % Binge -> Binge
     trainX = binge.trainX{ii}(:,bingeInds);
     trainY = binge.trainY{ii};
@@ -701,12 +806,12 @@ ddPermConf = conf(ddAperm,0.95);
 dbConf = conf(dbA,0.95);
 dbPermConf = conf(dbAperm,0.95);
 %% Build and test generalized models
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\baseline500Each6000All50-50.mat'])
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+    'baseline500Each6000All50-50_100.mat'])
 binge = all;
 bingeRnd = rnd; %#ok
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drink6000.mat'],'all','rnd')
+    'drink6000_100.mat'],'all','rnd')
 drink = all;
 drinkRnd = rnd; %#ok
 bingeInds = [1:12,25:30];
@@ -715,10 +820,10 @@ drinkInds = [13:24,55:60];
 tStep = 1/2400;
 % Preallocate
 [ggX,ggY,ggXperm,ggYperm,gbX,gbY,gbXperm,gbYperm,gdX,gdY,gdXperm,...
-    gdYperm] = deal(cell(1,20));
-[ggA,ggAperm,gbA,gbAperm,gdA,gdAperm] = deal(zeros(1,20));
-betas = zeros(18,20);
-for ii = 1:20
+    gdYperm] = deal(cell(1,100));
+[ggA,ggAperm,gbA,gbAperm,gdA,gdAperm] = deal(zeros(1,100));
+betas = zeros(18,100);
+for ii = 1:100
     % Train and test gen model
     trainX = [binge.trainX{ii}(:,bingeInds);drink.trainX{ii}(:,drinkInds)];
     trainY = [binge.trainY{ii};drink.trainY{ii}];
@@ -834,12 +939,12 @@ set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 xlabel('FPR'); ylabel('TPR')
 title('Gen>Gen')
 %% Monads
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
-    '\baseline500Each6000All50-50v2.mat'])
+load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+    'baseline500Each6000All50-50_100.mat'])
 binge = all;
 bingeRnd = rnd;
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drink6000.mat'],'all','rnd')
+    'drink6000_100.mat'],'all','rnd')
 drink = all;
 drinkRnd = rnd;
 bingeInds = [1:12,25:30];
@@ -848,7 +953,7 @@ drinkInds = [13:24,55:60];
 [bingeA,drinkA] = deal(cell(1,3));
 for k = 1%:3
     cmbs = nchoosek(1:18,k);
-    for ii = 1:20
+    for ii = 1:100
         disp([num2str(k),': ',num2str(ii)])
         for jj = 1:size(cmbs,1)
             % Train and test gen model
@@ -877,7 +982,7 @@ for k = 1%:3
 end
 drinkAM = mean(drinkA{1},1)';
 bingeAM = mean(bingeA{1},1)';
-genAM = mean(genA{1},1)';
+% genAM = mean(genA{1},1)';
 mOdds = mean(exp(betas),2);
 mBetas = mean(betas,2);
 %%
@@ -901,7 +1006,6 @@ for k = 1%:3
        vars{k}(:,ii) = nameVect(cmbs(sortInd{k},ii));
    end
 end
-
 %% Compare models built with different data subsets (all,pfc,nac)
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
     'drinkNotSubsets.mat'])
@@ -943,12 +1047,15 @@ end
 % Collate and impute
 catData{1,1} = preData;
 catData{1,2} = notData;
-[all,each,rnd,~] = evenDataSplit(catData,17222,4306,'ADA',20);
+% [all,each,rnd,~] = evenDataSplit(catData,17222,4306,'ADA',20);
+% save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+%     'preDrinkData.mat'],'all','each','rnd')
+[all,each,rnd,~] = evenDataSplit(catData,17222,4306,'ADA',100);
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'],'all','each','rnd')
+    'preDrinkData100.mat'],'all','each','rnd')
 %% Build full logistics
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'])
+    'preDrinkData100.mat'])
 % Preallocate
 [rndX,rndY] = deal(cell(1,20));
 rndA = zeros(1,20);
@@ -971,9 +1078,9 @@ for n = 1:20
 end
 % Test drinkNot models on preDrink data
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drinkNotModel.mat'],'concatData')
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'])
+    'drinkNotModel100.mat'],'concatData')
+% load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
+%     'preDrinkData.mat'])
 % Preallocate
 [drinkX,drinkY] = deal(cell(1,20));
 drinkA = zeros(1,20);
@@ -989,7 +1096,7 @@ cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
     'preBinge\'])
 % Preallocate
 [preA,preARand] = deal(zeros(20,8));
-% Hardcoded first dimension from know size of roc curves in concatData
+% Hardcoded first dimension from known size of roc curves in concatData
 [preX,preY] = deal(zeros(21207,20));
 [preRandX,preRandY] = deal(zeros(21222,20));
 beta = zeros(20,58);
