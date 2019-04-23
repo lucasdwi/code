@@ -1,3 +1,4 @@
+
 function [LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs,fixed,discrete)
 %% Applies preproccesing steps: filtering, downsampling, thresholding, and 
 % trializing

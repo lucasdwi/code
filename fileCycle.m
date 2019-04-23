@@ -46,7 +46,7 @@ if strcmp(fun,'scb')
         [cfg] = scbParamsMulti(files{ii});
         [LFPTs,trls,clnTrls,relPower,psdTrls,coh,stdPower,stdCoh] = spectcompbase(cfg);
         % OLD VERSION[LFPTs,nNaN,indSkp,trls,clnTrls,clnEvents,relPower,psdTrls,TFRs,fds,avgCoh,relCoh,~,~] = spectcompbase(sdir,files{i},'y',5,2,5,17000,3,[1 2 150],3,{1,'50%';2,'50%';3,'50%'},[3])
-        close all; clearvars -except files i sdir fun;
+        close all; clearvars -except files ii sdir fun;
         toc
     end
 end

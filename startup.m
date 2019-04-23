@@ -4,9 +4,10 @@ addpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\'))
 % Remove fieldtrip and chronux
 rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\fieldtrip-master\'))
 rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\chronux_2_11\'))
+
 % Data
-addpath(genpath('C:\Users\Pythia\Documents\GreenLab\data\'))
-cd('C:\Users\Pythia\Documents\GreenLab')
+% addpath(genpath('C:\Users\Pythia\Documents\GreenLab\data\'))
+cd('C:\Users\GreenLab\desktop')
 %% Set up plotting defaults
 % Reset defaults (perhaps redundant, but better safe than sorry)
 reset(0);

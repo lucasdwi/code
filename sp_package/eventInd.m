@@ -32,6 +32,9 @@ function [eventInds] = eventInd(eventTs,eoi)
 %% Go through eoi labels
 eventInds = zeros(size(eoi,1),2);
 for ei = 1:size(eoi,1)
+   % Search for eoi label in eventTs.label
+   inds = logicFind(1,strncmpi(eventTs.label,eoi{ei,1},...
+       length(eoi{ei,1})),'==');
    % Search for eoi label in eventTs.label; add space to event name in case
    % of number events s.t. 'Stim11' would not be found when looking for
    % 'Stim1'
@@ -43,7 +46,10 @@ for ei = 1:size(eoi,1)
           'eoi and eventTs.label.']) 
    end
    % If 2, assume that one is start and the other is end
-   if length(inds) == 2
+   if length(inds) >2
+       error([eoi{ei,1},' has a similarly named event;'...
+           ' this will probably fuck up everything.'])
+   elseif length(inds) == 2
       % Check if first label has 'Start' in it, if not make sure it has
       % 'End'
        if ~isempty(cell2mat(strfind(eventTs.label(inds(1)),'Start')))
