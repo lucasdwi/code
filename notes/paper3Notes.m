@@ -1,93 +1,64 @@
-%% Grab all water and alcohol data
-% Cross compare feature lists
-waterFeat = names({'ILL','CA1L','PL','SL','PR','CA1R','ILR','SR'},...
-    {'d','t','a','b','lg','hg'});
-alcFeat = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
-% Find overlap
-for ii = 1:60
-    ind = logicFind(alcFeat{ii},waterFeat,'==');
-    if ~isempty(ind)
-        inds(ii) = ind;
-    end
-end
-% Doesn't find PR-SL coherence since in waterFeat it is SL-PR
-inds(43:48) = 157:162;
-% Determine overlap between alcFeat and waterAlcFeat (same features,
-% differnet order)
-waterAlcFeat = names({'PL','SL','PR','SR'},{'d','t','a','b','lg','hg'});
-for ii = 1:60
-    ind = logicFind(alcFeat{ii},waterAlcFeat,'==');
-    if ~isempty(ind)
-        inds2(ii) = ind;
-    end
-end
-% Doesn't find PR-SL coherence since in waterFeat it is SL-PR
-inds2(43:48) = 43:48;
-%__________________________________________________________________________
-% Grab water only data
-[wData,samp,wFiles] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\paper3\waterProcessed\'],{'.mat'},{'pow','coh'},'trl','rel');
-% Get animal ID and day ID
-n = cell2mat(cellfun(@(x) size(x,1),wData{1,1}(:,1),'uniformoutput',0));
-animal = []; day = [];
-for ii = 1:size(wData{1},1)
-    parts = strsplit(wFiles{1}{ii},'_');
-    animal{ii,1} = repmat({['AH',parts{2}]},n(ii,1),1);
-    day{ii,1} = repmat({parts{3}},n(ii,1),1);
-end
-% Concatenate and z-score water data
-allWater = zscore(cat(1,wData{1}{:,1}));
-% Limit and tabulate water data
-water = [array2table(allWater(:,inds)),cat(1,animal{:}),cat(1,day{:})];
-% Add groups (1 = alcohol; 0 = water)
-water(:,63) = array2table(ones(size(water,1),1));
-water.Properties.VariableNames = [alcFeat(1:60),'ID','day','group'];
-%__________________________________________________________________________
-% Grab alcohol only data
-[aData,samp,aFiles] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\paper3\drinkNot\'],{'.mat'},{'pow','coh'},'trl','rel');
-% Get animal ID and day ID
-n = cell2mat(cellfun(@(x) size(x,1),aData{1,1}(:,1),'uniformoutput',0));
-animal = []; day = [];
-for ii = 1:size(aData{1},1)
-    parts = strsplit(aFiles{1}{ii},'_');
-    animal{ii,1} = repmat({parts{1}},n(ii,1),1);
-    day{ii,1} = repmat({parts{2}},n(ii,1),1);
-end
-% Concenate and z-score alcohol data
-allAlc = zscore(cat(1,aData{1}{:,1}));
-% Limit and tabulate alcohol data
-alc = [array2table(allAlc(:,1:60)),cat(1,animal{:}),cat(1,day{:})];
-% Add groups (1 = alcohol; 0 = water)
-alc(:,63) = array2table(ones(size(alc,1),1));
-alc.Properties.VariableNames = [alcFeat(1:60),'ID','day','group'];
-%__________________________________________________________________________
-% Grab water/alcohol data
-[awData,samp,awFiles] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\paper3\waterAlcohol\processed\'],{'.mat'},{'pow','coh'},'trl'...
-    ,'rel');
-% Get animal ID and day ID
-n = cell2mat(cellfun(@(x) size(x,1),awData{1,1},'uniformoutput',0));
-animal = []; day = [];
-for ii = 1:size(awData{1},1)
-    parts = strsplit(awFiles{1}{ii},'_');
-    for jj = 1:2
-        animal{ii,jj} = repmat({['AH',parts{2}]},n(ii,jj),1);
-        day{ii,jj} = repmat({parts{4}},n(ii,jj),1);
-    end
-end
-% Concenate and z-score water/alcohol data
-allWatAlc = [zscore(cat(1,awData{1}{:,1}));zscore(cat(1,awData{1}{:,2}))];
-% Limit and tabulate water/alcohol data
-watAlc = [array2table(allWatAlc(:,inds2)),[cat(1,animal{:,1});...
-    cat(1,animal{:,2})],[cat(1,day{:,1});cat(1,day{:,2})]];
-% Add groups (1 = alcohol; 0 = water)
-watAlc(:,63) = array2table([zeros(sum(n(:,1)),1);ones(sum(n(:,2)),1)]);
 
-watAlc.Properties.VariableNames = [alcFeat(1:60),'ID','day','group'];
-%__________________________________________________________________________
-% Combine all tables
-allData = [water;alc;watAlc];
+%% Feeding
+load('D:/paper3/preBingeAllData.mat')
+allNot = cat(1,notBingeCat{:});
+for ii = 1:100
+    load(['D:/paper3/analyzed/preFeed/preFeed',num2str(ii),'.mat'],'acc','accR')
+    for jj = 1:size(preData,2)
+        thisPast = cat(1,preData{:,jj});
+        thisCatX = [thisPast;allNot(randperm(size(allNot,1),size(thisPast,1)),:)];
+        thisCatY = [ones(size(thisPast,1),1);zeros(size(thisPast,1),1)];
+        prob = cvglmnetPredict(acc{1}.mdl{1},thisCatX,'lambda_1se','response');
+        [~,~,~,aLassoFeed(ii,jj)] = perfcurve(thisCatY,prob,1);
+        prob = cvglmnetPredict(acc{1}.mdl{1},thisCatX(randperm(size(thisCatX,1),size(thisCatX,1)),:),'lambda_1se','response');
+        [~,~,~,aLassoFeedP(ii,jj)] = perfcurve(thisCatY,prob,1);
+    end
+    a5(ii) = acc{1}.acc;
+    a5p(ii) = accR{1}.acc;
+end
+%% Plot
+figure
+hold on
+h2 = shadedErrorBar(1:241,[mean(a5p),mean(aLassoFeedP,1)],[std(a5p),std(aLassoFeedP)],'k');
+h1 = shadedErrorBar(1:241,[mean(a5),mean(aLassoFeed,1)],[std(a5),std(aLassoFeed)],'r');
+set(gca,'xtick',2:20:241,'xticklabel',-2.5:-20:-242.5)
+legend([h2.mainLine,h1.mainLine],{'all','perm'})
+xlabel('time before feeding')
+ylabel('auc')
+
+
+%% Male vs. Female
+% Preallocate
+[ffA,mmA] = deal(zeros(1,5));
+[fmA,mfA] = deal(zeros(5,5));
+for ii = 1:5
+   load(['D:\paper3\analyzed\maleFemale\maleFemale',num2str(ii),'.mat']) 
+   ffA(ii) = femaleMod.auc;
+   fmA(ii,:) = femaleMod.mAuc;
+   mmA(ii) = maleMod.auc;
+   mfA(ii,:) = maleMod.fAuc;
+end
+% Plot
+figure
+subplot(1,2,1)
+hold on
+scatter(1:5,mmA,200,'.k')
+scatter(reshape(repmat(1:5,5,1),1,25),reshape(fmA,1,25),200,'.r')
+set(gca,'Xtick',1:5)
+xlabel('Test Animal'); ylabel('AUC')
+legend({'Male Model','Female Model'},'location','nw')
+title('Male')
+
+subplot(1,2,2)
+hold on
+scatter(1:5,ffA,200,'.k')
+scatter(reshape(repmat(1:5,5,1),1,25),reshape(mfA,1,25),200,'.r')
+set(gca,'Xtick',1:5)
+xlabel('Test Animal'); ylabel('AUC')
+legend({'Female Model','Male Model'},'location','nw')
+title('Female')
+%%
+
 %% Get information on data
 % Count number of trials for each group from each animal
 ids = unique(allData.ID);
@@ -105,12 +76,12 @@ minSamp = min(nSamps(bothIDs,:),[],2);
 subData = [];
 for ii = 1:size(bothIDs,2)
     if minSamp(ii)>5
-    thisWat = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
-        allData.group==0,:);
-    thisAlc = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
-        allData.group==1,:);
-    subData = [subData;thisWat(randperm(size(thisWat,1),minSamp(ii)),:);...
-        thisAlc(randperm(size(thisAlc,1),minSamp(ii)),:)];
+        thisWat = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
+            allData.group==0,:);
+        thisAlc = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
+            allData.group==1,:);
+        subData = [subData;thisWat(randperm(size(thisWat,1),minSamp(ii)),:);...
+            thisAlc(randperm(size(thisAlc,1),minSamp(ii)),:)];
     end
 end
 %% Using allData build full models
@@ -134,8 +105,8 @@ for ii = 1:100
     [glmePrec(ii,:),glmeRecall(ii,:),~,glmeA2(ii)] = perfcurve(...
         allData.group(testInds),prob,1,'XCrit','prec','YCrit','reca');
     
-    mdl = fitglm(allData(trainInds,:),formula(1:end-7),'Distribution','binomial'...
-        ,'binomialsize',nTrain);
+    mdl = fitglm(allData(trainInds,:),formula(1:end-7),'Distribution',...
+        'binomial','binomialsize',nTrain);
     prob = predict(mdl,allData(testInds,:));
     [glmFPR(ii,:),glmTPR(ii,:),~,glmA(ii)] = perfcurve(...
         allData.group(testInds),prob,1);
@@ -154,8 +125,8 @@ for ii = 1:100
     [glmePrec(ii,:),glmeRecall(ii,:),~,glmeA2(ii)] = perfcurve(...
         subData.group(testInds),prob,1,'XCrit','prec','YCrit','reca');
     
-    mdl = fitglm(subData(trainInds,:),formula(1:end-7),'Distribution','binomial'...
-        ,'binomialsize',nTrain);
+    mdl = fitglm(subData(trainInds,:),formula(1:end-7),'Distribution',...
+        'binomial','binomialsize',nTrain);
     prob = predict(mdl,subData(testInds,:));
     [glmFPR(ii,:),glmTPR(ii,:),~,glmA(ii)] = perfcurve(...
         subData.group(testInds),prob,1);
@@ -206,9 +177,8 @@ for ii = 1:10
 end
 %% Grab drinkNot data (taken from waterAlcohol cohort but set to look at 
 % data corresponding to neither behavior)
-[dataNot,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab'...
-    '\data\paper3\waterAlcohol\notDrink\'],{'.mat'},{'pow','coh'},'trl',...
-    'rel');
+[dataNot,samp,files] = collateData(['D:\paper3\'...
+    'waterAlcohol\notDrink\'],{'.mat'},{'pow','coh'},'trl','rel');
 % Get animal ID and day ID
 n = cell2mat(cellfun(@(x) size(x,1),dataNot{1,1}(:,1),'uniformoutput',0));
 animal = []; day = [];
@@ -217,7 +187,7 @@ for ii = 1:size(dataNot{1},1)
     animal{ii,1} = repmat({[parts{1},parts{2}]},n(ii,1),1);
     day{ii,1} = repmat({parts{4}},n(ii,1),1);
 end
-% Concenate and z-score alcohol data
+% Concatenate and z-score alcohol data
 allDataNot = zscore(cat(1,dataNot{1}{:,1}));
 % Limit and tabulate alcohol data
 notD = [array2table(allDataNot(:,1:60)),cat(1,animal{:}),cat(1,day{:})];
@@ -315,6 +285,430 @@ legend({['W->W: ',num2str(mWWA),'\pm',num2str(cWWA)],...
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1);
 xlabel('FPR'); ylabel('TPR')
 title('Water vs. Alcohol')
+%% Build model alcohol vs. water/notDrik
+load('D:\paper3\waterAlcoholNotData.mat')
+% Count number of trials for each group from each animal
+ids = unique(allData.ID);
+for ii = 1:size(ids,1)
+    nSamps(ii,1) = sum(allData.group(strcmp(allData.ID,ids{ii}))==1);
+    nSamps(ii,2) = sum(allData.group(strcmp(allData.ID,ids{ii}))==0);
+end
+% Double water samples to account for water and not data being combined
+nSamps(:,2) = nSamps(:,2)*2;
+% Go through and find the animals with at least 1 samp in each group
+for ii = 1:size(nSamps)
+    both(ii) = nSamps(ii,1)>0 && nSamps(ii,2)>0;
+end
+bothIDs = logicFind(1,both,'==');
+minSamp = min(nSamps(bothIDs,:),[],2);
+minSamp(isodd(minSamp)) = minSamp(isodd(minSamp))-1;
+% Subset data to include only animals with >=5 samples
+subData = [];
+for ii = 1:size(bothIDs,2)
+    if minSamp(ii)>5
+    thisWat = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
+        allData.group==0,:);
+    thisNot = notD(strcmp(notD.ID,ids(bothIDs(ii))),:);
+    thisAlc = allData(strcmp(allData.ID,ids(bothIDs(ii))) & ...
+        allData.group==1,:);
+    % Grab 
+    subData = [subData;thisWat(randperm(size(thisWat,1),minSamp(ii)/2),:);...
+        thisNot(randperm(size(thisNot,1),minSamp(ii)/2),:);...
+        thisAlc(randperm(size(thisAlc,1),minSamp(ii)),:)];
+    end
+end
+
+for ii = 1:100
+    load(['D:\paper3\analyzed\alcoholOther\alcoholOther',num2str(ii),'.mat'])
+    [alcRocX(ii,:),alcRocY(ii,:),~,alcA(ii)] = perfcurve(hist.cfg.naive.testY,acc{1}.pred,1);
+    alcOtherA(ii) = acc{1}.acc;
+    [thisX,thisY,~,alcRA(ii)] = perfcurve(histR.cfg.naive.testY,accR{1}.pred,1);
+    if numel(thisX) == 2
+        alcRocXR(ii,:) = linspace(0,1,107);
+        alcRocYR(ii,:) = linspace(0,1,107);
+    else
+        alcRocXR(ii,:) = thisX;
+        alcRocYR(ii,:) = thisY;
+    end
+    alcOtherR(ii) = accR{1}.acc;
+end
+figure
+hold on
+plot(mean(alcRocX,1),mean(alcRocY,1),'-k')
+plot(mean(alcRocXR,1),mean(alcRocYR,1),'--k')
+legend({['Real: ',num2str(round(mean(alcA),2)),'\pm',...
+    num2str(round(conf(alcA,0.95),2))],...
+    ['Permuted: ',num2str(round(mean(alcRA),2)),'\pm',...
+    num2str(round(conf(alcRA,0.95),2))]},'location','nw')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR');
+title('Alcohol vs. Water/notDrink')
+%% Build model sweet-fat vs. chow/notBinge
+load('D:/paper2/analyzed/finalNew/bingeNotPreData.mat')
+samps(:,1) = cellfun(@(x) size(x,1),data{1,1}([1:3,5:8,10,11],1));
+samps(:,2) = cellfun(@(x) size(x,1),data{1,4}(:,1))*2;
+minSamp = min(samps,[],2);
+minSamp(isodd(minSamp)) = minSamp(isodd(minSamp))-1;
+x = []; y = [];
+bingeInds = [1:3,5:8,10,11];
+for ii = 1:9
+    thisBinge = data{1,1}{bingeInds(ii),1};
+    thisChow = data{1,4}{ii,1};
+    thisNot = [data{1,1}{bingeInds(ii),2};data{1,4}{ii,1}];
+    % Grab
+    x = [x;thisBinge(randperm(size(thisBinge,1),minSamp(ii)),:);...
+        thisChow(randperm(size(thisChow,1),minSamp(ii)/2),:);...
+        thisNot(randperm(size(thisNot,1),minSamp(ii)/2),:)];
+    y = [y;ones(minSamp(ii),1);zeros(minSamp(ii),1)];
+end
+for ii = 1:100
+    load(['D:\paper3\analyzed\bingeOther\bingeOther',num2str(ii),'.mat'])
+    [bingeRocX(ii,:),bingeRocY(ii,:),~,bingeA(ii)] = perfcurve(hist.cfg.naive.testY,acc{1}.pred,1,'Tvals',linspace(0,1,273),'usenearest',0);
+    bingeOtherA(ii) = acc{1}.acc;
+    [thisX,thisY,~,bingeRA(ii)] = perfcurve(histR.cfg.naive.testY,accR{1}.pred,1,'Tvals',linspace(0,1,273),'usenearest',0);
+    if numel(thisX) == 2
+        bingeRocXR(ii,:) = linspace(0,1,273);
+        bingeRocYR(ii,:) = linspace(0,1,273);
+    else
+        bingeRocXR(ii,:) = thisX;
+        bingeRocYR(ii,:) = thisY;
+    end
+    bingeOtherR(ii) = accR{1}.acc;
+end
+figure
+hold on
+plot(mean(bingeRocX,1),mean(bingeRocY,1),'-k')
+plot(mean(bingeRocXR,1),mean(bingeRocYR,1),'--k')
+legend({['Real: ',num2str(round(mean(bingeA),2)),'\pm',...
+    num2str(round(conf(bingeA,0.95),4))],...
+    ['Permuted: ',num2str(round(mean(bingeRA),2)),'\pm',...
+    num2str(round(conf(bingeRA,0.95),2))]},'location','nw')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR');
+title('Sweet-Fat vs. Chow/notEat')
+%% Find trade-off of number of animals and minimum of samples per behavior
+load('waterAlcoholNotData.mat')
+ids = unique(allData.ID);
+for ii = 1:size(ids,1)
+    nSamps(ii,1) = sum(allData.group(strcmp(allData.ID,ids{ii}))==1);
+    nSamps(ii,2) = sum(allData.group(strcmp(allData.ID,ids{ii}))==0)*2;
+end
+for ii = 1:size(nSamps)
+    both(ii) = nSamps(ii,1)>0 && nSamps(ii,2)>0;
+end
+nSamps = nSamps(both,:);
+load('D:\paper2\analyzed\finalNew\bingeNotPreData.mat')
+sweetSamps = cellfun(@(x) size(x,1),data{2}([1:3,5:8,10,11],:));
+chowSamps = cellfun(@(x) size(x,1),data{4});
+bingeSamps(:,1) = sweetSamps(:,1);
+bingeSamps(:,2) = chowSamps(:,1)*2;
+% bingeSamps(:,3) = sweetSamps(:,2)+chowSamps(:,2);
+all = [nSamps;bingeSamps];
+minBinge = min(bingeSamps,[],2);
+minAlc = min(nSamps,[],2);
+minSamps = sort(min(all,[],2),'ascend');
+for ii = 1:size(minSamps,1)
+    bingeN(ii) = sum(minBinge>=minSamps(ii));
+    alcN(ii) = sum(minAlc>=minSamps(ii));
+    total(ii) = minSamps(ii)*sum(minSamps>=minSamps(ii));
+end
+figure
+hold on
+yyaxis left
+plot(minSamps,bingeN,'-o')
+plot(minSamps,alcN,'-o')
+yyaxis right
+plot(minSamps,total,'-o')
+%% Build best possible drinking model
+load('D:/paper3/waterAlcoholNotData2.mat')
+ids = unique([unique(notD.ID);unique(water.ID);unique(alc.ID);...
+    unique(watAlc.ID)]);
+samps = [];
+for ii = 1:size(ids,1)
+    % Alcohol drinking
+    samps(ii,1) = sum(strcmp(watAlc.ID,ids{ii}) & ...
+        watAlc.group == 1) + sum(strcmp(alc.ID,ids{ii}) & ...
+        alc.group == 1);
+    % Water drinking
+    samps(ii,2) = sum(strcmp(watAlc.ID,ids{ii}) & ...
+        watAlc.group == 0) + sum(strcmp(water.ID,ids{ii}) ...
+        & water.group == 1);
+    % Neither
+    samps(ii,3) = sum(strcmp(notD.ID,ids{ii}) & notD.group == 0);
+end
+theseIDs = ids(sum(samps>0,2)==3);
+theseSamps = samps(sum(samps>0,2)==3,:);
+% Grab and combine data
+for ii = 1:size(theseIDs,1)
+    thisAlc{ii,1} = [watAlc(strcmp(watAlc.ID,theseIDs{ii}) & ...
+        watAlc.group == 1,:); alc(strcmp(alc.ID,theseIDs{ii}) & ...
+        alc.group == 1,:)];
+    thisWat{ii,1} = [watAlc(strcmp(watAlc.ID,theseIDs{ii}) & ...
+        watAlc.group == 0,:); water(strcmp(water.ID,theseIDs{ii}) ...
+        & water.group == 1,:)];
+    thisNeither{ii,1} = notD(strcmp(notD.ID,theseIDs{ii}) & ...
+        notD.group == 0,:);
+end
+allData = [thisAlc,thisWat,thisNeither];
+% Set target number of samples for alcohol (water and neither will be 1/2)
+n = 20;
+target = [n;n/2;n/2];
+these = []; theseWeights = [];
+for ii = 1:size(allData,1)
+    for jj = 1:3
+        % If fewer samples exist than target, then pull all and compute
+        % weights
+        if theseSamps(ii,jj)<target(jj)
+           these = [these;allData{ii,jj}];
+           theseWeights = [theseWeights;repmat(target(jj)/theseSamps(ii,jj),...
+               theseSamps(ii,jj),1)];
+        % Otherwise, grab random subsample
+        else
+            these = [these;allData{ii,jj}(randperm(theseSamps(ii,jj),...
+                target(jj)),:)];
+            theseWeights = [theseWeights;ones(target(jj),1)];
+        end
+    end
+end
+% Set up training and testing set indices (80/20 random split)
+[trainInd,~,testInd,~] = trainTest((1:numel(theseWeights))',...
+    (1:numel(theseWeights))',.20);
+% Use indices to create training and testing sets, and split weights
+trainX = these(trainInd,1:60);
+trainY = these.group(trainInd);
+trainWeights = theseWeights(trainInd);
+testX = these(testInd,1:60);
+testY = these.group(testInd); 
+testWeights = theseWeights(testInd);
+% Build models - only use shell features (to match feeding features)
+cfg = lassoNetCfg({testX,testY},[],'n','y','n',100,'1se',trainWeights);
+[~,lam,beta,fits,acc,hist] = lassoNet(trainX,trainY,'binomial','class',...
+    1,10,1,cfg);
+cfg = lassoNetCfg({testX,testY},[],'y','y','n',100,'1se',trainWeights);
+[~,lamR,betaR,fitsR,accR,histR] = lassoNet(trainX,trainY,'binomial',...
+    'class',1,10,1,cfg);
+%% Load drinking model data
+for ii = 1:100
+%     % 40 sample model
+%     cd D:\paper3\analyzed\alcoholOther40\
+%     load(['alcoholOther',num2str(ii),'.mat'])
+%     acc40(ii) = acc{1}.acc;
+%     accR40(ii) = accR{1}.acc;
+%     % 80 sample model
+%     cd D:\paper3\analyzed\alcoholOther80\
+%     load(['alcoholOther',num2str(ii),'.mat'])
+%     acc80(ii) = acc{1}.acc;
+%     accR80(ii) = accR{1}.acc;
+    % 120 sample model
+    cd D:\paper3\analyzed\alcoholOther120\
+    load(['alcoholOther',num2str(ii),'.mat'])
+    acc120(ii) = acc{1}.acc;
+    accR120(ii) = accR{1}.acc;
+%     % 160 sample model
+%     cd D:\paper3\analyzed\alcoholOther160\
+%     load(['alcoholOther',num2str(ii),'.mat'])
+%     acc160(ii) = acc{1}.acc;
+%     accR160(ii) = accR{1}.acc;
+%     % 200 sample model
+%     cd D:\paper3\analyzed\alcoholOther200\
+%     load(['alcoholOther',num2str(ii),'.mat'])
+%     acc200(ii) = acc{1}.acc;
+%     accR200(ii) = accR{1}.acc;
+end
+%% Plot performance curve
+figure
+hold on
+plot([40,80,120,160,200],[mean(acc40),mean(acc80),mean(acc120),mean(acc160),mean(acc200)],'-o')
+plot([40,80,120,160,200],[mean(accR40),mean(accR80),mean(accR120),mean(accR160),mean(accR200)],'-o')
+xlabel('Samples per animal')
+ylabel('Mean AUC')
+legend({'Real','Permuted'})
+%% Load alcohol models by sex
+cd D:\paper3\analyzed\alcoholOtherSex
+for ii = 1:100
+    load(['alcoholOtherMale',num2str(ii),'.mat'],'accMale','accMaleR',...
+        'histMale','histMaleR')
+    predBinary = round(accMale{1}.pred);
+    maleA(ii) = sum(predBinary==histMale.cfg.naive.testY')/numel(predBinary);
+    predBinaryR = round(accMaleR{1}.pred);
+    maleAR(ii) = sum(predBinaryR==histMaleR.cfg.naive.testY')/numel(predBinaryR);
+    [maleX(ii,:),maleY(ii,:),~,maleAcc(ii)] = perfcurve(histMale.cfg.naive.testY,...
+        accMale{1}.pred,1,'TVals',linspace(0,1,53),'UseNearest',0);
+    if numel(thisX)~=54
+        maleX(ii,:) = interp1(thisX.*(1+eps),thisY.*(1+eps),linspace(0,1,54));       
+        maleY(ii,:) = interp1(thisY,thisX,linspace(0,1,54));
+    else
+        maleX(ii,:) = thisX;
+        maleY(ii,:) = thisY;
+    end
+    [maleXR(ii,:),maleYR(ii,:),~,maleAccR(ii)] = perfcurve(...
+        histMaleR.cfg.naive.testY,accMaleR{1}.pred,1,'TVals',...
+        linspace(0,1,53),'UseNearest',0);
+    if numel(thisXR)~=54
+        maleXR(ii,:) = interp1(thisXR,thisYR,linspace(0,1,54));       
+        maleYR(ii,:) = interp1(thisYR,thisXR,linspace(0,1,54));
+    else
+        maleXR(ii,:) = thisXR;
+        maleYR(ii,:) = thisYR;
+    end
+    
+    load(['alcoholOtherFemale',num2str(ii),'.mat'],'accFemale',...
+        'accFemaleR','histFemale','histFemaleR')
+    predBinary = round(accFemale{1}.pred);
+    femaleA(ii) = sum(predBinary==histFemale.cfg.naive.testY')/numel(predBinary);
+    predBinaryR = round(accFemaleR{1}.pred);
+    femaleAR(ii) = sum(predBinaryR==histFemaleR.cfg.naive.testY')/numel(predBinaryR);
+    [femaleX(ii,:),femaleY(ii,:),~,femaleAcc(ii)] = perfcurve(...
+        histFemale.cfg.naive.testY,accFemale{1}.pred,1,'TVals',...
+        linspace(0,1,53),'UseNearest',0);
+    if numel(thisX)~=54
+        femaleX(ii,:) = interp1(thisX,thisY,linspace(0,1,54));      
+        femaleY(ii,:) = interp1(thisY,thisX,linspace(0,1,54));
+    else
+        femaleX(ii,:) = thisX;
+        femaleY(ii,:) = thisY;
+    end
+    [femaleXR(ii,:),femaleYR(ii,:),~,femaleAccR(ii)] = perfcurve(...
+        histFemaleR.cfg.naive.testY,accFemaleR{1}.pred,1,'TVals',...
+        linspace(0,1,53),'UseNearest',0);
+     if numel(thisXR)~=54
+        femaleXR(ii,:) = interp1(thisXR,thisYR,linspace(0,1,54));       
+        femaleYR(ii,:) = interp1(thisYR,thisXR,linspace(0,1,54));
+     else
+         femaleXR(ii,:) = thisXR;
+         femaleYR(ii,:) = thisYR;
+    end
+end
+%
+figure
+hold on
+plot(mean(maleX,1),mean(maleY,1),'-k')
+plot(mean(maleXR,1),mean(maleYR,1),'--k')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR')
+title('Male (n=4): Alcohol vs. Water + Other')
+legend({['Real: ',num2str(round(mean(maleAcc),2)),'\pm',...
+    num2str(round(conf(maleAcc,0.95),2))],['Permuted: ',...
+    num2str(round(mean(maleAccR),2)),'\pm',...
+    num2str(round(conf(maleAccR,0.95),2))]},'location','nw')
+figure
+hold on
+plot(mean(femaleX,1),mean(femaleY,1),'-k')
+plot(mean(femaleXR,1),mean(femaleYR,1),'--k')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR')
+title('Female (n=5): Alcohol vs. Water + Other')
+legend({['Real: ',num2str(round(mean(femaleAcc),2)),'\pm',...
+    num2str(round(conf(femaleAcc,0.95),2))],['Permuted: ',...
+    num2str(round(mean(femaleAccR),2)),'\pm',...
+    num2str(round(conf(femaleAccR,0.95),2))]},'location','nw')
+%% Build best possible feeding model
+load('D:\paper2\analyzed\finalNew\bingeNotPreData.mat')
+% Set up indices of the nine animals found in both 24 sweet dep and 24 chow
+nineInds = [1:3,5:8,10,11];
+sweetSamps = cellfun(@(x) size(x,1),data{2}(nineInds,:));
+chowSamps = cellfun(@(x) size(x,1),data{4});
+bingeSamps(:,1) = sweetSamps(:,1);
+bingeSamps(:,2) = chowSamps(:,1);
+bingeSamps(:,3) = sweetSamps(:,2)+chowSamps(:,2);
+% Combine data into similar structure as drinking data
+allFeedData(:,1) = data{2}(nineInds,1);
+allFeedData(:,2) = data{4}(:,1);
+for ii = 1:9
+    allFeedData{ii,3} = [data{2}{nineInds(ii),2};data{4}{ii,2}];
+end
+% Set up all y vectors
+allY = cell(size(allFeedData));
+for ii = 1:size(allFeedData,1)
+    for jj = 1:size(allFeedData,2)
+        allY{ii,jj} = ones(bingeSamps(ii,jj),1);
+        % Set neither column and chow to zero by subtracting one
+        if jj ~= 1
+           allY{ii,jj} = allY{ii,jj} - 1; 
+        end
+    end
+end
+% save('D:\paper3\24sweetChowNotData.mat','allFeedData','allY','bingeSamps')
+% Use same model building process as drinking models
+% Set target number of samples for 24 hour sweet dep (chow and neither will
+% be 1/2)
+n = 20;
+target = [n;n/2;n/2];
+these = []; theseWeights = []; theseY = [];
+for ii = 1:size(allFeedData,1)
+    for jj = 1:3
+        % If fewer samples exist than target, then pull all and compute
+        % weights
+        if bingeSamps(ii,jj)<target(jj)
+           these = [these;allFeedData{ii,jj}];
+           theseWeights = [theseWeights;repmat(target(jj)/...
+               bingeSamps(ii,jj),bingeSamps(ii,jj),1)];
+           % Add to y vector
+           theseY = [theseY;allY{ii,jj}];
+        % Otherwise, grab random subsample
+        else
+            % Generate indices
+            theseInds = randperm(bingeSamps(ii,jj),target(jj));
+            these = [these;allFeedData{ii,jj}(theseInds,:)];
+            theseWeights = [theseWeights;ones(target(jj),1)];
+            % Add to y vector
+            theseY = [theseY;allY{ii,jj}(theseInds)];
+        end
+    end
+end
+% Set up training and testing set indices (80/20 random split)
+[trainInd,~,testInd,~] = trainTest((1:numel(theseWeights))',...
+    (1:numel(theseWeights))',.20);
+% Use indices to create training and testing sets, and split weights
+trainX = these(trainInd,1:60);
+trainY = theseY(trainInd);
+trainWeights = theseWeights(trainInd);
+testX = these(testInd,1:60);
+testY = theseY(testInd); 
+testWeights = theseWeights(testInd);
+% Build models - only use shell features (to match feeding features)
+cfg = lassoNetCfg({testX,testY},[],'n','y','n',100,'1se',trainWeights);
+[~,lam,beta,fits,acc,hist] = lassoNet(trainX,trainY,'binomial','class',...
+    1,10,1,cfg);
+cfg = lassoNetCfg({testX,testY},[],'y','y','n',100,'1se',trainWeights);
+[~,lamR,betaR,fitsR,accR,histR] = lassoNet(trainX,trainY,'binomial',...
+    'class',1,10,1,cfg);
+%% Load feeding model data
+allN = 20:40:380;
+for ii = 1:10
+    cd(['D:/paper3/analyzed/24bingeOther/24bingeOther',num2str(allN(ii))])
+    for jj = 1:100
+        load(['24bingeOther',num2str(jj),'.mat'])
+        feedAcc(ii,jj) = acc{1}.acc;
+        feedAccR(ii,jj) = accR{1}.acc;
+    end
+end
+figure
+hold on
+plot(allN,mean(feedAcc,2),'-o')
+plot(allN,mean(feedAccR,2),'-o')
+
+%% Plot features from each data set
+% Get sign data
+feedSign = double(mean(feedBeta,2)>=0);
+feedSign(feedSign==0) = -1;
+drinkSign = double(mean(drinkBeta,2)>=0);
+drinkSign(drinkSign==0) = -1;
+% Load gen model to get gen single feature AUCs
+% theseGenA = [];
+% for ii = 1:100
+%     load(['D:/paper3/analyzed/genModel/1feedWeight/feedDrinkOther',num2str(ii),'.mat'],'sA')
+%     theseGenA(ii,:) = sA;
+% end
+% meanGenA = mean(theseGenA,1);
+% [sortMeanGenA,sortInd] = sort(meanGenA,'descend'); 
+figure
+hold on
+scatter(mean(feedA(1:12,:),2).*feedSign(1:12),mean(drinkA(1:12,:),2).*drinkSign(1:12),'ks')
+scatter(mean(feedA(13:18,:),2).*feedSign(13:18),mean(drinkA(13:18,:),2).*drinkSign(13:18),'ro')
+xlabel('Feed AUC'); ylabel('Drink AUC')
+xlim([-0.8 0.8]); ylim([-0.8 0.8])
+title('single feature AUC, built within dataset')
 %% Predict drinking amounts from LFPs during drinking session; use average 
 % of both drinking and notDrinking
 [data,samps,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
@@ -374,7 +768,7 @@ for ii = 1:size(files,2)
     LFPTs.label = LFPTs.label([3,4,5,8]);
     save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\waterAlcohol\NAcPL\',files{ii}],'LFPTs','eventTs','pl2','adfreq')
 end
-%% Grab water/alcohol data\
+%% Grab water/alcohol data
 % All channels
 % [data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
 %     'data\paper3\waterAlcohol\processedOld\'],{'.mat'},{'pow','coh'},'trl',...
@@ -479,8 +873,6 @@ for ii = 1:10
 end
 %% Sort mean logistic AUCs
 glmeLogAM = mean(glmeLogA,1);
-
-
 %% Grab data for drinkNot
 [data,~,~] = collateData(['C:\Users\Pythia\Documents\GreenLab\data\'...
     'paper3\drinkNot\'],{'.mat'},{'pow','coh'},'trl','rel');
@@ -496,7 +888,7 @@ load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
 [all,~,rnd,~] = evenDataSplit(catData,18494,4624,'ADA',20); %#ok
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
     'concatData.mat'],'all','rnd')
-% Or foce into same sample size as bingeNot data
+% Or force into same sample size as bingeNot data
 [all,~,rnd,~] = evenDataSplit(catData,6000,1200,'ADA',20);
 save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
     'drink6000.mat'],'all','rnd')
@@ -580,49 +972,6 @@ mA = mean(a,1)';
 [smA,inds] = sort(mA,'descend');
 nameVect = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
 nameSort = nameVect(inds)';
-%% Build drinkNot models split by sex and tested across sex with leave one 
-% animal out testing
-[data,~,~] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\paper3\drinkNot\'],{'.mat'},{'pow','coh'},'trl','rel');
-% Split
-male = data{1}([1:18,24:25],:);
-female = data{1}([21:23,26:45],:);
-% Set up animal number vector
-animal{1} = [1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5];
-animal{2} = [1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,5];
-save('C:\Users\Pythia\Documents\GreenLab\data\paper3\maleFemale.mat',...
-    'male','female','animal')
-%% Male vs. Female
-% Preallocate
-[ffA,mmA] = deal(zeros(1,5));
-[fmA,mfA] = deal(zeros(5,5));
-for ii = 1:5
-   load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-       'maleFemale\maleFemale',num2str(ii),'.mat']) 
-   ffA(ii) = femaleMod.auc;
-   fmA(ii,:) = femaleMod.mAuc;
-   mmA(ii) = maleMod.auc;
-   mfA(ii,:) = maleMod.fAuc;
-end
-% Plot
-figure
-subplot(1,2,1)
-hold on
-scatter(1:5,mmA,200,'.k')
-scatter(reshape(repmat(1:5,5,1),1,25),reshape(fmA,1,25),200,'.r')
-set(gca,'Xtick',1:5)
-xlabel('Test Animal'); ylabel('AUC')
-legend({'Male Model','Female Model'},'location','nw')
-title('Male')
-
-subplot(1,2,2)
-hold on
-scatter(1:5,ffA,200,'.k')
-scatter(reshape(repmat(1:5,5,1),1,25),reshape(mfA,1,25),200,'.r')
-set(gca,'Xtick',1:5)
-xlabel('Test Animal'); ylabel('AUC')
-legend({'Female Model','Male Model'},'location','nw')
-title('Female')
 %% Build models: binge, drink, and across
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
     '\baseline500Each6000All50-50.mat'])
@@ -919,366 +1268,7 @@ legend({['All: ',num2str(round(mean(ddAall),2)),'\pm',...
 title('DrinkNot: subsets')
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 xlabel('FPR'); ylabel('TPR')
-%% Pre-Drinking vs. Not Drinking
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper3\'...
-    'preDrinkCombined2\'],'.mat');
-preData = [];
-notData = [];
-for ii = 1:size(files,2)
-   load(files{ii})
-   if ~isempty(trls{1,1})
-      [b,c,t] = size(psdTrls{1,1}.relPow);
-      thisPow = reshape(psdTrls{1,1}.relPow,b*c,t)';
-      [cmb,b,t] = size(coh{1,1}.rel);
-      thisCoh = reshape(permute(coh{1,1}.rel,[2,1,3]),cmb*b,t)';
-      preData = [preData;thisPow,thisCoh]; %#ok
-      
-      [b,c,t] = size(psdTrls{1,end}.relPow);
-      thisPow = reshape(psdTrls{1,end}.relPow,b*c,t)';
-      [cmb,b,t] = size(coh{1,end}.rel);
-      thisCoh = reshape(permute(coh{1,end}.rel,[2,1,3]),cmb*b,t)';
-      notData = [notData;thisPow,thisCoh]; %#ok
-   end
-end
-% Collate and impute
-catData{1,1} = preData;
-catData{1,2} = notData;
-[all,each,rnd,~] = evenDataSplit(catData,17222,4306,'ADA',20);
-save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'],'all','each','rnd')
-%% Build full logistics
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'])
-% Preallocate
-[rndX,rndY] = deal(cell(1,20));
-rndA = zeros(1,20);
-for n = 1:20
-    disp([num2str(n),' of 20'])
-    % Set up training data
-    trainX = all.trainX{n};
-    trainY = all.trainY{n};
-    % Set up testing data
-    testX = all.testX{n};
-    testY = all.testY{n};
-    % Build and test model on concat data
-    mdl = fitglm(trainX,trainY,'distribution','binomial');
-    prob = predict(mdl,testX);
-    [x{n},y{n},~,a(n)] = perfcurve(testY,prob,1);
-    % Set up random testing data
-    testY = rnd.allTestY{n};
-    prob = predict(mdl,testX);
-    [rndX{n},rndY{n},~,rndA(n)] = perfcurve(testY,prob,1);
-end
-% Test drinkNot models on preDrink data
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drinkNotModel.mat'],'concatData')
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preDrinkData.mat'])
-% Preallocate
-[drinkX,drinkY] = deal(cell(1,20));
-drinkA = zeros(1,20);
-for ii = 1:20
-    disp([num2str(ii),' of 20'])
-    testX = all.testX{ii};
-    testY = all.testY{ii};
-    prob = predict(concatData.model{ii},testX);
-    [drinkX{ii},drinkY{ii},~,drinkA(ii)] = perfcurve(testY,prob,1);
-end
-% Load preBinge files
-cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
-    'preBinge\'])
-% Preallocate
-[preA,preARand] = deal(zeros(20,8));
-% Hardcoded first dimension from know size of roc curves in concatData
-[preX,preY] = deal(zeros(21207,20));
-[preRandX,preRandY] = deal(zeros(21222,20));
-beta = zeros(20,58);
-for ii = 1:20
-   load([num2str(ii),'.mat'])
-   preA(ii,:) = concatData{1,8}.auc;
-   preX(:,ii) = concatData{1,1}.acc{1,1}.x;
-   preY(:,ii) = concatData{1,1}.acc{1,1}.y;
-end
-cd(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew\'...
-    'preBingeRand\'])
-for ii = 1:20
-   load([num2str(ii),'.mat'])
-   preARand(ii,:) = concatData{1,8}.auc;
-   preRandX(:,ii) = concatData{1,1}.acc{1,1}.x;
-   preRandY(:,ii) = concatData{1,1}.acc{1,1}.y;
-end
-% Plot
-figure
-hold on
-plot(mean(cat(2,x{:}),2),mean(cat(2,y{:}),2),'-k')
-plot(mean(preX,2),mean(preY,2),'-.k')
-plot(mean(cat(2,rndX{:}),2),mean(cat(2,rndY{:}),2),'--k')
-plot(mean(preRandX,2),mean(preRandY,2),':k')
-set(gca,'XTick',0:0.5:1,'YTick',0:0.5:1)
-xlabel('False Positive Rate')
-ylabel('True Positive Rate')
-legend({['PreDrink: ',num2str(round(mean(a),2)),'\pm',...
-    num2str(round(conf(a,0.95),2))],['PreBinge: ',...
-    num2str(round(mean(preA(:,1)),2)),'\pm',...
-    num2str(round(conf(preA(:,1)',0.95),2))],['Permuted Drink: ',...
-    num2str(round(mean(rndA),2)),'\pm',...
-    num2str(round(conf(rndA,0.95),2))],['Permuted Binge: ',...
-    num2str(round(mean(preARand(:,1)),2)),'\pm',...
-    num2str(round(conf(preARand(:,1)',0.95),2))]},'Location','se')
-title('Pre-Drink vs. Other')
-%% Set up config for analyzing preBinge data up to 240 seconds before the
-% start of a binge moving in 1 second intervals
-cfg.sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\toProcess\';
-cfg.file = file;
-cfg.nFilt = [57 63];
-cfg.dsf = 5;
-cfg.thresh = 1; 
-cfg.onset = 1;
-cfg.offset = 1;
-cfg.foi = [1 1 100];
-cfg.bands = {'delta',[1,4];
-         'theta',[5,10];
-         'alpha',[11,14];
-         'beta',[15,30];
-         'lgamma',[45,65];
-         'hgamma',[70,90]};
-cfg.overlap = 0.5;
-cfg.ohMethod = 'mtm';
-for ei = 1:240
-    cfg.eoi(ei,:) = {'binge (s',[-4-ei 1-ei]};
-end
-cfg.vis = 'n';
-cfg.saveParent = ['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'preBinge_240sec\'];
-%% Combine prebinge data with non-overlapping non-binge data
-% Get fileNames of preBinge data
-fNames = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'preBinge_240sec\'],'.mat');
-for ii = 1:size(fNames,2)
-    names(ii,:) = strsplit(fNames{ii},'_'); %#ok<SAGROW>
-end
-% Cycle through files
-% Preallocate
-times = cell(1,size(names,1));
-for ii = 1:size(names,1)
-    disp(num2str(ii))
-    load(fNames{ii})
-    % Separate notBinge and preBinge
-    notCoh = coh{end};
-    notPow = psdTrls{end};
-    notTrls = trls{end};
-    
-    preCoh = coh(1:end-1);
-    prePow = psdTrls(1:end-1);
-    preTrls = trls(1:end-1);
-    % Grab times of binges
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\mat\',...
-        names{ii,1},'_',names{ii,2},'.mat'],'eventTs')
-    ind = logicFind(1,cell2mat(cellfun(@(x) strncmpi('binge (s',x,8),...
-        eventTs.label,'UniformOutput',0)),'==');
-    times{ii} = [eventTs.t{ind}*hist.adfreq,eventTs.t{ind+1}*hist.adfreq];
-    % Clear generic variables so they can be used later
-    clear coh psdTrls trls
-    %% Check that pre trials do no overlap with binges
-    % Preallocate
-    nTrl = size(prePow,2); 
-    [trls,psdTrls,coh] = deal(cell(1,nTrl));
-    for k = 1:nTrl
-        % Preallocate
-        nSamp = size(preTrls{1,k}.sampleinfo,1);
-        thisOverlap = zeros(nSamp,size(times{ii},1));
-        overlap = zeros(1,nSamp);
-        for jj = 1:nSamp
-            for m = 1:size(times{ii},1)
-                thisTrl = ismember(preTrls{1,k}.sampleinfo(jj,1):...
-                    preTrls{1,k}.sampleinfo(jj,2),...
-                    round(times{ii}(m,1)):round(times{ii}(m,2)));
-                thisOverlap(jj,m) = any(thisTrl(:) == 1);
-            end
-        overlap(jj) = any(thisOverlap(jj,:)==1);
-        end
-        trls{1,k}.trial = preTrls{1,k}.trial(:,:,~overlap);
-        trls{1,k}.time = preTrls{1,k}.time(~overlap);
-        trls{1,k}.sampleinfo = preTrls{1,k}.sampleinfo(~overlap,:);
-        
-        psdTrls{1,k}.Pow = prePow{1,k}.Pow(:,:,~overlap);
-        psdTrls{1,k}.f = prePow{1,k}.f;
-        psdTrls{1,k}.hammSize = prePow{1,k}.hammSize;
-        psdTrls{1,k}.bandPow = prePow{1,k}.bandPow(:,:,~overlap);
-        psdTrls{1,k}.totPow = prePow{1,k}.totPow(:,:,~overlap);
-        psdTrls{1,k}.relPow = prePow{1,k}.relPow(:,:,~overlap);
-        psdTrls{1,k}.Pow = prePow{1,k}.Pow(:,:,~overlap);
-        
-        coh{1,k}.Cxy = preCoh{1,k}.Cxy(:,:,~overlap);
-        coh{1,k}.rel = preCoh{1,k}.normBandCoh(:,:,~overlap);
-        coh{1,k}.band = preCoh{1,k}.mBandCoh(:,:,~overlap);
-        coh{1,k}.mRaw = preCoh{1,k}.mtCxy(:,:,~overlap);
-        coh{1,k}.f = preCoh{1,k}.f;
-    end
-    % Find notTrls that do not overlap with preTrls
-    samps = [];
-    for jj = 1:size(trls,2)
-        samps = [samps;trls{1,jj}.sampleinfo]; %#ok<AGROW>
-    end
-    overlap = zeros(1,nSamp);
-    for jj = 1:size(notTrls.sampleinfo,1)
-        thisTrl = ismember(samps,notTrls.sampleinfo(jj,1):...
-            notTrls.sampleinfo(jj,2));
-        overlap(jj) = any(thisTrl(:) == 1);
-    end
-    % Extract non-overlapping trials
-    trls{1,k+1}.label = notTrls.label;
-    trls{1,k+1}.fsample = notTrls.fsample;
-    trls{1,k+1}.trial = notTrls.trial(:,:,~overlap);
-    trls{1,k+1}.time = notTrls.time(~overlap);
-    trls{1,k+1}.sampleinfo = notTrls.sampleinfo(~overlap,:);
-    
-    psdTrls{1,k+1}.Pow = notPow.Pow(:,:,~overlap);
-    psdTrls{1,k+1}.f = notPow.f;
-    psdTrls{1,k+1}.hammSize = notPow.hammSize;
-    psdTrls{1,k+1}.bandPow = notPow.bandPow(:,:,~overlap);
-    psdTrls{1,k+1}.totPow = notPow.totPow(:,:,~overlap);
-    psdTrls{1,k+1}.relPow = notPow.relPow(:,:,~overlap);
-    psdTrls{1,k+1}.Pow = notPow.Pow(:,:,~overlap);
-    
-    coh{1,k+1}.Cxy = notCoh.Cxy(:,:,~overlap);
-    coh{1,k+1}.rel = notCoh.normBandCoh(:,:,~overlap);
-    coh{1,k+1}.band = notCoh.mBandCoh(:,:,~overlap);
-    coh{1,k+1}.mRaw = notCoh.mtCxy(:,:,~overlap);
-    coh{1,k+1}.f = notCoh.f;
-    overlap = [];
-    
-    save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\'...
-        'preBingeCombined\',names{ii,1},'_',names{ii,2},'.mat'],'trls',...
-        'psdTrls','coh')
-end
-%% Prep data for preBinge model
-[data,samp,preFiles] = collateData(['C:\Users\Pythia\Documents\GreenLab'...
-    '\data\paper3\preBingeCombined\'],{'base'},{'pow','coh'},'trl','rel');
-% Preallocate
-notBinge = cell(size(data{1},1),1);
-% Grab bingeNot data that does not overlap with preBinge
-for ii = 1:size(preFiles{1},2)
-    disp(['Grabbin'' data from file ',num2str(ii),' of ',...
-        num2str(size(preFiles{1},2))])
-    % Grab all samples from this row's preBinge data
-    theseSamp = cat(1,samp{1}{ii,1:end-1});
-    sampCat = [];
-    for jj = 1:size(theseSamp,1)
-       sampCat = [sampCat,theseSamp(jj,1):theseSamp(jj,2)]; %#ok
-    end
-    % Take only unique values
-    sampCat = unique(sampCat);
-    % Check if notBinge data overlaps with sampCat
-    overlap = sum(ismember(samp{1}{ii,end},sampCat),2);
-    % If overlap remove those trials
-    notBinge{ii,1} = data{1,1}{ii,end}(~overlap,:);
-end
-% Set up 5 sec preBinge model with notBinge data used for ADASYN
-preData = data{1}(:,1:end-1);
-pre5Cat = cat(1,preData{:,1});
-% Grab notBinge data
-notBinge = cat(1,data{1}{:,end});
-% Determine ratio of preBinge to notBinge
-nPre = sum(cellfun(@(x) size(x,1),samp{1}(:,1)));
-nNot = size(notBinge,1);
-r = nPre/(nPre+nNot);
-% Use 21 samples per animal (252 total); thus, need 126 preBinge and 126
-% notBinge. Use 1000 samples for testing due to extreme rarity of preBinge
-% compared to notBinge.
-nPreTest = round(r*1000);
-% Preallocate
-[thisTrainX,newPre,thisNotBinge] = deal(cell(1,20));
-for ii = 1:100
-    % Randomally generate indices corresponding to preBinge values to be
-    % set aside for testing
-    rPBI = randperm(size(pre5Cat,1),nPreTest);
-    pre5.testX{ii} = pre5Cat(rPBI,:);
-    % Take rest of values for training
-    thisTrainX{ii} = pre5Cat(~ismember(1:size(pre5Cat,1),rPBI),:); 
-    % Use 'notBinge' as majority case in ADASYN to impute preBinge up to
-    % 126; uses 200 to ensure enough samples are generated
-    [newPre{ii},~] = ADASYN([thisTrainX{ii};...
-        notBinge(randperm(size(notBinge,1),200),:)],...
-        [ones(size(thisTrainX{ii},1),1);zeros(200,1)]);
-    % Concatenate real and imputed data together with notBinge
-    thisPreCat = cat(1,thisTrainX{ii},newPre{ii});
-    % Generate 1119 indices for notBinge; use first 126 for training and
-    % last 993 for testing
-    rNBI = randperm(size(notBinge,1),1119);
-    % Grab 126 preBinge and 126 notBinge
-    pre5.trainX{ii} = cat(1,thisPreCat(randperm(size(...
-        thisPreCat,1),126),:),notBinge(rNBI(1:126),:));
-    % Add notBinge to test set
-    pre5.testX{ii} = [pre5.testX{ii};notBinge(rNBI(127:1119),:)];
-    % Create Ys for training and testing
-    pre5.trainY{ii} = [ones(126,1);zeros(126,1)];
-    pre5.testY{ii} = [ones(nPreTest,1);zeros(993,1)];
-    % Create test sets for pre240
-    thisNotBinge{ii} = notBinge(~ismember(1:nNot,rNBI),:);
-    % Use 50 preBinge trials (minimum number across all 240), which means
-    % 7093 notBinge trials to approximate the ratio r
-    % --CREATES HUGE STRUCTURE-- manually create each iterate on Discovery
-    % instead
-%     for jj = 2:240
-%         thisPreCat = cat(1,preData{:,jj});
-%         pre240.testX{ii,jj} = cat(1,...
-%             thisPreCat(randperm(size(thisPreCat,1),50),:),...
-%             thisNotBinge(randperm(size(thisNotBinge,1),7093),:));
-%         pre240.testY{ii,jj} = cat(1,ones(50,1),zeros(7093,1));
-%     end
-end
-% Save
-save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'preBingeModelData.mat'],'pre5','thisNotBinge','preData')
-%% Open binge240 files
-[lassoA,logA,lassoRandA,logRandA] = deal(zeros(20,240));
-for ii = 1:100
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-        'preBinge240\',num2str(ii),'.mat'])
-    lassoA(ii,:) = cellfun(@(x) x.auc,preBingeLasso);
-    logA(ii,:) = cellfun(@(x) x.auc,preBingeLog);
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-        'preBinge240\',num2str(ii),'_Rand.mat'])
-    lassoRandA(ii,:) = cellfun(@(x) x.auc,preBingeLasso);
-    logRandA(ii,:) = cellfun(@(x) x.auc,preBingeLog);
-end
-%%
-% Get mean and std
-lassoAM = mean(lassoA,1);
-lassoAS = std(lassoA,[],1);
-lassoAC = conf(lassoA',0.95);
-logAM = mean(logA,1);
-logAS = std(logA,[],1);
 
-lassoRandAM = mean(lassoRandA,1);
-lassoRandAS = std(lassoRandA,[],1);
-lassoRandAC = conf(lassoRandA',0.95);
-logRandAM = mean(logRandA,1);
-logRandAS = std(logRandA,[],1);
-% Run t-tests w/ correction
-[~,~,pAdjLasso] = bulkT(lassoA,lassoRandA,1,'bc');
-lassoInd = logicFind(0.05,pAdjLasso,'>=');
-[~,~,pAdjLog] = bulkT(logA,logRandA,1,'bc');
-logInd = logicFind(0.05,pAdjLog,'>=');
-% Plot - scatterErr
-% scatterErr(1:240,lassoAM,lassoAS,1)
-% hold on
-% scatterErr(1:240,lassoRandAM,lassoRandAS,0)
-% 
-% scatterErr(1:240,logAM,logAS,1)
-% hold on
-% scatterErr(1:240,logRandAM,logRandAS,0)
-% Plot - shadedError
-figure; hold on
-shadedErrorBar(1:240,lassoAM,lassoAS,'b',1)
-shadedErrorBar(1:240,lassoRandAM,lassoRandAS,'k',1)
-plot(lassoInd,lassoRandAM(lassoInd),'.r')
-
-figure; hold on
-shadedErrorBar(1:240,logAM,logAS,'b',1)
-shadedErrorBar(1:240,logRandAM,logRandAS,'k',1)
-plot(logInd,logRandAM(logInd),'.r')
 %% Prep bingeNot data for low samples -> ADASYN to compare w/ low sample 
 % drinking
 load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\finalNew'...
@@ -1360,200 +1350,6 @@ xlabel('False Positive Rate')
 legend(h,{['Real: ',num2str(round(mean(a),2))],...
     ['Permuted: ',num2str(round(mean(aRand),2))]},'Location','se')
 title('Binge vs. Other')
-%% PeriDrink
-chan = [];
-pair = []; %#ok
-freq = 3;
-loc = 'SLSR';
-feat = 'a';
-pow = zeros(44,32);
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper3\'...
-    'periDrink\'],'.mat');
-for ii = 1:size(files,2)
-    load(files{ii})
-    for jj = 1:size(psdTrls,2)
-        if ~isempty(psdTrls{jj})
-            pow(ii,jj) = mean(psdTrls{jj}.relPow(freq,chan,:));
-        else
-            pow(ii,jj) = NaN;
-        end
-    end
-end
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\analyzed\'...
-    'drinkNotRaw.mat'])
-mDrink = mean(catData{1,1}(:,(chan-1)*6+freq));
-mNot = mean(catData{1,2}(:,(chan-1)*6+freq));
-figure
-hold on
-% Pre
-shadedErrorBar(15:16,fliplr(mean(pow(:,1:2),1,'omitnan').*100),...
-    fliplr(std(pow(:,1:2),[],1,'omitnan').*100),{'color',[0 0.45 0.74]})
-shadedErrorBar(12:15,fliplr(mean(pow(:,2:5),1,'omitnan').*100),...
-    fliplr(std(pow(:,2:5),[],1,'omitnan').*100),'-b')
-shadedErrorBar(1:12,fliplr(mean(pow(:,5:16),1,'omitnan').*100),...
-    fliplr(std(pow(:,5:16),[],1,'omitnan').*100))
-% Post
-shadedErrorBar(17:18,mean(pow(:,17:18),1,'omitnan').*100,...
-    std(pow(:,17:18),[],1,'omitnan').*100,{'color',[0 0.45 0.74]})
-shadedErrorBar(18:21,mean(pow(:,18:21),1,'omitnan').*100,...
-    std(pow(:,18:21),[],1,'omitnan').*100,'-b')
-shadedErrorBar(21:32,mean(pow(:,21:32),1,'omitnan').*100,...
-    std(pow(:,21:32),[],1,'omitnan').*100)
-% Settings
-set(gca,'XTick',[2:2:16,17:2:32],'XTickLabel',[-11.5:2:2.5,-2.5:2:12.5])
-xlim([1 32])
-xtickangle(90)
-plot([1 32],[mDrink mDrink].*100,'--','color',[0 0.45 0.74])
-plot([1 32],[mNot mNot].*100,'--k')
-text(33,mDrink.*100,'Drink','color',[0 0.45 0.74])
-text(33,mNot.*100,'Other')
-xlabel('Time (s)')
-ylabel(['% ',feat])
-title([loc,feat])
-%% PeriBinge
-% Channels: SL,SR,CL,CR; SLSR,SLCL,SLCR,SRCL,SRCR,CLCR
-% Freq: delta,theta,alpha,beta,lgamma,hgamma
-clear chan pair freq
-chan = [1]; %#ok
-pair = [];
-freq = 6;
-feat = 'hg';
-loc = 'SL';
-% Get preBinge and notBinge data
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'preBingeCombined'],'base','in');
-% Preallocate
-[prePow,preCoh] = deal(zeros(size(files,2),61));
-[notPow,notCoh] = deal(zeros(1,size(files,2)));
-for ii = 1:length(files)
-    if isempty(pair)
-        load(files{ii},'psdTrls')
-    else
-        load(files{ii},'coh')
-    end
-   % Only grab up to [-56,-51]
-   for t = 1:52
-       if isempty(pair)
-           prePow(ii,t) = mean(psdTrls{t}.relPow(freq,chan,:),'omitnan');
-       else
-           preCoh(ii,t) = mean(coh{t}.rel(pair,freq,:),'omitnan');
-       end
-   end
-   if isempty(pair)
-       notPow(ii) = mean(psdTrls{1,62}.relPow(freq,chan,:),'omitnan');
-   else
-       notCoh(ii) = mean(coh{1,62}.rel(pair,freq,:));
-   end
-end
-% Flip around
-prePow = [fliplr(prePow(:,1:52)),prePow(:,53:end)];
-preCoh = [fliplr(preCoh(:,1:52)),preCoh(:,53:end)];
-% Get preBingeInfluence data
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'preBingeInfluence'],'.mat');
-for ii = 1:length(files)
-    if isempty(pair)
-        load(files{ii},'psdTrls')
-    else
-        load(files{ii},'coh')
-    end
-    for t = 1:4
-        if isempty(pair)
-            prePow(ii,52+t) = mean(psdTrls{t}.relPow(freq,chan,:),...
-            'omitnan');
-        else
-            preCoh(ii,52+t) = mean(coh{t}.normBandCoh(pair,freq,:),...
-                'omitnan');
-        end
-    end
-end
-% Get Binge data
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'binge'],'base','in');
-for ii = 1:length(files)
-    if isempty(pair)
-        load(files{ii},'psdTrls')
-    else
-        load(files{ii},'coh')
-    end
-    % Only grab up to [4,9]
-    for t = 1:5
-        if isempty(pair)
-            prePow(ii,56+t) = mean(psdTrls{t}.relPow(freq,chan,:),...
-                'omitnan');
-        else
-            preCoh(ii,56+t) = mean(coh{t}.rel(pair,freq,:),'omitnan');
-        end
-    end
-end
-if isempty(pair)
-    mPre = mean(prePow,1,'omitnan');
-    sPre = std(prePow,[],1,'omitnan');
-else
-    mPre = mean(preCoh,1,'omitnan');
-    sPre = std(preCoh,[],1,'omitnan');
-end
-load(['C:\Users\Pythia\Documents\GreenLab\data\paper2\analyzed\'...
-    'bingeNotBingeTrial.mat'])
-nameVect = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
-featI = logicFind([loc,feat],nameVect,'==');
-bingeCat = cat(1,data{1}{:,1});
-notCat = cat(1,data{1}{:,2});
-mNot = mean(notCat(:,featI));
-mBinge = mean(bingeCat(:,featI));
-% Get PostBinge data
-files = fileSearch(['C:\Users\Pythia\Documents\GreenLab\data\paper2\'...
-    'postBinge'],'(e','ex','test','ex');
-% Preallocate
-[postPow,postCoh] = deal(zeros(size(files,2),61));
-for ii = 1:length(files)
-    if isempty(pair)
-        load(files{ii},'psdTrls')
-    else
-        load(files{ii},'coh')
-    end
-    for t = 1:61
-        if isempty(pair)
-            postPow(ii,t) = mean(psdTrls{t}.relPow(freq,chan,:),'omitnan');
-        else
-            postCoh(ii,t) = mean(coh{t}.rel(pair,freq,:),'omitnan');
-        end
-    end
-end
-if isempty(pair)
-    mPost = mean(postPow,1,'omitnan');
-    sPost = std(postPow,[],1,'omitnan');
-else
-    mPost = mean(postCoh,1,'omitnan');
-    sPost = std(postCoh,[],1,'omitnan');
-end
-% Plot
-figure
-hold on
-% Pre and beginning of binge
-shadedErrorBar(1:52,mPre(1:52).*100,sPre(1:52).*100)
-shadedErrorBar(1:52,mPre(1:52).*100,sPre(1:52).*100)
-shadedErrorBar(52:55,mPre(52:55).*100,sPre(52:55).*100,'-b')
-shadedErrorBar(55:61,mPre(55:61).*100,sPre(55:61).*100,...
-    {'color',[0 0.45 0.74]})
-% End and post
-shadedErrorBar(63:69,mPost(1:7).*100,sPost(1:7).*100,...
-    {'color',[0 0.45 0.74]})
-shadedErrorBar(69:72,mPost(7:10).*100,sPost(7:10).*100,'-b')
-shadedErrorBar(72:123,mPost(10:61).*100,sPost(10:61).*100)
-plot(1:123,ones(1,123).*mNot.*100,'--k')
-plot(1:123,ones(1,123).*mBinge.*100,'--','color',[0 0.45 0.74])
-% Settings
-xlim([1 121])
-set(gca,'XTick',[1:5:61,63:5:123],...
-    'XTickLabel',[-53.5:5:6.5,-6.5:5:53.5])
-xtickangle(90)
-title([loc,' ',feat]);
-ylabel(['% ',feat])
-text(123,mean(mBinge)*100,'Binge','color',[0 0.45 0.74])
-text(123,mNot*100,'Other')
-xlabel('Time (s)')
-box off
 %% Find files with >20 drink samples
 [data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
     'data\paper3\drinkNot\'],{'.mat'},{'pow','coh'},'trl','rel');

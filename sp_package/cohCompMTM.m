@@ -1,4 +1,4 @@
-function [coh] = cohCompMTM(trls,adfreq,NW,eoi,bands,chans,zeroedChannel,vis)
+function [coh] = cohCompMTM(trls,adfreq,NW,eoi,bands,chans,zeroedChannel,winSize,overlap,vis)
 % Get channel combinations
 cmbs = nchoosek(1:chans,2);
 % Determine combinations to skip due to zeroed channels
@@ -23,11 +23,27 @@ for ei = 1:size(eoi,1)
             ': Calculating coherence for channel pair ',...
             num2str(cmbs(ci,1)),'-',num2str(cmbs(ci,2))])
         for ti = 1:nTrls
+            if discrete
             % Set up the two signals
             x = trls{1,ei}.trial(cmbs(ci,1),:,ti);
             y = trls{1,ei}.trial(cmbs(ci,2),:,ti);
             % Calculate coherence
             [f,thisCxy,~,~,~] = cmtm(x,y,1/adfreq,NW,0,0,0);
+            else
+                % Convert winSize from seconds to samples
+                winSize = winSize*adfreq;
+                % Set up counter and start
+                c = 0;
+                start = 1;
+                while start+winSize < size(trls{1,ei}.trial,2)
+                    start = 1+c*winSize*overlap;
+                    stop = start+winSize;
+                    x = trls{1,ei}.trial(cmbs(ci,1),start:stop,ti);
+                    y = trls{1,ei}.trial(cmbs(ci,2),start:stop,ti);
+                    [f,thisCxy(:,c)] = cmtm(x,y,1/adfreq,NW,0,0,0);
+                    c = c+1;
+                end
+            end
             % Truncate frequeny vector to 100 Hz
             f = f(1:nearest_idx3(100,f));
             % Truncate signal and store

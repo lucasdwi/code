@@ -70,47 +70,213 @@ for ii = 1:6
         ['Permuted: ',num2str(round(mean(aRand(ii,:)),2)),'\pm',...
         num2str(round(conf(aRand(ii,:),0.95),4))]},'location','se')
 end
-%% Estrus vs. Diestrus
+%% Male vs. Female - Pre - Data
 [data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\maleFemale\processed\'],{'estrus';'di'},{'pow','coh'},'avg','');
+    'data\maleFemale\processedOld\'],{'.mat'},{'pow','coh'},'avg','');
+male = cat(1,data{1}{[5:12,15,16,]});
+female = cat(1,data{1}{[1:4,13,14,17:end]});
+data = [male;female];
+animal{1} = 1;
+animal{2} = 2:3;
+animal{3} = 4;
+animal{4} = 5:6;
+animal{5} = 7;
+animal{6} = 8;
+animal{7} = 9:10;
+
+animal{8} = 11:14;
+animal{9} = 15:16;
+animal{10} = 17:18;
+animal{11} = 19:23;
+animal{12} = 24:29;
+animal{13} = 30:34;
+animal{14} = 35:36;
+animal{15} = 37;
+animal{16} = 38:41;
+animal{17} = 42:45;
+%% Male vs. Female - Pre - Model
+cd(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleFemalePre\'])
+err = [];
+for ii = 1:100
+    load(['maleFemalePre',num2str(ii),'.mat'])
+    err(:,ii) = allLambda{1}.allErr;
+end
+cd('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleFemalePrePerm\')
+permErr = [];
+for ii = 1:6
+    load(['maleFemalePrePerm',num2str(ii),'.mat'])
+    for jj = 1:1000
+        permErr(ii,jj,:) = perm{jj}.err;
+    end
+end
+%% Estrus vs. Diestrus - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processedOld\'],{'estrus';'di'},{'pow','coh'},'avg','');
 estrus = cat(1,data{1,1}{:});
 diestrus = cat(1,data{1,2}{:});
 data = [estrus;diestrus];
 y = [ones(size(estrus,1),1);zeros(size(diestrus,1),1)];
-%% Estrus vs. Male
-[data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\',{'estrus';'male'},{'pow','coh'},'avg','');
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'estrusDiestrusData.mat'],'data','y')
+%% Estrus vs. Diestrus - Model
+load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\phase1.mat'])
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Estrus vs. Diestrus')
+xlim([10 90])
+%% Estrus vs. Male - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processed\'],{'estrus';'male'},{'pow','coh'},'avg',...
+    '');
 estrus = cat(1,data{1,1}{:});
 male = cat(1,data{1,2}{:});
 data = [estrus;male];
 y = [ones(size(estrus,1),1);zeros(size(male,1),1)];
-% for ii = 1:size(data,2)
-%     mdl = fitglm(data(:,ii),y,'distribution','binomial');
-%     r(ii) = mdl.Rsquared.Ordinary;
-% end
-%% Female vs. Male
-[data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\',{'di';'male'},{'pow','coh'},'avg','');
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'estrusMaleData.mat'],'data','y')
+%% Estrus vs. Male - Model
+load('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleFemale1.mat')
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Male vs. Estrus')
+xlim([10 90])
+%% Diestrus vs. Male - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processed\'],{'di';'male'},{'pow','coh'},'avg','');
 female = cat(1,data{1,1}{:});
 male = cat(1,data{1,2}{:});
 data = [female;male];
 y = [ones(size(female,1),1);zeros(size(male,1),1)];
-%% Estrus vs. Pro
-[data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\',{'estrus';'pro'},{'pow','coh'},'avg','');
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'diestrusMaleData.mat'],'data','y')
+%% Diestrus vs. Male - Model
+load('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleDi1.mat')
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Male vs. Diestrus')
+xlim([10 90])
+%% Estrus vs. Pro - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processedOld\'],{'estrus';'pro'},{'pow','coh'},'avg','');
 estrus = cat(1,data{1,1}{:});
 pro = cat(1,data{1,2}{:});
 data = [estrus;pro];
 y = [ones(size(estrus,1),1);zeros(size(pro,1),1)];
-%% Diestrus vs. Pro
-[data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\',{'di';'pro'},{'pow','coh'},'avg','');
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'estrusProestrusRestData.mat'],'data','y')
+%% Estrus vs. Pro - Model
+load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'estrusProestrusRestModel.mat'])
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Estrus vs. Proestrus')
+xlim([10 90])
+%% Diestrus vs. Pro - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processedOld\'],{'di';'pro'},{'pow','coh'},'avg','');
 diestrus = cat(1,data{1,1}{:});
 pro = cat(1,data{1,2}{:});
 data = [diestrus;pro];
 y = [ones(size(diestrus,1),1);zeros(size(pro,1),1)];
-%% Pro vs. Male
-[data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\processed\',{'pro';'male'},{'pow','coh'},'avg','');
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'diestrusProestrusRestData.mat'],'data','y')
+%% Diestrus vs. Pro - Model
+load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'diestrusProestrusRestModel.mat'])
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Diestrus vs. Proestrus')
+xlim([10 90])
+%% Pro vs. Male - Data
+[data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
+    'data\maleFemale\processedOld\'],{'pro';'male'},{'pow','coh'},'avg','');
 pro = cat(1,data{1,1}{:});
 male = cat(1,data{1,2}{:});
 data = [pro;male];
 y = [ones(size(pro,1),1);zeros(size(male,1),1)];
+save(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'proestrusMaleRestData.mat'],'data','y')
+%% Proestrus vs. Male - Model
+load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'proestrusMaleRestModel.mat'])
+doubleHist((1-real{1}.err).*100,(1-perm{1}.err).*100,'xlab','Accuracy (%)',...
+    'main','Proestrus vs. Male')
+xlim([10 90])
+%% Diestrus vs. Male - During drinking
+cd('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\diestrusMaleDuring\')
+for ii = 1:100
+    load(['maleDiDuring',num2str(ii),'.mat'])
+    real(ii) = accArray{1}.acc;
+    perm(ii) = accArrayPerm{1}.acc;
+    
+    realCV(ii,:) = (1-allLambda{1}.allErr)*100;
+    permCV(ii,:) = (1-allLambdaPerm{1}.allErr)*100;
+end
+doubleHist(real,perm)
+doubleHist(reshape(realCV,1,10000),reshape(permCV,1,10000))
+%% Diestrus vs. Male - During drinking - Perm
+cd(['C:\Users\Pythia\Documents\GreenLab\data\'...
+    'maleFemale\diestrusMaleDuringPerm\'])
+err = [];
+for ii = 1:20
+    load(['maleDiDuringPerm',num2str(ii),'.mat'])
+    for jj = 1:20
+        err = [err,perm{jj}.err];
+    end
+end
+%% Diestrus & Male - Drink amount - In session - Continuous
+cd(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'diestrusMaleDrinkAmountCont\'])
+for ii = 1:100
+    load(['drinkAmount',num2str(ii),'.mat'])
+    realAcc(ii,:) = accArray{1}.acc;
+    permAcc(ii,:) = accArrayPerm{1}.acc;
+end
+realAcc = reshape(realAcc,1,600);
+permAcc = reshape(permAcc,1,600);
+doubleHist(abs(realAcc),abs(permAcc),'main',...
+    'During drink - Continuous - Naive','xlab','MAE')
+%% Diestrus & Male - Drink amount - In session - Median split
+cd(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'diestrusMaleDrinkAmountBinom'])
+for ii = 1:100
+    load(['drinkAmountMedian',num2str(ii),'.mat'])
+    realAcc(ii,:) = accArray{1}.acc;
+    permAcc(ii,:) = accArrayPerm{1}.acc;
+    
+    realCV(ii,:) = 1-allLambda{1}.allErr;
+    permCV(ii,:) = 1-allLambdaPerm{1}.allErr;
+end
+doubleHist(realAcc,permAcc,'main','During - Median split - Naive',...
+    'xlab','Accuracy')
+doubleHist(reshape(realCV,1,10000),reshape(permCV,1,10000),'main',...
+    'During - Median split - CV','xlab','Accuracy')
+%% Diestrus & Male - Animal detector - Pre drinking
+permErr = [];
+for ii = 1:9
+    load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+        'diestrusMalePerm\diestrusMalePerm',num2str(ii),'.mat'])
+    perm = perm(~cellfun(@isempty,perm));
+    for jj = 1:size(perm,2)
+        permErr = [permErr,perm{jj}.err];
+    end
+end
+figure
+histogram(reshape(permErr,1,numel(permErr)))
+%% Male vs. Female - During
+cd('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleFemaleDuring')
+err = [];
+for ii = 1:100
+    load(['maleFemaleDuring',num2str(ii),'.mat'])
+    err = [err,allLambda{1}.allErr];
+end
+% Animal detector
+cd('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleFemaleDuring')
+permErr = [];
+for ii = 1:20
+    load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+        'maleFemaleDuringPerm\maleFemaleDuringPerm',num2str(ii),'.mat'])
+%     perm = perm(~cellfun(@isempty,perm));
+    for jj = 1:size(perm,2)
+        permErr = [permErr,perm{jj}.err];
+    end
+end
+doubleHist(1-reshape(err,1,numel(err)),1-reshape(permErr,1,numel(permErr)),'main','Male vs. Female - During')
 %% Load data by trials - for getting first 10 minutes of pre-EtOH data
 [data,samp,files] = collateData('C:\Users\Pythia\Documents\GreenLab\data\paper3\drinkNot\',{'.mat'},{'pow','coh'},'trl','rel');
 % Load alcohol amounts
@@ -134,7 +300,7 @@ for ii = 1:size(data{1},1)
     % Grab alcohol amount
     yAlc(ii,1) = alc{ind,2};
 end
-% save('C:\Users\Pythia\Documents\GreenLab\data\paper3\preDataAlc.mat','preData','yAlc')
+save('C:\Users\Pythia\Documents\GreenLab\data\paper3\preDataAlc.mat','preData','yAlc')
 %% Build model with only males and only female (diestrus); test across
 load('C:\Users\Pythia\Documents\GreenLab\data\paper3\preDataAlc.mat')
 group = cellstr([repmat('m',18,1);'d';'p';'e';'d';'d';'m';'m';'d';'p';...
@@ -155,7 +321,7 @@ real = allLambda{1}.allErr;
 perm = cellfun(@(x) x.allErr, allLambdaPerm,'UniformOutput',0);
 perm = cat(1,perm{:});
 doubleHist(real,perm,'Main','Predicting alcohol consumption','xlab',...
-    'MAE (g/kg)');
+    'Deviance');
 %% Predicting drinking amounts - males
 load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
     'preDrinkAlcMale.mat'])
@@ -163,7 +329,7 @@ real = allLambda{1}.allErr;
 perm = cellfun(@(x) x.allErr,allLambdaPerm,'UniformOutput',0);
 perm = cat(1,perm{:});
 doubleHist(real,perm,'Main','Predicting alcohol consumption: Males',...
-    'xlab','MAE (g/kg)');
+    'xlab','Deviance');
 %% Predicting drinking amounts - diestrus female
 load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
     'preDrinkAlcDi.mat'])
@@ -171,10 +337,17 @@ real = allLambda{1}.allErr;
 perm = cellfun(@(x) x.allErr,allLambdaPerm,'UniformOutput',0);
 perm = cat(1,perm{:});
 doubleHist(real,perm,'Main','Predicting alcohol consumption: Diestrus',...
+    'xlab','Deviance');
+%% Predicting drinking amounts - both male and diestrus
+load(['C:\Users\Pythia\Documents\GreenLab\data\maleFemale\'...
+    'preDrinkAlcMaleDi.mat'])
+real = allLambda{1}.allErr;
+perm = cellfun(@(x) x.allErr,allLambdaPerm,'UniformOutput',0);
+perm = cat(1,perm{:});
+doubleHist(real,perm,'Main','Predicting alcohol consumption: Male/Di',...
     'xlab','MAE (g/kg)');
-
 %%
-load('C:\Users\Lucas\Desktop\maleFemale\phase1.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\phase1.mat')
 realAcc = (1-real{1}.err).*100;
 rM = mean(realAcc);
 rS = std(realAcc);
@@ -218,7 +391,7 @@ legend({['Real: ',num2str(round(rM)),'\pm',num2str(round(rS)),'%'],['Permuted: '
 text(12,.076,['d = ',num2str(round(d,2))])
 box off
 %%
-load('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleDi1.mat')
+load('C:\Users\Pythia\Documents\GreenLab\data\maleFemale\maleDiestrusModel.mat')
 realAcc = (1-real{1}.err).*100;
 rM = mean(realAcc);
 rS = std(realAcc);

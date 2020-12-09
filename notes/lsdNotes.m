@@ -23,6 +23,8 @@ waterData = cat(1,waterData{:});
 waterFiles = cat(2,waterFiles{:})';
 nameVect = names({'ILL','CA1L','PLL','NAcL','PLR','CA1R','ILR','NAcR'},...
     {'d','t','a','b','lg','hg'});
+'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+    'rNAcC'}
 %% Create animal variable for mixed effects models
 group = cell(1,3);
 for ii = 1:size(data,2)
@@ -46,7 +48,7 @@ baseSal = cat(1,data{1,3}{:,1},waterData{[1:2,5:11,16:17],2});
 baseSalG = cat(1,group{1,3}{:,1},waterGroup{[1:2,5:11,16:17],2});
 baseLSD = cat(1,data{1,2}{:,1},waterData{[3:4,12:15,18:25],2});
 baseLSDG = cat(1,group{1,2}{:,1},waterGroup{[3:4,12:15,18:25],2});
-% Get 48hour saline and lsd
+% Get 24hour saline and lsd
 sal24 = cat(1,data{1,1}{[1,3:5,8],1});
 sal24G = cat(1,group{1,1}{[1,3:5,8],1});
 lsd24 = cat(1,data{1,1}{[2,6,7,9:11],1});
@@ -73,10 +75,10 @@ for ii = 1:100
     prob = predict(mdl,zscore(testX));
     [fpr(:,ii),tpr(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
         'TVals',0:1/100:1,'UseNearest',0);
-    [prec(:,ii),recall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
-        'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
+%     [prec(:,ii),recall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
+%         'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
 end
-%% Compare saline baselines (+ post injection) to 24 hour
+% Compare saline baselines (+ post injection) to 24 hour
 nTrain = 1300;
 nTest = 325;
 newBaseSal = [baseSal;postSal];
@@ -94,10 +96,10 @@ for ii = 1:100
     prob = predict(mdl,zscore(testX));
     [fpr24(:,ii),tpr24(:,ii),~,a24(ii)] = perfcurve(testY,prob,1,...
         'TVals',0:1/100:1,'UseNearest',0);
-    [prec24(:,ii),recall24(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
-        'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
+%     [prec24(:,ii),recall24(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
+%         'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
 end
-%% Compare base to post injection LSD
+% Compare base to post injection LSD
 nTrain = 1300;
 nTest = 325;
 for ii = 1:100
@@ -114,10 +116,10 @@ for ii = 1:100
     prob = predict(mdl,zscore(testX));
     [lsdFPR(:,ii),lsdTPR(:,ii),~,lsdA(ii)] = perfcurve(testY,prob,1,...
         'TVals',0:1/100:1,'UseNearest',0);
-    [lsdPrec(:,ii),lsdRecall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
-        'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
+%     [lsdPrec(:,ii),lsdRecall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
+%         'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
 end
-%% Compare base to 24 hour LSD
+% Compare base to 24 hour LSD
 nTrain = 1300;
 nTest = 325;
 for ii = 1:100
@@ -134,10 +136,10 @@ for ii = 1:100
     prob = predict(mdl,zscore(testX));
     [lsd24FPR(:,ii),lsd24TPR(:,ii),~,lsd24A(ii)] = perfcurve(testY,prob,1,...
         'TVals',0:1/100:1,'UseNearest',0);
-    [lsd24Prec(:,ii),lsd24Recall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
-        'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
+%     [lsd24Prec(:,ii),lsd24Recall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
+%         'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
 end
-%% Compare LSD to saline acute
+% Compare LSD to saline acute
 nTrain = 2600;
 nTest = 650;
 for ii = 1:100
@@ -154,8 +156,8 @@ for ii = 1:100
     prob = predict(mdl,zscore(testX));
     [lsdSalFPR(:,ii),lsdSalTPR(:,ii),~,lsdSalA(ii)] = perfcurve(testY,prob,...
         1,'TVals',0:1/100:1,'UseNearest',0);
-    [lsdSalPrec(:,ii),lsdSalRecall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
-        'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
+%     [lsdSalPrec(:,ii),lsdSalRecall(:,ii),~,a(ii)] = perfcurve(testY,prob,1,...
+%         'TVals',0:1/100:1,'UseNearest',0,'XCrit','prec');
 end
 %% Plot all models
 figure
@@ -200,7 +202,7 @@ parfor ii = 1:100
       train = t([baseLSDInd(1:nTrain),postLSDInd(1:nTrain)],:);
       test = t([baseLSDInd(1:nTest),postLSDInd(1:nTest)],:);
       % Build linear mixed effects model with animal ID as random effect
-      mdl = 
+%       mdl = 
 end
 %% Single feature models
 parfor ii = 1:100
@@ -243,10 +245,10 @@ scatterErr(1:216,sortA,c(sortI),0)
 %% Open Lasso results
 lsdA = []; salA = [];
 for ii = 1:100
-%    load(['C:\Users\Pythia\Documents\GreenLab\data\lsd\lassoBaseAcute\',...
+%    load(['D:\lsd\lassoBaseAcute\',...
 %        num2str(ii),'.mat']) 
-%    load(['C:\Users\Pythia\Documents\GreenLab\data\lsd\lassoBase24\',...
-%        num2str(ii),'.mat'])
+   load(['D:\lsd\lassoBase24\',...
+       num2str(ii),'.mat'])
    lsdA(ii) = aLSD;
    lsdX(ii,:) = xLSD;
    lsdY(ii,:) = yLSD;

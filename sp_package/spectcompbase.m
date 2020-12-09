@@ -27,6 +27,11 @@ function [LFPTs,trls,clnTrls,psdTrls,coh,stdPower,stdCoh,hist] = spectcompbase(c
 %       (interval) and a 3 second window centered at the scalar tag2.
 %       N.B.: if all the data use the tag 'all', otherwise use tags
 %       corresponding to event markers.
+%   fixed = whether or not to use fixed trializing; if 1 (fixed), then will
+%       use contiguous trials that disregard NaNs; if 0 (not fixed) then 
+%       will maximize the number of trials without NaNs
+%   discrete = whether or not analysis is discrete; 0 for continuous, 1 for
+%       discrete
 %   vis = whether or not to plot power and coherence; format = 'y' or 'n'
 %   saveParent = parent directory path to save plots and files; format:
 %       string N.B.: if directory/file exists will warn about overwritting
@@ -76,6 +81,8 @@ thresh = cfg.thresh;
 onset = cfg.onset;
 offset = cfg.offset;
 foi = cfg.foi;
+fixed = cfg.fixed;
+discrete = cfg.discrete;
 bands = cfg.bands;
 overlap = cfg.overlap;
 cohMethod = cfg.cohMethod;
@@ -117,13 +124,14 @@ load(file,'LFPTs','eventTs','adfreq');
 skipInd = ~ismember(1:size(LFPTs.data,1),skip);
 LFPTs.data = LFPTs.data(skipInd,:);
 LFPTs.label = LFPTs.label(skipInd);
-[LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,...
-    adfreq,dsf,thresh,onset,offset,eoi,eventTs); %#ok<NODEF>
+[LFPTs,chk_nan,zeroedChannel,nanInd,clnTrls,trls,adfreq] = preProcess(LFPTs,...
+    adfreq,dsf,thresh,onset,offset,eoi,eventTs,fixed,discrete); %#ok<NODEF>
 %% Calculate power spectra and plot 
 tic
 disp(['Calculating power spectra and plotting average total power with '...
     'powerComp.m'])
-[psdTrls,powerPlots] = powerComp(trls,adfreq,bands,nFilt,foi,eoi,vis);
+[psdTrls,powerPlots] = powerComp(trls,adfreq,bands,nFilt,foi,eoi,...
+    discrete,nanInd,vis);
 toc
 %% Calculate power correlations - requires at least 2 trials otherwise 
 % gives NaNs
@@ -132,25 +140,27 @@ disp('Calculating power corrleations using powerCorr.m...')
 [r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
 toc
 %% Calculate coherence
+
 if strcmpi(cohMethod,'mat')
     tic
     disp('Using mscohere.m to calculate coherence...')
     [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,...
-        nFilt,vis,cohMethod,'overlap',overlap);
+        nFilt,vis,cohMethod,discrete,nanInd,'overlap',overlap);
     toc
 elseif strcmpi(cohMethod,'mtm')
     tic
     disp('Using cmtm.m to calculate coherence...')
     [coh,cohPlots] = cohComp(trls,adfreq,eoi,bands,zeroedChannel,foi,...
-        nFilt,vis,cohMethod,'NW',8);
+        nFilt,vis,cohMethod,discrete,nanInd,'NW',8);
     toc
 end
 %% Create history structure - Stores all inputs used and a few variables
 hist.sdir = sdir; hist.file = file; hist.filter = nFilt; hist.dsf = dsf;
-hist.thresh = thresh; hist.onset = onset; hist.offset = offset; 
-hist.foi = foi; hist.bands = bands; hist.overlap = 1-overlap; 
-hist.cohMethod = cohMethod; hist.eoi = eoi; hist.saveParent = saveParent; 
-hist.adfreq = adfreq; hist.chk_nan = chk_nan; hist.eventTs = eventTs;
+hist.thresh = thresh; hist.onset = onset; hist.offset = offset;
+hist.foi = foi; hist.fixed = fixed; hist.discrete = discrete;
+hist.bands = bands; hist.overlap = 1-overlap; hist.cohMethod = cohMethod; 
+hist.eoi = eoi; hist.saveParent = saveParent; hist.adfreq = adfreq; 
+hist.chk_nan = chk_nan; hist.eventTs = eventTs; hist.nanInd = nanInd;
 
 if exist('bingeSize','var')
    hist.bingeSize = bingeSize; 

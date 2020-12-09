@@ -1,11 +1,11 @@
 %% Addpaths
 % Code
-addpath(genpath('C:\Users\GreenLab\Documents\GitHub'))
+addpath(genpath('G:\GreenLab\code\'))
 % Remove fieldtrip
-% rmpath(genpath('C:\Users\Pythia\Documents\GreenLab\code\outside\fieldtrip-master\'))
+% rmpath(genpath('G:\GreenLab\fieldtrip-master\'))
 % Data
-% addpath(genpath('C:\Users\Pythia\Documents\GreenLab\data\'))
-cd('C:\Users\GreenLab\desktop')
+addpath(genpath('G:\GreenLab\data\'))
+cd('G:\GreenLab\')
 %% Set up plotting defaults
 % Reset defaults (perhaps redundant, but better safe than sorry)
 reset(0);
@@ -30,4 +30,4 @@ set(0,'defaultAxesZColor','k')
 % Turn off legend box
 set(0,'defaultLegendBox','off')
 % Set line width to 2
-set(0,'defaultLineLineWidth',2)
+% set(0,'defaultLineLineWidth',2)

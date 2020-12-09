@@ -108,6 +108,10 @@ end
 if ~isfield(cfg,'minTerm') || isempty(cfg.minTerm)
     cfg.minTerm = '1se';
 end
+% Get training weights
+if ~isempty(cfg.weights)
+    trainWeights = cfg.weights;
+end
 %% Split data into naive-test set and training set
 % Use CV to train best model, then get error from predicting naive-test set
 for rep = 1:repeats
@@ -330,8 +334,10 @@ for rep = 1:repeats
         % Also get sign of betas for predictive directionality
         signBeta(r,:) = sign(mean(betas(:,:,r)));
     end
+    % Pull out model
+    mdl{r} = CVfits{bestLambdaInds(r),r};
     toc
-    %% Use above models to predict naive dataset, if extistent
+    %% Use above models to predict naive dataset, if existent
     if ~isempty(cfg.naive)
         nPred = size(testY,1);
         % Preallocate
@@ -342,13 +348,13 @@ for rep = 1:repeats
             % If family is gaussian (continuous), use defualt prediction
             % 'type' ('link')
             if strcmpi(family,'gaussian') || strcmpi(family,'poisson')
-                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm]);
+                [predY(r,:)] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm]);
                 % Compare predY to testY: difference
                 acc(r,:) = predY(r,:) - testY(:,r)';
             % Otherwise, if binomial or multinomial, use 'response' type to
             % get probability of group 1 assignment
             elseif strcmpi(family,'binomial') || strcmpi(family,'multinomial')
-                [predY(r,:)] = cvglmnetPredict(CVfits{bestLambdaInds(r),r},testX,['lambda_',cfg.minTerm],'response');
+                [predY(r,:)] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm],'response');
                 [~,~,~,acc(r)] = perfcurve(testY,predY(r,:),1);
             end
         end
@@ -391,6 +397,7 @@ for rep = 1:repeats
     % Create acc and CVfits array
     accArray{rep}.acc = acc;
     accArray{rep}.pred = predY;
+    accArray{rep}.mdl = mdl;
     cvFitsArray{rep} = CVfits;
     % Create hist array
     hist.cfg = cfg;
@@ -400,4 +407,6 @@ for rep = 1:repeats
     hist.alpha = alph;
     hist.repeats = repeats;
     hist.testInd = naiveInd;
+    hist.trainX = trainX;
+    hist.testX = testX;
 end

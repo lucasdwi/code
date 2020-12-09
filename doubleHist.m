@@ -36,15 +36,16 @@ addParameter(p,'main','',@isstr);
 addParameter(p,'xlab','',@isstr);
 addParameter(p,'ylab','Percent of Models (%)',@isstr);
 addParameter(p,'loc','Best',@isstr);
+addParameter(p,'norm','probability',@isstr);
 parse(p,real,perm,varargin{:});
 %%
 figure
 hold on
 % Plot real in black with white outline
-h(1) = histogram(real,'Normalization','probability','FaceColor','k',...
+h(1) = histogram(real,'Normalization',p.Results.norm,'FaceColor','k',...
     'FaceAlpha',1,'EdgeColor','w');
 % Plot perm in white with black outline
-h(2) = histogram(perm,'Normalization','probability','FaceColor','w',...
+h(2) = histogram(perm,'Normalization',p.Results.norm,'FaceColor','w',...
     'FaceAlpha',1);
 % Plot dummy for effect size in legend
 h(3) = plot(NaN,NaN,'Marker','none','LineStyle','none');

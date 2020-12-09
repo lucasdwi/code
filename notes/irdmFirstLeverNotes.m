@@ -157,7 +157,7 @@ for ii = 1:100
     [xRnd(ii,:),yRnd(ii,:),~,aRnd(ii,:)] = perfcurve([ones(15,1);...
         zeros(15,1)],prob,1,'TVals',0:1/99:1,'UseNearest',0);
 end
-%% Exmaple data
+%% Example data
 figure
 hold on
 plot(LFPTs.tvec,LFPTs.data(2,:))

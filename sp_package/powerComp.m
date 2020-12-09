@@ -1,4 +1,4 @@
-function [psdtrlData,powerPlots] = powerComp(trlData,adfreq,bands,nFilt,foi,eoi,vis)
+function [psdtrlData,powerPlots] = powerComp(trlData,adfreq,bands,nFilt,foi,eoi,discrete,nanInd,vis)
 %% Uses pwelch to compute power and plots overall PSD per channel and 
 % either a distribution of power per frequency band for each channel or a 
 % relative change in each frequency band 
@@ -15,6 +15,10 @@ function [psdtrlData,powerPlots] = powerComp(trlData,adfreq,bands,nFilt,foi,eoi,
 % foi = frequencies of interest; format = integer row vector [low step
 %   high]
 % eoi = events of interest
+% discrete = whether or not analysis is discrete; 0 for continuous, 1 for
+%   discrete
+% nanInd = indices of NaNs; from oneChan so includes NaNs collapsed from
+%   all channels; only used during continuous analysis (discrete = 0)
 % vis = whether or not to plot power spectra; format = 'y' or 'n'
 %__________________________________________________________________________
 % Outputs:
@@ -41,7 +45,7 @@ for ii = 1:size(eoi,1)
 end
 % Set nTrials to zero if no events
 nTrials(empt) = 0;
-% Count number of events, including potnetially empty ones
+% Count number of events, including potentially empty ones
 nEvents = size(eoi,1);
 % Count number of bands
 nBand = size(bands,1);
@@ -49,7 +53,8 @@ nBand = size(bands,1);
 % Preallocate psdtrlData
 psdtrlData = cell(1,size(trlData,2));
 % Uses nearest power of 2 for speed.
-[~,hammSize] = nearestPow2(adfreq/foi(2));
+% [~,hammSize] = nearestPow2(adfreq/foi(2));
+hammSize = 126;
 % Only calculate power spectra for events with data
 for ii = logicFind(0,empt,'==')
     for jj = 1:nTrials(ii)
@@ -58,31 +63,78 @@ for ii = logicFind(0,empt,'==')
             data = trlData{ii}.trial(k,:,jj);
             win = hamming(hammSize);
             fVect = foi(1):foi(2):foi(3);
-            % Returns two-sided Welch PSD estimate at fois
-            [Pxx,F] = pwelch(data,win,[],fVect,adfreq);
-            % Convert PSD into dB and store
-            psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
+            if discrete
+                % Returns two-sided Welch PSD estimate at fois
+                [Pxx,F] = pwelch(data,win,[],fVect,adfreq);
+                % Convert PSD into dB and store
+                psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
+            else
+                % Check if NaNed data
+                if isnan(sum(data))
+                    % Calculate number of time windows
+                    nx = size(data,2);
+                    nwin = length(win);
+                    noverlap = nwin/2;
+                    nTime = fix((nx-noverlap)/(nwin-noverlap));
+                    psdtrlData{ii}.Pow(k,:,jj,:) = nan(1,length(fVect),...
+                        1,nTime);
+                else
+                    % Compute spectrogram
+                    [~,F,t,Pxx] = spectrogram(data,win,[],fVect,adfreq);
+                    % Convert into dB and store
+                    psdtrlData{ii}.Pow(k,:,jj,:) = reshape((10*log10(abs(...
+                        Pxx))),1,100,1,size(Pxx,2));
+                end
+            end
             % Check if notch filter needs to be interpolated over
-            if ~isempty(nFilt)
+            if ~isempty(nFilt) && exist('F','var')
                 notchInd = [nearest_idx3(nFilt(1),F);...
                     nearest_idx3(nFilt(2),F)];
                 notch = notchInd(1):notchInd(2);
-                psdtrlData{ii}.Pow(k,notch,jj) = NaN;
+                psdtrlData{ii}.Pow(k,notch,jj,:) = NaN;
                 % Set up interp1 inputs
-                x = find(~isnan(psdtrlData{ii}.Pow(k,:,jj)));
-                v = psdtrlData{ii}.Pow(k,~isnan(...
-                    psdtrlData{ii}.Pow(k,:,jj)),jj);
-                xq = find(isnan(psdtrlData{ii}.Pow(k,:,jj)));
-                psdtrlData{ii}.Pow(k,notch,jj) = interp1(x,v,xq,'linear');
+                for ti = 1:size(psdtrlData{ii}.Pow,4)
+                    x = find(~isnan(psdtrlData{ii}.Pow(k,:,jj,ti)));
+                    % If one of the NaNed windows, no need to interpolate
+                    if ~isempty(x)
+                        v = psdtrlData{ii}.Pow(k,~isnan(...
+                            psdtrlData{ii}.Pow(k,:,jj,ti)),jj,ti);
+                        xq = find(isnan(psdtrlData{ii}.Pow(k,:,jj,ti)));
+                        psdtrlData{ii}.Pow(k,notch,jj,ti) = interp1(x,v,...
+                            xq,'linear');
+                    end
+                end
             end
         end
     end
-    % Calculate mean and standard deviation across trials
-    psdtrlData{ii}.Overall = mean(psdtrlData{ii}.Pow,3);
-    psdtrlData{ii}.OverallStd = std(psdtrlData{ii}.Pow,0,3);
-    % Also store frequency vectors and hammSize
+    % Store hammSize
     psdtrlData{ii}.hammSize = hammSize;
-    psdtrlData{ii}.f = F;
+    if exist('F','var')
+        psdtrlData{ii}.f = F;
+    end
+    % Store time points of windows (for continuous); also remove NaNed data
+    if exist('t','var')
+       psdtrlData{ii}.t = t;
+       % Cycle through all time windows and determine if they overlap with
+       % nanInd
+       % First convert nanInd to time
+       nanTime = trlData{ii}.time(nanInd);
+       % Convert window size to seconds
+       winSize = hammSize/adfreq;
+       % Get half window size
+       halfWin = winSize/2;
+       for ti = 1:numel(t)
+           % Calculate this window
+           thisWin = [psdtrlData{ii}.t(ti)-halfWin, psdtrlData{ii}.t(ti)+halfWin];
+           % Check if it includes NaNs, if so NaN power data
+           if any(nanTime>thisWin(1) & nanTime<thisWin(2))
+              psdtrlData{ii}.Pow(:,:,:,ti) = NaN;
+           end
+       end
+    end
+    % Calculate mean and standard deviation across trials
+    psdtrlData{ii}.Overall = mean(psdtrlData{ii}.Pow,3,'omitnan');
+    psdtrlData{ii}.OverallStd = std(psdtrlData{ii}.Pow,[],3,'omitnan');
 end
 %% Plot PSDs
 % Set up figure
@@ -119,24 +171,31 @@ bInd = bandIndices(bands,F);
 for ii = logicFind(0,empt,'==')
     % Then each trial
     for k = 1:nTrials(ii)
-        % And each band
+        % Each band
         for jj = 1:nBand
-            % Set up data to get trapezoidal area of
-            data = psdtrlData{ii}.Pow(:,bInd(jj,1):bInd(jj,2),k);
-            % Get trapezoidal area (numerical integral) under the curve
-            % for each band and store (band,channel,trial)
-            psdtrlData{ii}.bandPow(jj,:,k) = trapz(data,2);
+            % Each time window
+            for ti = 1:size(psdtrlData{ii}.Pow,4)
+                % Set up data to get trapezoidal area
+                data = psdtrlData{ii}.Pow(:,bInd(jj,1):bInd(jj,2),k,ti);
+                % Get trapezoidal area (numerical integral) under the curve
+                % for each band and store (band,channel,trial)
+                psdtrlData{ii}.bandPow(jj,:,k,ti) = trapz(data,2);
+            end
         end
     end
-    % Get total trapezoidal area from beginning of first band to end of
-    % last. Replicate to match dimension of .bandPow (band,channel,trial)
-    % where columns will be identical because the total power is the same
-    % (i.e. the bands don't matter here)
-    data = trapz(psdtrlData{ii}.Overall(:,bInd(1,1):bInd(end,2),:),2)';
-    psdtrlData{ii}.totPow = repmat(data,size(bands,1),1,nTrials(ii));
-    % Use element-wise division to obtain percent of total power across
-    % bands
-    psdtrlData{ii}.relPow = psdtrlData{ii}.bandPow./psdtrlData{ii}.totPow;
+    for ti = 1:size(psdtrlData{ii}.Pow,4)
+        % Get total trapezoidal area from beginning of first band to end of
+        % last. Replicate to match dimension of .bandPow
+        % (band,channel,trial) where columns will be identical because the
+        % total power is the same (i.e. the bands don't matter here)
+        data = permute(trapz(psdtrlData{ii}.Overall(:,bInd(1,1):...
+            bInd(end,2),:,:),2),[2,1,3,4]);
+        psdtrlData{ii}.totPow = repmat(data,size(bands,1),1,nTrials(ii));
+        % Use element-wise division to obtain percent of total power across
+        % bands
+        psdtrlData{ii}.relPow = psdtrlData{ii}.bandPow./...
+            psdtrlData{ii}.totPow;
+    end
 end
 %% Get average relative power
 for ii = logicFind(0,empt,'==')

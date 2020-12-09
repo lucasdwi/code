@@ -1,3 +1,10 @@
+%% angelaMiaAlcInj
+for ii = 1:100
+    load(['G:/GreenLab/data/angelaMiaAlcInj/model/',num2str(ii),'.mat'])
+    aReal(ii) = a;
+    aRand(ii) = aR;
+end
+doubleHist(aReal,aRand)
 %%
 [data,samp,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
     'data\angelaMIA\processed\'],{'mSaline';'mMIA';'fSaline';'fMIA'},...

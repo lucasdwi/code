@@ -1,7 +1,7 @@
 files = fileSearch('E:\dualSite\','.mat');
 %%
 fI = 1;
-thisFile = files{fI}
+thisFile = files{fI};
 %%
 load(files{fI},'LFPTs','eventTs','adfreq')
 thisFile = thisFile(1:strfind(thisFile,'.')-1);
@@ -125,7 +125,8 @@ for fI = 37:size(files,2)
     eventTs.t = [eventTs.t,struct.t];
     eventTs.label = [eventTs.label,struct.label];
     % Save
-    save(['E:\dualSite\toProcess\',files{fI}],'LFPTs','adfreq','eventTs','-v7.3')
+    save(['E:\dualSite\toProcess\',files{fI}],'LFPTs','adfreq',...
+        'eventTs','-v7.3')
     clearvars -except fi files
 end
 %% Test plot

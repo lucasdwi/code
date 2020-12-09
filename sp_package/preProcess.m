@@ -1,4 +1,4 @@
- function [LFPTs,chk_nan,zeroedChannel,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs)
+function [LFPTs,chk_nan,zeroedChannel,nanInd,clnTrls,trls,adfreq] = preProcess(LFPTs,adfreq,dsf,thresh,onset,offset,eoi,eventTs,fixed,discrete)
 %% Applies preproccesing steps: filtering, downsampling, thresholding, and 
 % trializing
 % INPUTS:
@@ -19,6 +19,11 @@
 %   per trial (i.e. the minimum interval per behavioral trial)
 % eventTs = event structure from ConvertPl2All_Files; fields .t and .label
 %   required for script to run
+% fixed = whether or not to use fixed trializing; if 1 (fixed), then will
+%   use contiguous trials that disregard NaNs; if 0 (not fixed) then will
+%   maximize the number of trials without NaNs
+% discrete = whether or not analysis is discrete; 0 for continuous, 1 for
+%   discrete
 %__________________________________________________________________________
 % OUTPUTS:
 % LFPTs = new LFPTs data; filtered, downsampled, and thresholded; 
@@ -29,6 +34,8 @@
 %   trial > channel x timestamp
 % clnEvents = collapsed clnTrls with all timestamps concatenated; format =
 %   event > channel x timestamp
+% nanInd = indices of NaNs; from oneChan so includes NaNs collapsed from
+%   all channels
 % trls = data structure of all usable trials, each event is in its own
 %   structure; includes the following fields:
 %       label = cell array of channel labels
@@ -68,8 +75,8 @@ disp('Downsampling signal with dwnSample.m...')
 disp('Removing noise artifacts with threshFilt.m...')
 % Uses largest eoi minimum interval as minInt
 minInt = max(diff(cell2mat(eoi(:,2)),1,2));
-[LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,...
-    minInt,adfreq);
+[LFPTs,chk_nan,zeroedChannel,nanInd] = threshFilt(LFPTs,thresh,onset,offset,...
+    minInt,adfreq,discrete);
 %% NaN Sleep Intervals
 % if exist('sleep')
 %     for sind = 1:size(sleep.t{1,1},1)
@@ -78,4 +85,4 @@ minInt = max(diff(cell2mat(eoi(:,2)),1,2));
 % end
 %% Trialize data into equal length 'trials'
 disp('Trializing data with trialize.m...')
-[clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq);
+[clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq,fixed,discrete);

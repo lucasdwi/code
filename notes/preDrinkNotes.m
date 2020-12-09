@@ -1,19 +1,292 @@
+%%
+% First get subindices for animals with more channels
+waterFeat = names({'ILL','CA1L','PL','SL','PR','CA1R','ILR','SR'},...
+    {'d','t','a','b','lg','hg'});
+alcFeat = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
+% Find overlap
+waInds = zeros(1,60);
+for ii = 1:60
+    ind = logicFind(alcFeat{ii},waterFeat,'==');
+    if ~isempty(ind)
+        waInds(ii) = ind;
+    end
+end
+% Doesn't find PR-SL coherence since in waterFeat it is SL-PR
+waInds(43:48) = 157:162;
+% Determine overlap between alcFeat and waterAlcFeat (same features,
+% different order)
+waterAlcFeat = names({'PL','SL','PR','SR'},{'d','t','a','b','lg','hg'});
+inds2 = zeros(1,60);
+for ii = 1:60
+    ind = logicFind(alcFeat{ii},waterAlcFeat,'==');
+    if ~isempty(ind)
+        inds2(ii) = ind;
+    end
+end
+% Doesn't find PR-SL coherence since in waterFeat it is SL-PR
+inds2(43:48) = 43:48;
+files = fileSearch('F:\paper3\periDrink\','.mat')';
+fStuff = cellfun(@(x) strsplit(x,'_'),files,'UniformOutput',0);
+nFiles = numel(files);
+watInds = [25:36,52:61,67:69];
+for ii = 1:nFiles
+    % Get water, alcohol, and not data/samps
+    if ~any(ismember(ii,watInds))
+       load(['F:\paper3\drinkNot\',fStuff{ii}{1},'_',fStuff{ii}{2},...
+           '_drink_vs_~drink.mat'])
+       if ~isempty(trls{1})
+           alcSamps{ii} = trls{1}.sampleinfo;
+       else
+           alcSamps{ii} = [];
+       end
+       notSamps{ii} = trls{2}.sampleinfo;
+       for jj = 1:numel(psdTrls)
+           if ~isempty(trls{jj})
+               [b,c,t] = size(psdTrls{1,jj}.relPow);
+               thisPow = reshape(psdTrls{1,jj}.relPow,b*c,t)';
+               [cmb,b,t] = size(coh{1,jj}.normBandCoh);
+               thisCoh = reshape(permute(coh{1,jj}.normBandCoh,...
+                   [2,1,3]),cmb*b,t)';
+               if jj == 1
+                  alcData{ii} = [thisPow,thisCoh]; 
+               else
+                  notData{ii} = [thisPow,thisCoh];
+               end
+           end
+       end
+    else
+        load(['F:\paper3\waterAlcohol\notDrink\',fStuff{ii}{1},'_',...
+            fStuff{ii}{2},'_',fStuff{ii}{3},'_~Both.mat'])
+        neitherSamps{ii} = trls{1}.sampleinfo;
+        [b,c,t] = size(psdTrls{1,1}.relPow);
+        thisPow = reshape(psdTrls{1,1}.relPow,b*c,t)';
+        [cmb,b,t] = size(coh{1,1}.normBandCoh);
+        thisCoh = reshape(permute(coh{1,1}.normBandCoh,[2,1,3]),cmb*b,t)';
+        neitherData{ii} = [thisPow,thisCoh];
+        if exist(['F:\paper3\waterAlcohol\processed\',fStuff{ii}{1},'_',...
+                fStuff{ii}{2},'_',fStuff{ii}{3},'_water_vs_alcohol.mat'])
+            load(['F:\paper3\waterAlcohol\processed\',fStuff{ii}{1},'_',...
+                fStuff{ii}{2},'_',fStuff{ii}{3},'_water_vs_alcohol.mat'])
+            if ~isempty(trls{1})
+                watSamps{ii} = trls{1}.sampleinfo;
+                [b,c,t] = size(psdTrls{1,1}.relPow);
+                thisPow = reshape(psdTrls{1,1}.relPow,b*c,t)';
+                [cmb,b,t] = size(coh{1,1}.normBandCoh);
+                thisCoh = reshape(permute(coh{1,1}.normBandCoh,...
+                    [2,1,3]),cmb*b,t)';
+                theseData = [thisPow,thisCoh];
+                theseData = theseData(:,inds2);
+                waterData{ii} = theseData;
+            else
+                waterData{ii} = [];
+                watSamps{ii} = [];
+            end
+            if ~isempty(psdTrls{1,2})
+                alcSamps{ii} = trls{1,2}.sampleinfo;
+                [b,c,t] = size(psdTrls{1,2}.relPow);
+                thisPow = reshape(psdTrls{1,2}.relPow,b*c,t)';
+                [cmb,b,t] = size(coh{1,2}.normBandCoh);
+                thisCoh = reshape(permute(coh{1,2}.normBandCoh,...
+                    [2,1,3]),cmb*b,t)';
+                theseData = [thisPow,thisCoh];
+                theseData = theseData(:,inds2);
+                alcData{ii} = theseData;
+            else
+                alcData{ii} = [];
+                alcSamps{ii} = [];
+            end
+            % Combine neither and water into not
+            notSamps{ii} = [neitherSamps{ii};watSamps{ii}];
+            notData{ii} = [neitherData{ii};waterData{ii}];
+        else
+            notSamps{ii} = neitherSamps{ii};
+            notData{ii} = neitherData{ii};
+        end
+    end
+end
+%% Go through preSamps and remove corresponding notData
+% Reset inds and go through files
+inds = [];
+past = cell(69,26);
+allPre = []; allPreID = []; allNot = []; allNotID = [];
+for k = 1:nFiles
+    load(['F:\paper3\periDrink\',files{k}])
+    %     for ii = 1:size(trls{1,31}.sampleinfo,1)
+    if any(k == [1:24,37:51,62:66])
+        alcInd = 6;
+    else
+        alcInd = 4;
+    end
+    % Get alc and water samples for this recordings
+    theseAlcSamps = [];
+    if ~isempty(alcSamps{k})
+        for ii = 1:size(alcSamps{k},1)
+            theseAlcSamps = [theseAlcSamps,...
+                alcSamps{k}(ii,1):alcSamps{k}(ii,2)];
+        end
+    end
+    theseWaterSamps = [];
+    if ~isempty(watSamps{k})
+        for ii = 1:size(watSamps{k},1)
+            theseWaterSamps = [theseWaterSamps,...
+                watSamps{k}(ii,1):watSamps{k}(ii,2)];
+        end
+    end
+    % Go through each possible drink event
+    for ii = 1:size(hist.eventTs.t{1,alcInd},1)
+        % And go back through time, checking if any data came from that
+        % epoch
+        for jj = 1:26
+            if ~isempty(trls{1,27-jj})
+                if jj > 1 && overlapPre{k,28-jj}(ii) == 1
+                    overlapPre{k,27-jj}(ii) = 1;
+                else
+                    % Get index of corresponding pre-window for each drink
+                    % event going backwards through time
+                    dummy = logicFind(...
+                        nearest_idx3(hist.eventTs.t{1,alcInd}(ii),...
+                        LFPTs.tvec)-(2000+400*(jj-1)),...
+                        trls{1,27-jj}.sampleinfo(:,1),'==');
+                    if isempty(dummy)
+                        inds{k}(ii,jj) = 0;
+                    else
+                        inds{k}(ii,jj) = dummy;
+                        % Get samples for pre window
+                        preSamps = trls{27-jj}.sampleinfo(...
+                            inds{k}(ii,jj),1):...
+                            trls{27-jj}.sampleinfo(inds{k}(ii,jj),2);
+                    end
+                    % Check for overlap with notSamps (remove pre-drinking
+                    % data from notData)
+                    for m = 1:size(notSamps{k},1)
+                        if any(ismember(preSamps,notSamps{k}(m,1):...
+                                notSamps{k}(m,2)))
+                            overlap{k}(m,27-jj,ii) = 1;
+                        else
+                            overlap{k}(m,27-jj,ii) = 0;
+                        end
+                    end
+                    % Check for overlap with other alcSamps (remove
+                    % pre-drinking data that overlaps with previous
+                    % drinking)
+                    if any(ismember(preSamps,theseAlcSamps))
+                        overlapPre{k,27-jj}(ii) = 1;
+                    else
+                        if any(ismember(preSamps,theseWaterSamps))
+                            overlapPre{k,27-jj}(ii) = 2;
+                        else
+                            overlapPre{k,27-jj}(ii) = 0;
+                        end
+                    end
+                end
+            else
+                inds{k}(ii,jj) = 0;
+                overlapPre{k,27-jj}(ii) = 3;
+            end
+            % Grab pre-drinking data and store in past
+            if overlapPre{k,27-jj}(ii) == 0 && inds{k}(ii,jj) ~= 0
+                [b,c,~] = size(psdTrls{1,27-jj}.relPow);
+                thisPow = reshape(psdTrls{1,27-jj}.relPow(:,:,...
+                    inds{k}(ii,jj)),b*c,1)';
+                [cmb,b,~] = size(coh{1,27-jj}.normBandCoh);
+                thisCoh = reshape(permute(coh{1,27-jj}.normBandCoh(:,:,...
+                    inds{k}(ii,jj)),[2,1,3]),cmb*b,1)';
+                theseData = [thisPow,thisCoh];
+                % If a waterAlcohol recording, get rid of extra channels
+                % and reorder features
+                if alcInd == 4
+                theseData = theseData(:,waInds);
+                end
+                if jj == 1
+                    allPre = [allPre;theseData];
+                    allPreID = [allPreID;repmat(fStuff{k}(1),...
+                        size(theseData,1),1)];
+                else
+                    past{k,27-jj} = [past{k,jj};thisPow,thisCoh];
+                end
+            end
+        end
+    end
+    % Add to pastID
+    pastID{k} = fStuff{k}{1};
+    % Add not data
+    allNot = [allNot;...
+        notData{k}(~any(any(overlap{k},3),2),:)];
+    allNotID = [allNotID;fStuff{k}(1)];
+end
+%%
+files = fileSearch('F:\paper3\periDrink\','.mat');
+fStuff = cellfun(@(x) strsplit(x,'_'),files,'UniformOutput',0);
+ids = cellfun(@(x) x{1},fStuff,'UniformOutput',0);
+allPre = []; preID = [];
+allNot = []; notID = [];
+nFiles = numel(files);
+[past,pastID] = deal(cell(nFiles,60));
+preSamps = [];
+for ii = 1:nFiles
+    cd('F:\paper3\periDrink\')
+    load(files{ii})
+    for jj = 1:26
+        [b,c,t] = size(psdTrls{1,jj}.relPow);
+        thisPow = reshape(psdTrls{1,jj}.relPow,b*c,t)';
+        [cmb,b,t] = size(coh{1,jj}.normBandCoh);
+        thisCoh = reshape(permute(coh{1,jj}.normBandCoh,[2,1,3]),cmb*b,t)';
+        if jj == 26
+            allPre = [allPre;thisPow,thisCoh]; %#ok
+            preID = [preID;repmat(ids(ii),size(thisPow,1),1)]; %#ok
+        else
+            past{ii,jj} = [thisPow,thisCoh];
+            preSamps = [preSamps;trls{jj}.sampleinfo]; %#ok
+        end
+    end
+    
+    % Get samps for alcohol and all other (not drink and water)
+    if ii <= 24
+        load(['F:\paper3\drinkNot\',fStuff{ii}{1},'_',fStuff{ii}{2},'_drink_vs_~drink.mat'])
+        if ~isempty(trls{1})
+            alcSamps = trls{1}.sampleinfo;
+        else
+            alcSamps = [];
+        end
+        notSamps = trls{2}.sampleinfo;
+    else
+       load(['F:\paper3\waterAlcohol\notDrink\',fStuff{ii}{1},'_',fStuff{ii}{2},'_~Both.mat'])
+       neitherSamps = trls{1}.sampleinfo;
+       load(['F:\paper3\waterAlcohol\processed\',fStuff{ii}{1},'_',fStuff{ii}{2},'_water_vs_alcohol.mat'])
+       watSamps = trls{1}.sampleinfo;
+       alcSamps = trls{1}.sampleinfo;
+       % Combine neither and water into not
+       notSamps = [nethierSamps;watSamps];
+    end
+    % Turn start and stop values into complete vectors and remove repeats
+    allNot = []; allAlc = [];
+    for k = 1:size(notSamps,1)
+        allNot = [allNot,notSamps(k,1):notSamps(k,2)];
+    end
+    allNot = unique(allNot);
+    for k = 1:size(alcSamps,1)
+        allAlc = [allAlc,alcSamps(k,1):alcSamps(k,2)];
+    end
+    allAlc = unique(allAlc);
+    % Compare to samples associated with preDrink behavior and remove 
+    
+end
 %% Get fileNames of preDrink data
-fNames = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\paper3\preDrink\','.mat');
+fNames = fileSearch('F:\paper3\preDrink\','.mat');
 for ii = 1:size(fNames,2)
     names(ii,:) = strsplit(fNames{ii},'_');
 end
-%% Combine prebinge data with non-overlapping non-drink data
+%% Combine predrink data with non-overlapping non-drink data
 for ii = 1:size(names,1)
     disp(num2str(ii))
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\drinkNot\',names{ii,1},'_',names{ii,2},'_drink_vs_~drink.mat'])
+    load(['F:\paper3\drinkNot\',names{ii,1},'_',names{ii,2},'_drink_vs_~drink.mat'])
     notCoh = coh;
     notPow = psdTrls;
     notTrls = trls;
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\mat\',names{ii,1},'_',names{ii,2},'.mat'],'eventTs')
+    load(['F:\paper3\mat\',names{ii,1},'_',names{ii,2},'.mat'],'eventTs')
     ind = logicFind(1,cell2mat(cellfun(@(x) strncmpi('drink (s',x,8),eventTs.label,'UniformOutput',0)),'==');
     times{ii} = [eventTs.t{ind}*hist.adfreq,eventTs.t{ind+1}*hist.adfreq];
-    load(['C:\Users\Pythia\Documents\GreenLab\data\paper3\preDrink\',names{ii,1},'_',names{ii,2},'_',names{ii,3}])
+    load(['F:\paper3\preDrink\',names{ii,1},'_',names{ii,2},'_',names{ii,3}])
     preCoh = coh;
     prePow = psdTrls;
     preTrls = trls;
@@ -38,6 +311,7 @@ for ii = 1:size(names,1)
             trls{1,k}.trial = preTrls{1,k}.trial(:,:,~overlap);
             trls{1,k}.time = preTrls{1,k}.time(~overlap);
             trls{1,k}.sampleinfo = preTrls{1,k}.sampleinfo(~overlap,:);
+            trls{1,k}.eoi = hist.eoi{k,2};
             
             psdTrls{1,k}.Pow = prePow{1,k}.Pow(:,:,~overlap);
             psdTrls{1,k}.f = prePow{1,k}.f;
@@ -88,7 +362,7 @@ for ii = 1:size(names,1)
     coh{1,k}.mtCxy = notCoh{1,2}.mtCxy(:,:,~overlap);
     overlap = [];
     %%
-    save(['C:\Users\Pythia\Documents\GreenLab\data\paper3\preDrinkCombined2\',names{ii,1},'_',names{ii,2},'.mat'],'trls','psdTrls','coh')
+    save(['F:\paper3\preDrinkCombined3\',names{ii,1},'_',names{ii,2},'.mat'],'trls','psdTrls','coh')
 end
 %% Grab first and last drink data point
 fNames = fileSearch('C:\Users\Pythia\Documents\GreenLab\data\paper3\drinkNot\','.mat');

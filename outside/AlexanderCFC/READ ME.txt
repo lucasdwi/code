@@ -1,0 +1,25 @@
+Generalized Morse Wavelet Phase-Amplitude Coupling
+
+This software package contains tools to compute and visualize phase-amplitude coupling using the generalized Morse wavelets [1], which are described elsewhere [2,3]. Example calls to the primary program, gmwCFC, are provided in the preamble to the code. 
+
+Analysis overview:
+
+1) gmwCFC: Compute modulation indices among a set of time-series using.
+2) gmwCFCpermFDR: Generate null distributions by randomly pairing the phase of trial n to the amplitude of trial k, where n and k are pseudorandom integers, and computing the phase-amplitude coupling. For each observed MI, determine the probability of obtaining a value >= MI_obs by using the empirical cumulative distribution of random MIs. Significant MIs (with multiple comparison control) are determined using false discovery rate.
+3) plotMIs: Plot comodulograms.
+
+Note on Java files:
+
+This program uses Java code written by Shinya Ito to bin amplitude values by phase. To use this program, the first line of gmwCFC (javaaddpath('/Users/Alexander/Documents/MATLAB/GMW CFC Public/crossfrequencycoupling.jar') must modified to include the location of crossfrequencycoupling.jar on the end users machine.
+
+
+Questions or concerns should be addressed to Alexander Nakhnikian (alexander_nahnikian@hms.harvard.edu).
+
+1. Nakhnikian, A., Ito, S., Dwiel, L.L., Grasse, L.M., Rebec, G.V., Lauridsen, L.N. and Beggs, J.M., 2016. A novel cross-frequency coupling detection method using the generalized Morse wavelets.ÊJournal of neuroscience methods,Ê269, pp.61-73.
+
+2. Olhede, S. C., & Walden, A. T. (2002). Generalized morse wavelets.ÊIEEE Transactions on Signal Processing,Ê50(11), 2661-2670.
+
+3. Lilly, J. M., & Olhede, S. C. (2009). Higher-order properties of analytic wavelets.ÊIEEE Transactions on Signal Processing,Ê57(1), 146-160.
+
+
+

@@ -1,4 +1,4 @@
-function [data,samp,files,varargout] = collateData(sdir,searchStr,vars,dat,norm,varargin)
+function [data,samp,files,time,varargout] = collateData(sdir,searchStr,vars,dat,norm,varargin)
 %% Collates data from many files into matrices.
 %__________________________________________________________________________
 % INPUTS:
@@ -59,7 +59,7 @@ end
 %% Cycle through each searchStr and get file names
 if ~isempty(searchStr)
     for sI = 1:size(searchStr,1)
-        [files{sI}] = fileSearch(sdir,searchStr{sI,:});
+        [files{sI}] = fileSearch(sdir,searchStr{sI,:})';
     end
 else
     files = varargin{1};
@@ -70,15 +70,13 @@ nAllFile = sum(cellfun(@numel,files));
 % one structure per cell of files
 % Set up file counter
 count = 1;
-% Set up data
-data = cell(1,nStr);
-% Set up samp
-samp = cell(1,nStr);
+% Set up data, samp, and time
+[data,samp,time.abs,time.rel] = deal(cell(1,nStr));
 for sI = 1:nStr
     % Get number of files within given cell
-    nFile = size(files{sI},2);
+    nFile = size(files{sI},1);
     for fI = 1:nFile
-        disp(['Adding file ',num2str(count),' of ',num2str(nAllFile)])
+        disp(['Adding file ',num2str(count),' of ',num2str(nAllFile),': ',files{sI}{fI}])
         load([sdir,files{sI}{fI}]);
         % Add one to counter
         count = count + 1;
@@ -100,6 +98,10 @@ for sI = 1:nStr
                             thisPow = reshape(psdTrls{iE}.bandPow,b*c,t)';
                         end
                     else
+                        % Average over 4th dimension in case of
+                        % continuous
+                        psdTrls{iE}.avgRelPow = squeeze(mean(...
+                            psdTrls{iE}.avgRelPow,4,'omitnan'));
                         [b,c] = size(psdTrls{iE}.avgRelPow);
                         if strcmpi(norm,'rel')
                             % Reshape
@@ -119,37 +121,59 @@ for sI = 1:nStr
                 if sum(strcmpi(vars,'coh')) == 1
                     if strcmpi(dat,'trl')
                         if strcmpi(norm,'rel')
-%                             [cmb,b,t] = size(coh{iE}.rel);
-                            [cmb,b,t] = size(coh{iE}.normBandCoh);
+                            if isfield(coh{iE},'rel')
+                                [cmb,b,t] = size(coh{iE}.rel);
+                            else
+                                [cmb,b,t] = size(coh{iE}.normBandCoh);
+                            end
                             % Permute coh.rel into a similar pattern as
                             % power
-%                             thisCoh = reshape(permute(...
-%                                 coh{iE}.rel,[2,1,3]),cmb*b,t)';
-                            thisCoh = reshape(permute(...
-                                coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
+                            if isfield(coh{iE},'rel')
+                                thisCoh = reshape(permute(...
+                                    coh{iE}.rel,[2,1,3]),cmb*b,t)';
+                            else
+                                thisCoh = reshape(permute(...
+                                    coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
+                            end
                         else
-                            [cmb,b,t] =  size(coh{iE}.mBandCoh);
-%                             [cmb,b,t] =  size(coh{iE}.band);
+                            if isfield(coh{iE},'band')
+                                [cmb,b,t] =  size(coh{iE}.band);
+                            else
+                                [cmb,b,t] =  size(coh{iE}.mBandCoh);
+                            end
                             % Permute coh.rel into a similar pattern as
                             % power
                             thisCoh = reshape(permute(...
                                 coh{iE}.mBandCoh,[2,1,3]),cmb*b,t)';
                         end
                     else
-                        [cmb,b,~] = size(coh{iE}.normBandCoh);
-%                         [cmb,b,~] = size(coh{iE}.rel);
+                        % Average over 4th dimension in case of
+                        % continuous
+                        coh{iE}.normBandCoh = squeeze(mean(...
+                            coh{iE}.normBandCoh,4,'omitnan'));
+                        if isfield(coh{iE},'normBandCoh')
+                            [cmb,b,~] = size(coh{iE}.normBandCoh);
+                        else
+                            [cmb,b,~] = size(coh{iE}.rel);
+                        end
                         if strcmpi(norm,'rel')
                             % Mean and permute coh.rel
-%                             thisCoh = reshape(permute(mean(...
-%                                 coh{iE}.rel,3),[2,1]),1,cmb*b);
-                            thisCoh = reshape(permute(mean(...
-                                coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
+                            if isfield(coh{iE},'rel')
+                                thisCoh = reshape(permute(mean(...
+                                    coh{iE}.rel,3),[2,1]),1,cmb*b);
+                            else
+                                thisCoh = reshape(permute(mean(...
+                                    coh{iE}.normBandCoh,3),[2,1]),1,cmb*b);
+                            end
                         else
                             % Mean and permute coh.band
-                            thisCoh = reshape(permute(mean(...
-                                coh{iE}.mBandCoh,3),[2,1]),1,cmb*b);
-%                             thisCoh = reshape(permute(mean(...
-%                                 coh{iE}.band,3),[2,1]),1,cmb*b);
+                            if isfield(coh{iE},'normBandCoh')
+                                thisCoh = reshape(permute(mean(...
+                                    coh{iE}.mBandCoh,3),[2,1]),1,cmb*b);
+                            else
+                                thisCoh = reshape(permute(mean(...
+                                    coh{iE}.band,3),[2,1]),1,cmb*b);
+                            end
                         end
                     end
                     % Store coherence
@@ -169,10 +193,16 @@ for sI = 1:nStr
                 end
                 % Grab sampleInfo for timing
                 thisSamp{iE} = trls{1,iE}.sampleinfo;
+                % Convert to absolute and relative time
+%                 absTime{iE} = LFPTs.tvec(thisSamp{iE});
+%                 relTime{iE} = (absTime{iE}-absTime{iE}(1))./...
+%                     (absTime{iE}(end)-absTime{iE}(1));
             end
         end
         data{sI} = [data{sI};thisData];
         samp{sI} = [samp{sI};thisSamp];
+%         time.abs{sI} = [time.abs{sI};absTime];
+%         time.rel{sI} = [time.rel{sI};relTime];        
     end
 end
 %% Combine data together

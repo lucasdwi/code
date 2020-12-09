@@ -1,5 +1,5 @@
 %%
-sdir = 'C:\Users\Pythia\Documents\GreenLab\data\paper2\mat\';
+sdir = 'D:\paper2\mat\';
 [fNames(:,1)] = fileSearch(sdir,'Base','in');
 [fNames(:,2)] = fileSearch(sdir,'Dep24','in');
 [fNames(1:9,3)] = fileSearch(sdir,'Dep48','in');

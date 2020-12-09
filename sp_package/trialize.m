@@ -1,4 +1,4 @@
-function [clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
+function [clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq,fixed,discrete)
 % [clnTrls,clnEvents,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
 %% Uses behavior markers to trialize data
 %__________________________________________________________________________
@@ -13,7 +13,12 @@ function [clnTrls,trls] = trialize(eoi,eventTs,LFPTs,adfreq)
 %   required for script to run
 % LFPTs = data structure from ConvertPl2All_Files; fields .data and .tvec
 %   required for script to run
-% adfreq = sampling rate of data; format: integer
+% adfreq = sampling rate of data; format: integer 
+% fixed = whether or not to use fixed trializing; if 1 (fixed), then will
+%   use contiguous trials that disregard NaNs; if 0 (not fixed) then will
+%   maximize the number of trials without NaNs
+% discrete = whether or not analysis is discrete; 0 for continuous, 1 for
+%   discrete
 %__________________________________________________________________________
 % OUTPUTS:
 % clnTrls = cell array of timestamps of all clean trials; format = event X
@@ -88,13 +93,13 @@ for iE = 1:nEvent
     if ~isempty(eventTs.t{eventInds(iE,1)})
         % Check if event is negated
         if neg(iE)
-            % Check that first positive event does not occur at exact start of
-            % file
+            % Check that first positive event does not occur at exact start
+            % of file
             if eventTs.t{eventInds(iE,1)}(1)~=LFPTs.tvec(1)
                 % If not, use time 1 as beginning of first interval and
                 % first Start time as end of interval
-                intTime{iE,1} = 1:nearest_idx3(eventTs.t{eventInds(iE,1)}(1)...
-                    ,LFPTs.tvec);
+                intTime{iE,1} = 1:nearest_idx3(eventTs.t{eventInds(iE,...
+                    1)}(1),LFPTs.tvec);
                 % Set starting index at 2 to skip first event
                 c = 2;
             end
@@ -109,24 +114,26 @@ for iE = 1:nEvent
                     % Check if last interval
                     if iT == numel(eventTs.t{eventInds(iE,1)})
                         % If so first check if last interval goes to end of
-                        % file in which case skip, otherwise make interval that
-                        % goes from end of last interval to end of recording
+                        % file in which case skip, otherwise make interval
+                        % that goes from end of last interval to end of
+                        % recording
                         
                         % Use counter, c, as storage index to account for
                         % potential first interval created outside of loop
-                        if eventTs.t{eventInds(iE,2)}(end) ~= LFPTs.tvec(end)
+                        if eventTs.t{eventInds(iE,2)}(end) ~= ...
+                                LFPTs.tvec(end)
                             intTime{iE,c} = nearest_idx3(...
-                                eventTs.t{1,eventInds(iE,2)}(iT),LFPTs.tvec)...
-                                :numel(LFPTs.tvec);
+                                eventTs.t{1,eventInds(iE,2)}(iT),...
+                                LFPTs.tvec):numel(LFPTs.tvec);
                         end
                     else
-                        % If not last then use the start of an event as the end
-                        % of the previous interval, and the end as the start of
-                        % the current
+                        % If not last then use the start of an event as the
+                        % end of the previous interval, and the end as the
+                        % start of the current
                         intTime{iE,c} = nearest_idx3(...
-                            eventTs.t{1,eventInds(iE,2)}(iT),LFPTs.tvec):...
-                            nearest_idx3(eventTs.t{1,eventInds(iE,1)}(iT+1),...
-                            LFPTs.tvec);
+                            eventTs.t{1,eventInds(iE,2)}(iT),...
+                            LFPTs.tvec):nearest_idx3(eventTs.t{1,...
+                            eventInds(iE,1)}(iT+1),LFPTs.tvec);
                     end
                     % Add one to counter
                     c = c+1;
@@ -136,8 +143,8 @@ for iE = 1:nEvent
                         eventTs.t{1,eventInds(iE,2)}(iT),LFPTs.tvec);
                 end
                 % Otherwise it is a scalar behavior, so look around those
-                % timestamps in a window defined by the corresponding entry in the
-                % second column of 'eoi'
+                % timestamps in a window defined by the corresponding entry
+                % in the second column of 'eoi'
             else
                 intTime{iE,iT} = nearest_idx3(...
                     eventTs.t{1,eventInds(iE,1)}(iT)+eoi{iE,2}(1),...
@@ -154,15 +161,18 @@ for iE = 1:nEvent
         end
     end
 end
-
 %% NaN timestamps corresponding to NaNed LFPTs data
-for iE = 1:nEvent
-    % Skip if event has no timestamps
-    if ~isempty(intTime{iE})
-        for iT = 1:sum(~cellfun(@isempty,intTime(iE,:)))
-            % Sums across channels of data to propogate missing data
-            intTime{iE,iT}(isnan(sum(LFPTs.data(:,intTime{iE,iT}),1))) =...
-                NaN;
+% Only do this if doing discrete intTimeanalysis; for continuous analysis
+% the NaNs will be taken care of during processing
+if discrete
+    for iE = 1:nEvent
+        % Skip if event has no timestamps
+        if ~isempty({iE})
+            for iT = 1:sum(~cellfun(@isempty,intTime(iE,:)))
+                % Sums across channels of data to propogate missing data
+                intTime{iE,iT}(isnan(sum(LFPTs.data(:,intTime{iE,iT}),...
+                    1))) = NaN;
+            end
         end
     end
 end
@@ -178,53 +188,70 @@ for iE = logicFind(0,cellfun(@isempty,intTime(:,1)),'==')
         minInt = eoi{iE,2};
     end
     for iT = 1:sum(~cellfun(@isempty,intTime(iE,:)))
-        dummy = intTime{iE,iT};
-        dummy(~isnan(dummy)) = 1;
-        dummy(isnan(dummy)) = 0;
-        dataStart = find(diff(dummy)==1)+1;
-        dataStop = find(diff(dummy)==-1);
-        % Check for clean data at first index
-        if ~isnan(intTime{iE,iT}(1,1))
-            dataStart = [1, dataStart]; %#ok<AGROW>
-        end
-        % Check for clean data at last index
-        if ~isnan(intTime{iE,iT}(end))
-            dataStop = horzcat(dataStop,length(intTime{iE,iT}));%#ok<AGROW>
-        end
-        % Only keep data that is not NaNed and in continuous intervals
-        % longer than minInt
-        if ~isnan(sum(intTime{iE,iT})) && (size(intTime{iE,iT},2) >= ...
-                (minInt*adfreq))
-            numTrls = floor(size(intTime{iE,iT},2)/(minInt*adfreq));
-            thisTrls = intTime{iE,iT}(1:((minInt*adfreq)*numTrls));
-            clnTrls{iE,iT} = thisTrls;
+        % If not doing discrete analysis, then put all intTime into clnTrls
+        if ~discrete
+            clnTrls{iE,iT} = intTime{iE,iT};
+            % If using fixed windows, then use maximal amount of data that
+            % will evenly split into the most windows
         else
-            thisTrls = [];
-            % Run through data intervals
-            for intInd = 1:length(dataStart)
-                % Add one for indexing
-                intLen = length(dataStart(intInd):dataStop(intInd));
-                % Double check that each interval is long enough
-                if intLen >= (minInt*adfreq)
-                    numTrls = floor(intLen/(minInt*adfreq));
-                    thisTrls = horzcat(thisTrls,intTime{iE,iT}(...
-                        dataStart(intInd):(dataStart(intInd)+...
-                        ((minInt*adfreq)*numTrls))-1)); %#ok<AGROW>
+            if fixed
+                numTrls = floor(size(intTime{iE,iT},2)/(minInt*adfreq));
+                clnTrls{iE,iT} = intTime{iE,iT}(1:numTrls*(minInt*adfreq));
+                % Otherwise, figure out where clean data windows exist that
+                % are long enough
+            else
+                dummy = intTime{iE,iT};
+                dummy(~isnan(dummy)) = 1;
+                dummy(isnan(dummy)) = 0;
+                dataStart = find(diff(dummy)==1)+1;
+                dataStop = find(diff(dummy)==-1);
+                % Check for clean data at first index
+                if ~isnan(intTime{iE,iT}(1,1))
+                    dataStart = [1, dataStart]; %#ok<AGROW>
                 end
-            end
-            if ~isempty(thisTrls)
-                clnTrls{iE,iT} = thisTrls;
+                % Check for clean data at last index
+                if ~isnan(intTime{iE,iT}(end))
+                    dataStop = horzcat(dataStop,...
+                        length(intTime{iE,iT}));%#ok<AGROW>
+                end
+                % Only keep data that is not NaNed and in continuous
+                % intervals longer than minInt
+                if ~isnan(sum(intTime{iE,iT})) && ...
+                        (size(intTime{iE,iT},2) >= (minInt*adfreq))
+                    numTrls = floor(size(intTime{iE,iT},2)/...
+                        (minInt*adfreq));
+                    thisTrls = intTime{iE,iT}(1:((minInt*adfreq)*numTrls));
+                    clnTrls{iE,iT} = thisTrls;
+                else
+                    thisTrls = [];
+                    % Run through data intervals
+                    for intInd = 1:length(dataStart)
+                        % Add one for indexing
+                        intLen = length(dataStart(intInd):...
+                            dataStop(intInd));
+                        % Double check that each interval is long enough
+                        if intLen >= (minInt*adfreq)
+                            numTrls = floor(intLen/(minInt*adfreq));
+                            thisTrls = horzcat(thisTrls,intTime{iE,iT}(...
+                                dataStart(intInd):(dataStart(intInd)+...
+                                ((minInt*adfreq)*numTrls))-1)); %#ok<AGROW>
+                        end
+                    end
+                    if ~isempty(thisTrls)
+                        clnTrls{iE,iT} = thisTrls;
+                    end
+                end
             end
         end
     end
 end
 %% Create empty trial structure
-thisTrl = [];
-thisTrl.label = LFPTs.label;
-thisTrl.fsample = adfreq;
-thisTrl.trial = [];
-thisTrl.time = {};
-thisTrl.sampleinfo = [];
+% thisTrl = [];
+% thisTrl.label = LFPTs.label;
+% thisTrl.fsample = adfreq;
+% thisTrl.trial = [];
+% thisTrl.time = {};
+% thisTrl.sampleinfo = [];
 % Create trl structures for each event
 trls = cell(1,size(eoi,1));
 for iE = 1:size(eoi,1)
@@ -232,28 +259,51 @@ for iE = 1:size(eoi,1)
     if any(~cell2mat(cellfun(@isempty,clnTrls(iE,:),'UniformOutput',0)))
         % Start counter
         c = 1;
-        for iT = 1:size(clnTrls,2)
-            % Check if trial exists
-            if ~isempty(clnTrls{iE,iT})
+        thisTrl = [];
+        thisTrl.label = LFPTs.label;
+        thisTrl.fsample = adfreq;
+        thisTrl.trial = [];
+        thisTrl.time = {};
+        thisTrl.sampleinfo = [];
+        for iT = logicFind(1,~cell2mat(cellfun(@isempty,clnTrls(iE,:),...
+                'UniformOutput',0)),'==')
+            % If doing discrete analysis, figure out maximal windowing
+            if discrete
                 % Split into as many trials as possible
                 for iN = 1:size(clnTrls{iE,iT},2)/(minInt*adfreq)
-                    thisTrl.time{1,c} = (1/adfreq:1/adfreq:minInt);
+                    % thisTrl.time{1,c} = (1/adfreq:1/adfreq:minInt);
                     thisTrl.sampleinfo(c,1) = clnTrls{iE,iT}...
                         (1+(iN-1)*minInt*adfreq);
                     thisTrl.sampleinfo(c,2) = clnTrls{iE,iT}...
                         (iN*minInt*adfreq);
-                    thisTrl.trial(:,:,c) = LFPTs.data(:,...
-                        clnTrls{iE,iT}(1+(iN-1)*minInt*adfreq:...
-                        iN*minInt*adfreq));
-                    thisTrl.label = LFPTs.label;
-                    thisTrl.fsample = adfreq;
+                    thisTrl.time{1,c} = LFPTs.tvec(...
+                        thisTrl.sampleinfo(c,1)):LFPTs.tvec(...
+                        thisTrl.sampleinfo(c,2));
+                    % If using fixed trials, then check if any NaNs exist
+                    % in which case make a whole trial of NaNs as
+                    % placeholder
+                    if fixed && sum(isnan(clnTrls{iE,iT}(1+(iN-1)*minInt...
+                            *adfreq:iN*minInt*adfreq)))
+                        thisTrl.trial(:,:,c) = NaN([size(LFPTs.data,1),...
+                            minInt*adfreq]);
+                    else
+                        thisTrl.trial(:,:,c) = LFPTs.data(:,...
+                            clnTrls{iE,iT}(1+(iN-1)*minInt*adfreq:...
+                            iN*minInt*adfreq));
+                    end
                     c = c+1;
                 end
+                
+                % Otherwise, if doing continuous analysis, keep all data
+            else
+                thisTrl.trial = LFPTs.data(:,clnTrls{iE,iT});
+                thisTrl.sampleinfo = clnTrls{iE,iT};
+                thisTrl.time = LFPTs.tvec;
             end
         end
         trls{iE} = thisTrl;
-        thisTrl = [];
+        thisTrl = []; %#ok
     else
-        disp('Warning: This event has 0 clean trials!')
+        disp(['Warning: This event ',eoi{iE,1},' has 0 clean trials!'])
     end
 end

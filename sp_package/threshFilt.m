@@ -1,4 +1,4 @@
-function [LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq)
+function [LFPTs,chk_nan,zeroedChannel,nanInd] = threshFilt(LFPTs,thresh,onset,offset,minInt,adfreq,discrete)
 %% Find indices of |data| greater than or equal to thresh and NaNs. Useful 
 % for filtering out noise artifacts from data.
 %__________________________________________________________________________
@@ -12,11 +12,16 @@ function [LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,thresh,onset,offset,mi
 %   N.B. offset*adfreq will be rounded up if not a whole number
 % minInt = minimum interval length of data to keep; format: seconds 
 % adfreq = sampling frequency; format: Hz
+% discrete = whether to do discrete (1) or continuous (0) analysis;
+%   continuous will keep data un-NaNed so that it can all be processed and
+%   then the NaNs brought back in after processing
 %__________________________________________________________________________
 % OUTPUTS:
 % LFPTs = NaNed LFPT data structure
 % nNaN = number of NaNed samples per channel
 % indSkp = indices of channels skipped due to too many NaNs
+% nanInd = indices of NaNs; from oneChan so includes NaNs collapsed from
+%   all channels
 %__________________________________________________________________________
 % USE:
 % [LFPTs,chk_nan,zeroedChannel] = threshFilt(LFPTs,2.5,0.0125,40,5,400)
@@ -68,7 +73,6 @@ if chk_nan ~= 0
         threshInd{2,iI} = threshInd{1,iI}(firstIndex)-onset;
         threshInd{3,iI} = threshInd{1,iI}(firstIndex)+offset;
     end
-
     %% Create overlapping intervals
     % Initialize overlapping interval array
     overInt = cell(2,chans);
@@ -140,7 +144,11 @@ if chk_nan ~= 0
         end
     end
     %% Overwrite LFPTs with LFPTsNaN
-    LFPTs = LFPTsNaN;
+    if discrete
+        LFPTs = LFPTsNaN;
+    end
+    nanInd = logicFind(0,oneChan,'==');
     % Record that LFPTs was processed with threshFilt.m
 %     LFPTs.cfg.history.mfun{end+1} = 'threshFilt';
 end
+nanInd = [];

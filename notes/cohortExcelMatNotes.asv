@@ -1,0 +1,67 @@
+%% Extract data from IRDM cohort spreadsheets (helps automates checking AUCs)
+
+% Would be good to add in feature that detects surgery date and only looks
+% for files after that...would at least get rid of values u
+%% Import spreadsheets
+% files = fileSearch('F:\irdmRound2\cohortSpreadsheets\');
+files = fileSearch('H:\Shared drives\Green Lab\IRDM\Cohort spreadsheets');
+thisData = cell(1,4);
+c = 1;
+for ii = 1:numel(files)
+    [~,sheetName] = xlsfinfo(files{ii});
+    for jj = 1:numel(sheetName)
+        if ~isnan(str2double(sheetName{jj}))
+            thisSheet = readtable(files{ii},'sheet',sheetName{jj});
+            % Get indices of rows that are not: 'no pl2', 'pre-implant',
+            % don't have date
+            inds = logicFind(1,...
+                cellfun(@isempty,strfind(thisSheet.notes,'no pl2')) & ...
+                cellfun(@isempty,strfind(thisSheet.notes,'pre-implant'))...
+                & ~isnat(thisSheet.Date),'==');
+            for k = inds
+                if isdatetime(thisSheet{k,1}) 
+                    thisData(c,:) = {['IRDM',sheetName{jj}],...
+                        char(datetime(thisSheet{k,1},'format',...
+                        'yyyy-MM-dd')),thisSheet.AUC(k),...
+                        thisSheet.notes(k)};
+                    c = c+1;
+                end
+            end
+        end
+    end
+end
+%% Get list of aucs and filenames from processed files
+files = fileSearch('F:\irdmRound2\processedContinuous3\','.mat');
+processedData = cell(1,4);
+for ii = 1:numel(files)
+    parts = strsplit(files{ii},'_');
+    ID = strsplit(parts{1},'-');
+    % Find index that matches ID and date
+    ind = logicFind(1,contains(thisData(:,1),ID{1}) ...
+        & contains(thisData(:,2),parts{end-1}),'==');
+    % Check if 'bad events' or 'missing events', if so skip running
+    % ddtTrials
+    if contains(thisData{ind,4},'bad') || contains(thisData{ind,4},'missing')
+        trials = [];
+    else
+        % Re-run ddtTrials to account for fixed delay time rounding
+        load(files{ii},'LFPTs','hist')
+        trials = ddtTrials(hist.eventTs,LFPTs,0);
+    end
+    % If trials is empty, use NaN
+    if isempty(trials)
+        auc = NaN;
+    else
+        auc = round(trials(1).auc,4);
+    end
+    % Fill in processedData with ID, date, and auc
+    processedData(ii,1:3) = {ID{1},parts{end-1},auc};
+    % Check against spreadsheet data - if not in spreadsheet, insert NaN
+    if isempty(ind)
+        processedData(ii,4) = {NaN};
+    else
+        processedData{ii,4} = round(thisData{ind,3},4);
+    end
+end
+processedData(:,5) = num2cell(cell2mat(processedData(:,3)) == ...
+    cell2mat(processedData(:,4)));
