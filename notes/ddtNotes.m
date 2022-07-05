@@ -117,7 +117,7 @@ load('E:\processed\ddt\catData.mat')
 % get AUCs
 for ii = 1:size(catFiles,1)
    load(catFiles{ii},'trials') 
-   auc(ii) = trials(1).trapzAUC;
+   auc(ii) = trials(1).auc;
 end
 % model data
 trainInds = randperm(size(auc,2),ceil(size(auc,2)*.8));
@@ -203,58 +203,71 @@ for ii = 1:40
 end
 %% plot trait models
 load('G:\GreenLab\data\irdmNew\fedDepBaseModel\traitModels.mat')
-for ii = 1:100
-   load(['G:\GreenLab\data\irdmNew\fedDepBaseModel\animalDetectorNew\traitBinary_depFedBase_randAnimalDetector_',num2str(ii),'.mat'])
-   depRand(ii,:) = 1-depLamRand{1}.allErr;
-   fedRand(ii,:) = 1-fedLamRand{1}.allErr;
-   depAD(ii,:) = 1-depLamAD{1}.allErr;
-   fedAD(ii,:) = 1-fedLamAD{1}.allErr;
+for ii = 1:40
+%    load(['G:\GreenLab\data\irdmNew\fedDepBaseModel\animalDetectorNew\traitBinary_depFedBase_randAnimalDetector_',num2str(ii),'.mat'])
+    load(['G:\GreenLab\data\irdmNew\fedDepBaseModel\all_leave2out\traitBinary_depFedBase_randAnimalDetector_',num2str(ii),'.mat'])
+%     depRand(ii,:) = 1-depLamRand{1}.allErr;
+%     fedRand(ii,:) = 1-fedLamRand{1}.allErr;
+%    depAD(ii,:) = 1-depLamAD{1}.allErr;
+%    fedAD(ii,:) = 1-fedLamAD{1}.allErr;
+    depRand(ii) = depAccRand{1}.acc;
+    fedRand(ii) = fedAccRand{1}.acc;
+    depAD(ii) = depAccAD{1}.acc;
+    fedAD(ii) = fedAccAD{1}.acc;
 end
+%%
 figure
-this = histfit(mean(fedAD,2));
+% this = histfit(mean(fedAD,2));
+this = histfit(fedAD);
 thisX = this(2).XData;
 thisY = this(2).YData;
 close(gcf)
-doubleHist(fedA,mean(fedRand,2),'main','Fed Baseline vs. Animal Detector','xlab','accuracy')
+% doubleHist(fedA,mean(fedRand,2),'main','Fed Baseline vs. Animal Detector','xlab','accuracy')
+doubleHist(fedA,fedRand,'main','Fed Baseline vs. Animal Detector','xlab','accuracy')
 hold on
-plot(thisX,thisY./100,'--','color',[0.5 0.5 0.5],'lineWidth',2)
-
+plot(thisX,thisY./50,'--','color',[0.5 0.5 0.5],'lineWidth',2)
+xlim([0 1])
+%
 figure
-this = histfit(mean(depAD,2));
+% this = histfit(mean(depAD,2));
+this = histfit(depAD);
 thisX = this(2).XData;
 thisY = this(2).YData;
 close(gcf)
-doubleHist(depA,mean(depRand,2),'main','Dep Baseline vs. Animal Detector','xlab','accuracy')
+% doubleHist(depA,mean(depRand,2),'main','Dep Baseline vs. Animal Detector','xlab','accuracy')
+doubleHist(depA,depRand,'main','Dep Baseline vs. Animal Detector','xlab','accuracy')
 hold on
-plot(thisX,thisY./100,'--','color',[0.5 0.5 0.5],'lineWidth',2)
+plot(thisX,thisY./50,'--','color',[0.5 0.5 0.5],'lineWidth',2)
+xlim([0 1])
 %% state analysis
-load('E:\processed\ddt\trapzAUCmodel_32delay.mat')
+load('G:\GreenLab\data\irdmNew\trapzAUCmodel\trapzAUCmodel_32delay.mat')
 % get AUCs
+cd('F:\irdmDiscrete\ddt\0-4-8-16-32_delay')
 for ii = 1:size(catFiles,1)
    load(catFiles{ii},'trials') 
    auc(ii) = trials(1).trapzAUC;
 end
 % all data
-for ii = 1:100
-    load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\full\trapzAUC_',num2str(ii),'.mat'],'acc','accRand','accRandMan')
-    a(ii,:) = acc{1}.acc;
-    aR(ii,:) = accRand{1}.acc;
-    aRM(ii,:) = accRandMan{1}.acc;
-end
-doubleHist(mean(a,2),mean(aRM,2))
+% for ii = 1:100
+%     load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\full\trapzAUC_',num2str(ii),'.mat'],'acc','accRand','accRandMan')
+%     a(ii,:) = acc{1}.acc;
+%     aR(ii,:) = accRand{1}.acc;
+%     aRM(ii,:) = accRandMan{1}.acc;
+% end
+% doubleHist(mean(a,2),mean(aRM,2))
 % delay 32 - continuous
-for ii = 1:100
-    load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\32DelayNew\trapzAUC32delay_',num2str(ii),'.mat'],'acc','accRand')
-    a32(ii,:) = acc{1}.acc;
-    pred = cvglmnetPredict(accRand{1}.mdl,histRand.cfg.naive.testX);
-    aR32(ii,:) = accRand{1}.acc;
-end
-doubleHist(mean(a32,2),mean(aR32,2),'main','Default delay: Continuous trapz AUC','xlab','error')
+% for ii = 1:100
+%     load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\32DelayNew\trapzAUC32delay_',num2str(ii),'.mat'],'acc','accRand')
+%     a32(ii,:) = acc{1}.acc;
+%     pred = cvglmnetPredict(accRand{1}.mdl,histRand.cfg.naive.testX);
+%     aR32(ii,:) = accRand{1}.acc;
+% end
+% doubleHist(mean(a32,2),mean(aR32,2),'main','Default delay: Continuous trapz AUC','xlab','error')
 % delay 32 - median split
 for ii = 1:100
-    load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\32DelayBinary\trapzAUC32delay_medianSplit_',num2str(ii),'.mat'],'acc','accRand','accRandMan')
-    [x(ii,:),y(ii,:),~,auc(ii)] = perfcurve(hist.cfg.naive.testY,acc{1}.pred,1,'TVals',0:0.001:1,'UseNearest',0);
-    [xR(ii,:),yR(ii,:),~,aucR(ii)] = perfcurve(histRand.cfg.naive.testY,accRand{1}.pred,1,'TVals',0:0.001:1,'UseNearest',0);
+    load(['G:\GreenLab\data\irdmNew\trapzAUCmodel\32DelayBinary\trapzAUC32delay_medianSplit_',num2str(ii),'.mat'])
+    [~,~,~,auc(ii)] = perfcurve(hist.cfg.naive.testY,acc{1}.pred,1);
+    [~,~,~,aucR(ii)] = perfcurve(histRand.cfg.naive.testY,accRand{1}.pred,1);
 %     auc32(ii,:) = acc{1}.acc;
 %     aucR32(ii,:) = accRand{1}.acc;
 %     aucRM32(ii,:) = accRandMan{1}.acc;
@@ -299,10 +312,14 @@ figure
 hold on
 % scatter(fedAM(1:48),depAM(1:48),[],repmat(c,8,1),'o')
 % scatter(fedAM(49:end),depAM(49:end),[],repmat(c,28,1),'s')
+scatter(depAM(1:48),aM(1:48),[],repmat(c,8,1),'o');
+scatter(depAM(49:end),aM(49:end),[],repmat(c,28,1),'s');
+% scatter(fedAM(1:48),depAM(1:48),[],repmat(c,8,1),'o')
+% scatter(fedAM(49:end),depAM(49:end),[],repmat(c,28,1),'s')
 % scatter(fedAM(1:48),aM(1:48),[],repmat(c,8,1),'o')
 % scatter(fedAM(49:end),aM(49:end),[],repmat(c,28,1),'s')
-scatter(delayImmediateGenAM(1:48),aM(1:48),[],repmat(c,8,1),'o')
-scatter(delayImmediateGenAM(49:end),aM(49:end),[],repmat(c,28,1),'s')
+% scatter(delayImmediateGenAM(1:48),aM(1:48),[],repmat(c,8,1),'o')
+% scatter(delayImmediateGenAM(49:end),aM(49:end),[],repmat(c,28,1),'s')
 xlim([-1 1]); ylim([-1 1])
 set(gca,'xtick',-1:0.5:1,'ytick',-1:0.5:1)
 plot([-1 -0.5],[-0.5 -0.5],':k')
@@ -314,10 +331,13 @@ plot([-0.5 -0.5],[-1 -0.5],':k')
 plot([-0.5 -0.5],[1 0.5],':k')
 plot([0.5 0.5],[-1 -0.5],':k')
 plot([0.5 0.5],[1 0.5],':k')
-% xlabel('AUC Fed Baseline')
-xlabel('Delay (1) v. Immediate (0)')
+ylabel('AUC State')
+xlabel('AUC Trait')
+legend(h(1:2))
+% xlabel('Delay (1) v. Immediate (0)')
 % ylabel('AUC Dep Baseline')
-ylabel('AUC State 32 Delay')
+%% Load new state models
+
 %% find features that don't move quadrant
 pos = aM > 0.5 & fedAM > 0.5 & delayImmediateGenAM > 0.5;
 neg = aM < -0.5 & fedAM < -0.5 & delayImmediateGenAM < -0.5;
@@ -347,9 +367,11 @@ delayImmediateGenAM = mean(delayImmediateGenA,1).*(delayImmediateGenSignM./abs(d
 %% immediate vs delay levers
 for ii = 1:100
     load(['G:\GreenLab\data\irdmNew\delayImmediate\genModel\delayImmediateGen',num2str(ii),'.mat'],'accArray','accArrayP','hist','histP','sign','a')
-    [idX(ii,:),idY(ii,:),~,idAuc(ii)] = perfcurve(hist.cfg.naive.testY,accArray{1}.pred,1);
-    idSign(ii,:) = sign;
-    [idXP(ii,:),idYP(ii,:),~,idAucP(ii)] = perfcurve(histP.cfg.naive.testY,accArrayP{1}.pred,1);
+    [~,~,~,idAuc(ii)] = perfcurve(hist.cfg.naive.testY,accArray{1}.pred,1);
+    %     [idX(ii,:),idY(ii,:),~,idAuc(ii)] = perfcurve(hist.cfg.naive.testY,accArray{1}.pred,1);
+%     idSign(ii,:) = sign;
+        [~,~,~,idAucP(ii)] = perfcurve(histP.cfg.naive.testY,accArrayP{1}.pred,1);
+%     [idXP(ii,:),idYP(ii,:),~,idAucP(ii)] = perfcurve(histP.cfg.naive.testY,accArrayP{1}.pred,1);
 end
 figure
 hold on

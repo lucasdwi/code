@@ -231,11 +231,11 @@ end
 if plotlegend==1 & plotmean==1 | plotlegend==1 & plotmedian==1
     
     if plotmean==1 & plotmedian==1
-        L=legend([p(1) p(2)],'Mean','Median');
+        L=legend([p(1) p(2)],'mean','median');
     elseif plotmean==0 & plotmedian==1
-        L=legend([p(2)],'Median');
+        L=legend([p(2)],'median');
     elseif plotmean==1 & plotmedian==0
-        L=legend([p(1)],'Mean');
+        L=legend([p(1)],'mean');
     end
     
     set(L,'box','off','FontSize',14)

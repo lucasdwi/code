@@ -155,10 +155,11 @@ xlabel('% delay choice')
 ylabel('latency (sec)')
 %% Get clean data associated with free decisions
 files = fileSearch('F:/irdmRound2/processedContinuous3/','DDT');
-% cd('G:\GreenLab\data\irdmNew\processedContinuous\')
 data = []; c = 0; aC = 1;
-% Set window size (sec) desired and % of window required to keep
+% Set window size (sec) desired and minimum number of clean data for use
 winSize = 10;
+notNan = 1;
+ti = 1;
 for ii = 1:numel(files)
     disp(ii)
     load(files{ii},'trials')
@@ -174,36 +175,41 @@ for ii = 1:numel(files)
             % may not be used
             first = 1;
             if trials(end).blockN == 5 && trials(end).trialN > 5
-                for jj = 1:size(this,1)
-                    % Subtract 0.5 seconds from trial start to account for
-                    % feature times given as center of 1-second window
-                    % (i.e., window centered at 0.5 includes data from [0
-                    % 1])
+                for jj = 1:size(this,2)
+                    % Subtract 1.5 seconds from lever press to account for
+                    % feature times given as center of 3-second window
+                    % (i.e., window centered at 1.5 includes data from [0
+                    % 3])
                     if strcmp('immediate_free',this(1,jj)) || strcmp(...
                             'delay_free',this(1,jj))
-                        stop = nearest_idx3(cell2mat(this(2,jj))-0.5,...
-                            psdTrls{1}.t,-1);
-                        start = stop-winSize+1;
-                        % Check for NaNs; only keep if 3/5 not Nans (using
+                        % Use leverPress as the last possible point to
+                        % include
+                        stop = nearest_idx3(cell2mat(this(6,jj)),...
+                            psdTrls{1}.t+1.5,-1);
+                        % Subtract winSize+1.5 to get all possible data
+                        % within the time of interest
+                        start = nearest_idx3(cell2mat(this(6,jj))-winSize,...
+                            psdTrls{1}.t-1.5,1);
+                        % Check for NaNs; only keep if >= notNan (using
                         % first values in relPower as proxy)
                         if sum(~isnan(psdTrls{1}.relPow(1,1,1,start:...
-                                stop)))>=1
+                                stop)))>=notNan
                             % Add to counter
                             c = c+1;
                             % Get starting index for this session
                             if first == 1
                                 animalInds(aC,1) = c;
                             end
+                            % data
                             data(c).animal = parts{1};
-                            data(c).date = parts{3};
-                            
-                            
-                            data(c).rawPower = psdTrls{1}.Pow(:,:,:,...
-                                start:stop);
+                            data(c).date = parts{end-1};
+                                                        
+%                             data(c).rawPower = psdTrls{1}.Pow(:,:,:,...
+%                                 start:stop);
                             data(c).relPower = psdTrls{1}.relPow(:,:,:,...
                                 start:stop);
                             
-                            data(c).rawCoh = coh{1}.Cxy(:,:,:,start:stop);
+%                             data(c).rawCoh = coh{1}.Cxy(:,:,:,start:stop);
                             data(c).normBandCoh = coh{1}.normBandCoh(:,...
                                 :,:,start:stop);
                             
@@ -225,6 +231,12 @@ for ii = 1:numel(files)
                             data(c).lever_headEntry_latency = ...
                                 cell2mat(this(11,jj));
                             data(c).blockD = cell2mat(this(12,jj));
+                            % Save data window
+                            data(c).start = psdTrls{1}.t(start);
+                            data(c).stop = psdTrls{1}.t(stop);
+                            % time
+                            data(c).winCenter = cell2mat(this(6,jj))-...
+                                psdTrls{1}.t(start:stop);
                             % Reset first
                             first = 0;
                         end
@@ -240,135 +252,526 @@ for ii = 1:numel(files)
 end
 % Get rid of zero animalInds due to NaNed data
 animalInds(animalInds(:,1)==0,:) = [];
-%%
-for ii = 1:size(data,2)
-    clean(ii,:) = ~isnan(data(ii).rawPower(1,1,1,:));
-end
-figure
-subplot(1,3,1)
-imagesc(clean)
-set(gca,'xtick',1:2:10,'xticklabel',1.5:2:10.5)
-title('clean data per lever press')
-colormap gray
-xlabel('time before lever press (sec)')
-ylabel('lever press')
-% get sum of clean trials through time
-sum(clean);
-for ii = 1:10
-    cumSum(ii) = sum(reshape(clean(:,end-ii+1:end),1,ii*size(clean,1)));
-end
-subplot(1,3,2)
-plot(1:10,cumSum,'.k','markersize',20)
-title('total clean windows through time')
-set(gca,'xtick',1:2:10,'xticklabel',1.5:2:10.5)
-xlabel('time before lever press (sec)')
-ylabel('total data')
-% percent of window available
-for ii = 1:size(clean,1)
-   for jj = 1:10
-        percentClean(ii,jj) = sum(clean(ii,1:jj))/jj;
-   end
-end
-% Get percent clean by animal
-% Convert and split apart anmimal ID to get just IRDM# (removes things
-% after -, e.g., IRDM11-stimcore would count as IRDM11)
-cellData = squeeze(struct2cell(data));
-allID = unique(cellData(1,:));
-splitID = cellfun(@(x) strsplit(x,'-'),allID,'UniformOutput',false);
-uIDs = unique(cellfun(@(x) x{1},splitID,'UniformOutput',0));
-for ii = 1:numel(uIDs)
-    % Find all indices of data that are from given animal
-    inds = logicFind(1,cellfun(@(x) ~isempty(x),strfind(cellData(1,:),...
-        uIDs{ii})),'==');
-    c = 1;
-    for jj = inds
-        for k = 1:10
-            ratPercentClean{ii}(c,k) = sum(clean(jj,1:k))/k;
-        end 
-        c = c+1;
-    end
-end
-subplot(1,3,3)
-hold on
-for ii = 1:numel(ratPercentClean)
-    plot(1:10,mean(ratPercentClean{ii}),'-','color',[0.5 0.5 0.5])%,'.','markerSize',20)
-end
-plot(1:10,mean(percentClean,1),'.k','markersize',20)
-set(gca,'xtick',1:2:10,'xticklabel',1.5:2:10.5)
-xlabel('time before lever press (sec)')
-ylabel('% of clean data')
-title('% of clean data through time')
-%% Get trial number by length of window and # clean required
-this = [];
-for ii = 1:size(clean,1)
-    for jj = 1:10
-        for k = 1:jj
-           this(ii,k,jj) = sum(clean(ii,1:jj)) >= k; 
+% save('F:/irdmRound2/trialData.mat','animalInds','data')
+%% collate all times
+% allTimes = [];
+% clean = [];
+% for ii = 1:numel(data)
+%     % Check NaNs
+%     cleanInds = ~isnan(data(ii).relPower(1,1,1,:));
+%     clean(ii) = sum(cleanInds);
+%     % Account for the times being center points by adding and subtracting
+%     % 1.5 seconds
+%    allTimes = [allTimes,data(ii).winCenter(cleanInds)-1.5,...
+%        data(ii).winCenter(cleanInds)+1.5];
+% end
+% figure
+% subplot(1,2,1)
+% histogram(allTimes)
+% box off
+% xlabel('seconds before lever (sec)')
+% ylabel('number of trials')
+% subplot(1,2,2)
+% [f,x] = ecdf(allTimes);
+% plot(x,f.*sum(clean))
+% box off
+% xlabel('seconds before lever (sec)')
+% ylabel('number of trials')
+%% get number of trials as we allow time to go further back
+% load('F:/irdmRound2/trialData.mat')
+c=1;
+cleanTrials = cell(1,8);
+for x = [3.1,4:10]
+    thresh = 0:0.1:x;
+%     cleanTrials = zeros(numel(data),numel(thresh));
+    for ii = 1:numel(data)
+        % Check NaNs
+        cleanInds = ~isnan(data(ii).relPower(1,1,1,:));
+        clean{c}(ii) = sum(cleanInds);
+        cleanCenters = data(ii).winCenter(cleanInds);
+        % Check if any window contains thresh but does not exceed max thresh
+        for jj = 1:numel(thresh)
+            if any(thresh(jj) >= cleanCenters-1.5 & ...
+                    thresh(jj) <= cleanCenters+1.5 & ...
+                    thresh(end) >= cleanCenters+1.5)
+                cleanTrials{c}(ii,jj) = 1;
+            else
+                cleanTrials{c}(ii,jj) = 0;
+            end
         end
     end
+    c = c+1;
 end
+cumSum = cell(1,8);
+for c = 1:8
+    for ii = 1:size(cleanTrials{c},2)
+        cumSum{c}(ii) = sum(any(cleanTrials{c}(:,1:ii),2));
+    end
+end
+%% plots how many trials can be gotten max 
 figure
-imagesc(squeeze(sum(this,1)))
-set(gca,'xtick',1:2:10,'xticklabel',1.5:2:10.5)
+plot(3:10,cellfun(@max,cumSum),'.')
+figure
+thresh = [3.1,4:10];
+hold on
+for ii = 1:8
+    plot(0:0.1:thresh(ii),sum(cleanTrials{ii},1))
+end
+%%
+figure
+subplot(1,2,1)
+imagesc(cleanTrials{3})
+set(gca,'xtick',0:9:51,'xticklabel',0:5)
 xlabel('time before lever press (sec)')
-ylabel('# clean bins required')
-c = colorbar;
-c.Label.String = 'trials';
-colormap viridis
+ylabel('trial')
+title('clean data per trial')
+colormap gray
+
+subplot(1,2,2)
+plot(0:0.1:5,(sum(cleanTrials{3})/cumSum{3}(end))*100)
+xlabel('time before lever press (sec)')
+ylabel('% trials')
+title('% of trials with included time')
+%% plot data and behavior
+figure
+hold on
+% plot(LFPTs.tvec,LFPTs.data(1,:))
+plot(psdTrls{1}.t,squeeze(psdTrls{1}.Overall(1,1,1,:)),'ok')
+for ii = 1:size(times,1)
+    plot([psdTrls{1}.t(times(ii,1))-1.5 psdTrls{1}.t(times(ii,2))+1.5],[2 2],'-r')
+end
+%% Plot histogram of gap between data start and lever press
+figure
+% Account for the 1.5 seconds subtracted earlier
+histogram(extractfield(data,'stop')-extractfield(data,'leverPress')+1.5);
+figure
+histogram(extractfield(data,'start')-extractfield(data,'leverPress')+1.5);
 %% Immediate and delay lever press
+% Find when session switches by comparing animal ID and date
 allData = squeeze(struct2cell(data));
 delay = []; immediate = [];
 % Find minimal number of delays and immediates each session contributes
 for ii = 1:size(animalInds,1)
     % Find indices of delays and immediates
-    delayInd = logicFind(1,cell2mat(allData(7,animalInds(ii,1):...
+    delayInd = logicFind(1,cell2mat(allData(5,animalInds(ii,1):...
         animalInds(ii,2))),'==');
-    immediateInd = logicFind(0,cell2mat(allData(7,animalInds(ii,1):...
+    immediateInd = logicFind(0,cell2mat(allData(5,animalInds(ii,1):...
         animalInds(ii,2))),'==');
-    % Count number of delays and immediates
-    dN(ii) = numel(delayInd);
-    iN(ii) = numel(immediateInd);
-    % Find min
-    thisMin = min([dN(ii),iN(ii)]);
     if ii == 1
         start = 0;
     else
         start = animalInds(ii-1,2);
     end
-    % Pull that number of both trials
-    delay = cat(2,delay,allData(:,start+delayInd(randperm(dN(ii),...
-        thisMin))));
-    immediate = cat(2,immediate,allData(:,start+immediateInd(randperm(...
-        iN(ii),thisMin))));
+%     % Count number of delays and immediates
+%     dN(ii) = numel(delayInd);
+%     iN(ii) = numel(immediateInd);
+%     % Find min
+%     thisMin = min([dN(ii),iN(ii)]);
+%     % Pull that number of both trials
+%     delay = cat(2,delay,allData(:,start+delayInd(randperm(dN(ii),...
+%         thisMin))));
+%     immediate = cat(2,immediate,allData(:,start+immediateInd(randperm(...
+%         iN(ii),thisMin))));
+    % Grab all delays and immediates
+    delay = cat(2,delay,allData(:,start+delayInd));
+    immediate = cat(2,immediate,allData(:,start+immediateInd));
 end
 % Count number of trials per animal (just counts delays, so half of real
 % number)
 u = unique(delay(1,:));
 for ii = 1:numel(u)
     nD(ii) = sum(strcmp(u(ii),delay(1,:)));
+    nI(ii) = sum(strcmp(u(ii),immediate(1,:)));
 end
+% save('F:/irdmRound2/delayImmediate.mat','delay','immediate','u','nD','nI')
+%% Get trials per animal (not intervention)
+% baseInd = ~contains(u,'-');
+baseInd = 1:79; % Includes intervention
+uBase = u(baseInd);
+% Only use an animal if it has at least 20 total samples (immediate and
+% delay)
+theseInd = nD(baseInd)+nI(baseInd) >= 20;
+[catDelay,catImmediate] = deal(cell(1,sum(theseInd)));
+for ii = 1:sum(theseInd)
+    thisAnimalDeInd = strcmp(delay(1,:),uBase{ii});
+    thisAnimalImInd = strcmp(immediate(1,:),uBase{ii});
+    % Delay
+    delayRelPower = cellfun(@(x) reshape(squeeze(mean(x,4,'omitnan')),1,...
+        48),delay(3,thisAnimalDeInd),'UniformOutput',0);
+    catDelayPower = cat(1,delayRelPower{:});
+    delayNormCoh = cellfun(@(x) reshape(permute(squeeze(mean(x,4,...
+        'omitnan')),[2,1,3]),1,168),delay(4,thisAnimalDeInd),...
+        'UniformOutput',0);
+    catDelayCoh = cat(1,delayNormCoh{:});
+    catDelay{ii} = [catDelayPower,catDelayCoh];
+    % Immediate
+    immediateRelPower = cellfun(@(x) reshape(squeeze(mean(x,4,'omitnan')...
+        ),1,48),immediate(3,thisAnimalImInd),'UniformOutput',0);
+    catImmediatePower = cat(1,immediateRelPower{:});
+    immediateNormCoh = cellfun(@(x) reshape(permute(squeeze(mean(x,4,...
+        'omitnan')),[2,1,3]),1,168),immediate(4,thisAnimalImInd),...
+        'UniformOutput',0);
+    catImmediateCoh = cat(1,immediateNormCoh{:});
+    catImmediate{ii} = [catImmediatePower,catImmediateCoh];
+end
+%%
+all = logicFind(1,theseInd,'==');
+% Calculate weights
+baseDelay = nD(baseInd);%cellfun(@(x) size(x,1),catDelay);
+baseIm = cellfun(@(x) size(x,1),catImmediate);
+delayW = 1./(baseDelay/sum(baseDelay));
+imW = 1./(baseIm/sum(baseIm));
+% Propogate weights
+for ii = 1: numel(all)
+    dWeights{ii} = repmat(delayW(ii),baseDelay(ii),1);
+    iWeights{ii} = repmat(imW(ii),baseIm(ii),1);
+end
+% LOO
+for ii = 1:numel(all)
+    % Leave out this animal and build a model from all others
+    others = ~ismember(all,all(ii));
+    testXLOO{ii} = [catDelay{ii};catImmediate{ii}];
+    testYLOO{ii} = [zeros(size(catDelay{ii},1),1);...
+        ones(size(catImmediate{ii},1),1)];
+    
+    trainXLOO{ii} = [cat(1,catDelay{others});cat(1,catImmediate{others})];
+    trainYLOO{ii} = [zeros(size(cat(1,catDelay{others}),1),1);...
+        ones(size(cat(1,catImmediate{others}),1),1)];
+    % Grab weights
+    trainWLOO{ii} = [cat(1,dWeights{others});cat(1,iWeights{others})];
+    cfg = lassoNetCfg({testXLOO{ii},testYLOO{ii}},[],'n','n','n',100,...
+        '1se',trainWLOO{ii});
+    [~,~,~,~,accLOO,histLOO] = lassoNet(trainXLOO{ii},trainYLOO{ii},...
+        'binomial','deviance',1,10,1,cfg);
+end
+% 80/20
+xAll = [cat(1,catDelay{:});cat(1,catImmediate{:})];
+yAll = [zeros(size(cat(1,catDelay{:}),1),1);...
+    ones(size(cat(1,catImmediate{:}),1),1)];
+wAll = [cat(1,dWeights{:});cat(1,iWeights{:})];
+rng(n)
+[trainXind,trainYind,testXind,testYind] = trainTest((1:size(xAll,1))',...
+    (1:size(yAll,1))',0.2);
+cfg = lassoNetCfg({xAll(testXind,:),yAll(testYind)},[],'n','n','n',...
+    100,'1se',wAll(trainXind));
+[~,~,~,~,accAll,histAll] = lassoNet(xAll(trainXind,:),yAll(trainYind),...
+    'binomial','deviance',1,10,1,cfg);
+%% Plot above (delay vs. immmediate) results
+for ii = 1:100
+    load(['F:/irdmRound2/delayImmediate/delayIm',num2str(ii),'.mat']')
+    allA(ii) = accAll{1}.acc;
+    allAX(ii,:) = interp1(linspace(0,1,numel(accAll{1}.x)),accAll{1}.x,...
+        linspace(0,1,600));
+    allAY(ii,:) = interp1(linspace(0,1,numel(accAll{1}.y)),accAll{1}.y,...
+        linspace(0,1,600));
+    for jj = 1:size(accLOO,2)
+        if ~isempty(accLOO{jj})
+            looA(ii,jj) = accLOO{jj}{1}.acc;
+            % Convert all ROCs to length 100 for plotting convenience
+            looAX(ii,jj,:) = interp1(linspace(0,1,...
+                numel(accLOO{jj}{1}.x)),accLOO{jj}{1}.x,linspace(0,1,100));
+            looAY(ii,jj,:) = interp1(linspace(0,1,...
+                numel(accLOO{jj}{1}.y)),accLOO{jj}{1}.y,linspace(0,1,100));
+        else
+            looA(ii,jj) = NaN;
+            [looAX(ii,jj,:),looAY(ii,jj,:)] = deal(NaN);
+        end
+    end
+    glmA(ii) = glmAllA;
+end
+
+figure
+hold on
+for ii = 1:size(looAX,2)
+   plot(squeeze(mean(looAX(:,ii,:),1)),squeeze(mean(looAY(:,ii,:),1)))
+end
+title('delay vs. immediate: each LOO')
+xlabel('FPR')
+ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+
+figure
+hold on
+plot(squeeze(mean(allAX,1)),squeeze(mean(allAY,1)))
+plot(squeeze(mean(mean(looAX,1,'omitnan'),2,'omitnan')),...
+    squeeze(mean(mean(looAY,1,'omitnan'),2,'omitnan')))
+legend({['80:20 \mu = ',num2str(round(mean(allA),2)),'\pm',...
+    num2str(round(conf(allA,0.95),3))],['LOO \mu = ',...
+    num2str(round(mean(mean(looA,'omitnan'),'omitnan'),2)),'\pm',...
+    num2str(round(conf(mean(looA(:,[1:16,18:end])),0.95),2))]},...
+    'location','nw')
+box off
+title('delay vs. immediate')
+xlabel('FPR')
+ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 %% Decisive split - decisive = >80% one lever or the other, indecisive = 
 % <40% one lever or the other
+load('F:/irdmRound2/trialData.mat')
+u = unique(extractfield(data,'animal'));
 for ii = 1:size(animalInds,1)
     delayPerc(ii) = data(animalInds(ii,1)).blockD;
 end
 allDelay = extractfield(data,'blockD');
 topInd = logicFind(1,allDelay<=0.2 | allDelay>=0.8,'==');
-midInd = allDelay<=0.6 & allDelay>=0.4;
+midInd = logicFind(1,allDelay<=0.6 & allDelay>=0.4,'==');
+% Remove data with missing channels
 
-top = squeeze(struct2cell(data(topInd(randperm(numel(topInd),sum(midInd))))));
+top = squeeze(struct2cell(data(topInd)));%squeeze(struct2cell(data(topInd(randperm(numel(topInd),sum(midInd))))));
 mid = squeeze(struct2cell(data(midInd)));
+
+% Get indices of each animal
+uT = unique(top(1,:));
+uTLog = cellfun(@(x) strcmp(top(1,:),x),uT,'UniformOutput',0);
+uM = unique(mid(1,:));
+uMLog = cellfun(@(x) strcmp(mid(1,:),x),uM,'UniformOutput',0);
+% Get base
+uBaseLog = ~contains(u,'-');
+uBaseInd = logicFind(1,uBaseLog,'==');
+% Get number of trials per animal
+% save('F:/irdmRound2/topMid.mat','top','mid','uBaseInd','u')
+%% Plot top (im. vs delay) and mid (im vs. delay)
+for ii = 1:100
+    load(['F:/irdmRound2/decisive/decisiveImDe',num2str(ii),'.mat'])
+    for jj = 1:numel(accTopLOO)
+        if iscell(accTopLOO{jj})
+            topLOO(ii,jj) = accTopLOO{jj}{1}.acc;
+            topGLMLOO(ii,jj) = glmTopLOOA(jj);
+            topLOOX(ii,jj,:) = interp1(linspace(0,1,numel(accTopLOO{jj}{1}.x)),...
+                accTopLOO{jj}{1}.x,linspace(0,1,400));
+            topLOOY(ii,jj,:) = interp1(linspace(0,1,numel(accTopLOO{jj}{1}.y)),...
+                accTopLOO{jj}{1}.y,linspace(0,1,400));
+        else
+            topLOO(ii,jj) = NaN;
+            topGLMLOO(ii,jj) = NaN;
+            topLOOX(ii,jj,:) = ones(1,400).*NaN;
+            topLOOY(ii,jj,:) = ones(1,400).*NaN;
+        end
+    end
+    for jj = 1:numel(accMidLOO)
+        midLOO(ii,jj) = accMidLOO{jj}{1}.acc;
+        midGLMLOO(ii,jj) = glmMidLOOA(jj);
+        midLOOX(ii,jj,:) = interp1(linspace(0,1,numel(accMidLOO{jj}{1}.x)),...
+            accMidLOO{jj}{1}.x,linspace(0,1,400));
+        midLOOY(ii,jj,:) = interp1(linspace(0,1,numel(accMidLOO{jj}{1}.y)),...
+            accMidLOO{jj}{1}.y,linspace(0,1,400));
+    end
+    allTop(ii) = accTopAll{1}.acc;
+    allTopX(ii,:) = interp1(linspace(0,1,numel(accTopAll{1}.x)),...
+        accTopAll{1}.x,linspace(0,1,400));
+    allTopY(ii,:) = interp1(linspace(0,1,numel(accTopAll{1}.y)),...
+        accTopAll{1}.y,linspace(0,1,400));
+    allMid(ii) = accMidAll{1}.acc;
+    allMidX(ii,:) = interp1(linspace(0,1,numel(accMidAll{1}.x)),...
+        accMidAll{1}.x,linspace(0,1,400));
+    allMidY(ii,:) = interp1(linspace(0,1,numel(accMidAll{1}.y)),...
+        accMidAll{1}.y,linspace(0,1,400));
+end
+subplot(2,3,1)
+hold on
+plot(mean(allTopX),mean(allTopY))
+plot(mean(allMidX),mean(allMidY))
+title('immediate vs. delay (top and mid)')
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['top: \mu = ',num2str(mean(allTop)),'\pm',num2str(conf(allTop,0.95))],...
+    ['mid: \mu = ',num2str(mean(allMid)),'\pm',num2str(conf(allMid,0.95))]})
+
+subplot(2,3,2)
+hold on
+plot(squeeze(mean(mean(topLOOX,1,'omitnan'),2,'omitnan')),...
+    squeeze(mean(mean(topLOOY,1,'omitnan'),2,'omitnan')))
+plot(squeeze(mean(mean(midLOOX,1,'omitnan'),2,'omitnan')),...
+    squeeze(mean(mean(midLOOY,1,'omitnan'),2,'omitnan')))
+legend({['top: \mu = ',num2str(mean(mean(topLOO,'omitnan'),'omitnan')),...
+    '\pm',num2str(conf(squeeze(mean(topLOO(:,[1:14,16]),1)),0.95))],...
+    ['mid: \mu = ',num2str(mean(mean(midLOO,'omitnan'),'omitnan')),...
+    '\pm',num2str(conf(squeeze(mean(midLOO,1)),0.95))]})
+title('top and mid: immediate vs. delay (LOO)')
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+
+subplot(2,3,3)
+hold on
+for ii = 1:16
+    plot(squeeze(mean(topLOOX(:,ii,:),1)),squeeze(mean(topLOOY(:,ii,:),1)))
+end
+title('immediate vs. delay (top): each LOO')
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+
+subplot(2,3,4)
+hold on
+for ii = 1:4
+    plot(squeeze(mean(midLOOX(:,ii,:),1)),squeeze(mean(midLOOY(:,ii,:),1)))
+end
+title('immediate vs. delay (mid): each LOO')
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+% Plot top vs. mid
+for ii = 1:100
+    load(['F:/irdmRound2/topMid/topMid',num2str(ii),'.mat'])
+    for jj = 1:20
+        looLassoA(ii,jj) = accLOO{jj}{1}.acc;
+        looLassoX(ii,jj,:) = interp1(linspace(0,1,numel(accLOO{jj}{1}.x)),...
+            accLOO{jj}{1}.x,linspace(0,1,24));
+        looLassoY(ii,jj,:) = interp1(linspace(0,1,numel(accLOO{jj}{1}.y)),...
+            accLOO{jj}{1}.y,linspace(0,1,24));
+    end
+    allA(ii) = accArray{1}.acc;
+    if ~isnan(allA(ii))
+        allX(ii,:) = interp1(linspace(0,1,numel(accArray{1}.x)),...
+            accArray{1}.x,linspace(0,1,24));
+        allY(ii,:) = interp1(linspace(0,1,numel(accArray{1}.y)),...
+            accArray{1}.y,linspace(0,1,24));
+    else
+        allX(ii,:) = deal(NaN);
+        allY(ii,:) = deal(NaN);
+    end
+end
+subplot(2,3,5)
+hold on
+plot(mean(allX,'omitnan'),mean(allY,'omitnan'))
+plot(squeeze(mean(mean(looLassoX,1),2)),squeeze(mean(mean(looLassoY,1),2)))
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['80:20 \mu = ',num2str(round(mean(allA),2)),'\pm',...
+    num2str(round(conf(allA,0.95),2))],['LOO \mu = ',...
+    num2str(round(mean(mean(looLassoA,1),2),2)),'\pm',...
+    num2str(round(conf(mean(looLassoA,1),0.95),2))]})
+
+subplot(2,3,6)
+hold on
+for ii = 1:20
+    plot(squeeze(mean(looLassoX(:,ii,:),1)),squeeze(mean(looLassoY(:,ii,:),1)))
+end
+xlabel('FPR'); ylabel('TPR')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+%% Plot immediate vs. delay (individual animal models)
+for ii = 1:100
+    load(['F:/irdmRound2/delayImmediateInd/delayImInd',num2str(ii),'.mat'])
+    allA(:,:,ii) = a;
+end
+%%
+% Get animal ID
+load('F:/irdmRound2/delayImmediate.mat','u','nI','nD')
+baseIndLog = ~contains(u,'-');
+baseInd = logicFind(1,~contains(u,'-'),'==');
+uBase = u(baseIndLog);
+theseIndLog = nD(baseIndLog)+nI(baseIndLog) >= 40;
+theseInd = logicFind(1,theseIndLog,'==');
+theseID = uBase(theseInd);
+figure
+thisM = mean(allA,3,'omitnan');
+pcolor(padarray(thisM([2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14],...
+    [2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14]),[1,1],'post'))
+caxis([0.33 0.8])
+colormap viridis
+set(gca,'xtick',0.5:18.5,'ytick',0.5:18.5)
+xlabel('train')
+ylabel('test')
+set(gca,'xtick',1.5:19.5,'xticklabel',...
+    theseID([2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14]),...
+    'ytick',1.5:19.5,'yticklabel',...
+    theseID([2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14]))
+xtickangle(45)
+colorbar
+
+% Get sex; 1 = male
+sex = [zeros(1,9),ones(1,9)];
+% Get left or right; left = 1
+leftRight = [ones(1,6),0,0,0,1,1,1,1,0,0,0,0,0];
+% Set data to use; where dim = test x train
+this = thisM([2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14],...
+    [2,7,8,9,15,17,10,16,18,3,5,11,13,1,4,6,12,14]);
+% male->female
+mf = this(sex==0,sex==1);
+% male->male
+mm = this(sex==1,sex==1);
+mm(1:size(mm,1)+1:end) = NaN;
+% female->female
+ff = this(sex==0,sex==0);
+ff(1:size(ff,1)+1:end) = NaN;
+% female->male
+fm = this(sex==1,sex==0);
+
+totalMM = sum(sum(~isnan(mm)));
+totalFF = sum(sum(~isnan(ff)));
+totalMF = sum(sum(~isnan(mf)));
+totalFM = sum(sum(~isnan(fm)));
+p = 0.7;
+nMM = sum(sum(mm>p));
+nFF = sum(sum(ff>p));
+nMF = sum(sum(mf>p));
+nFM = sum(sum(fm>p));
+
+% left->left
+ll = this(leftRight==1,leftRight==1);
+ll(1:size(ll,1)+1:end) = NaN;
+% left->right
+lr = this(leftRight==0,leftRight==1);
+% right->left 
+rl = this(leftRight==1,leftRight==0);
+% right->right
+rr = this(leftRight==0,leftRight==0);
+rr(1:size(rr,1)+1:end) = NaN;
+
+totalLL = sum(sum(~isnan(ll)));
+totalRR = sum(sum(~isnan(rr)));
+totalLR = sum(sum(~isnan(lr)));
+totalRL = sum(sum(~isnan(rl)));
+
+nLL = sum(sum(ll>p));
+nRR = sum(sum(rr>p));
+nLR = sum(sum(lr>p));
+nRL = sum(sum(rl>p));
+
+perc(4,:) = [nMM/totalMM,nMF/totalMF,nFF/totalFF,nFM/totalFM,...
+    nLL/totalLL,nLR/totalLR,nRR/totalRR,nRL/totalRL];
+n(4,:) = [nMM,nMF,nFF,nFM,nLL,nLR,nRR,nRL];
+total(4,:) = [totalMM,totalMF,totalFF,totalFM,totalLL,totalLR,totalRR,...
+    totalRL];
+%% Plot cross performance (above) vs. change in trapz AUC
+% Get IDs of animals with intervention and immediate vs delay model
+these = theseInter(contains(theseInter,theseBase));
+baseAUC = [];
+inter = {'sIL','sNAcC','guan0.3','mph3','mph0.3','mph1','mph0.1',...
+    'sNAcC-LSD','sIL-LSD'};
+for ii = 1:numel(these)
+    for jj = 1:numel(inter)
+        % Get baseline mean trapz AUC
+        
+    end
+end
+%% Plot cross performance (above) vs. effect
+thisInter = contains(theseInter,theseBase);
+thisBase = contains(theseBase,theseInter);
+thisBaseInd = logicFind(1,thisBase,'==');
+interI = 1;
+for ii = [1,2,4]
+    c = 1;
+    
+        figure
+    for jj = 1:15
+        subplot(3,5,c)
+        plot(thisEffect(thisInter,ii),mean(allA(thisBaseInd(jj),thisBaseInd,:),3),'o')
+%         thisEffect(thisInter,jj) == 1;
+%         
+        [~,p(interI,jj)] = ttest2(thisEffect(thisInter,ii),mean(allA(thisBaseInd(jj),thisBaseInd,:),3));
+        c = c+1;
+    end
+    interI = interI+1;
+end
 %%
 figure
 set(gcf,'renderer','Painters')
-hold on
+hold onclear
 histogram(delayPerc,'binwidth',.1)
 plot([0.2 0.2],[0 16],'-k')
 plot([0.8 0.8],[0 16],'-k')
 plot([0.6 0.6],[0 16],'--k')
 plot([0.4 0.4],[0 16],'--k')
 box off
-
 %% Median split AUC
 auc{1} = [345,325,365,355,355,360,370,375,365,350,365,365,365];
 auc{2} = [215,210,225,220,180,100,180,265,225,220];
@@ -887,10 +1290,10 @@ IRDM11 = (IRDM11./10)*100;
 IRDM15 = (IRDM15./10)*100;
 IRDM18 = (IRDM18./10)*100;
 figure
-these = linspace(0.2,0.8,size(IRDM11,1));
+allTimes = linspace(0.2,0.8,size(IRDM11,1));
 hold on
 for ii = 1:size(IRDM11,1)
-    plot(IRDM11(ii,:),'-','color',repmat(these(ii),1,3))
+    plot(IRDM11(ii,:),'-','color',repmat(allTimes(ii),1,3))
 end
 plot(mean(IRDM11,1),'-b')
 ylim([0 100])
@@ -900,10 +1303,10 @@ ylabel('% Delay')
 title('IRDM11')
 %%
 figure
-these = linspace(0.2,0.8,size(IRDM15,1));
+allTimes = linspace(0.2,0.8,size(IRDM15,1));
 hold on
 for ii = 1:size(IRDM15,1)
-    plot(IRDM15(ii,:),'-','color',repmat(these(ii),1,3))
+    plot(IRDM15(ii,:),'-','color',repmat(allTimes(ii),1,3))
 end
 plot(mean(IRDM15,1),'-b')
 ylim([0 100])
@@ -913,10 +1316,10 @@ ylabel('% Delay')
 title('IRDM15')
 %%
 figure
-these = linspace(0.2,0.8,size(IRDM18,1));
+allTimes = linspace(0.2,0.8,size(IRDM18,1));
 hold on
 for ii = 1:size(IRDM18,1)
-    plot(IRDM18(ii,:),'-','color',repmat(these(ii),1,3))
+    plot(IRDM18(ii,:),'-','color',repmat(allTimes(ii),1,3))
 end
 plot(mean(IRDM18,1),'-b')
 ylim([0 100])

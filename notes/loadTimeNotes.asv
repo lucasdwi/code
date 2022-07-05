@@ -1,7 +1,0 @@
-%% Compare loading times between local ssd, local hd, and network drive
-%% Local ssd
-cd()
-files = filSearch('H:\Shared drives\Green Lab2\IRDM\')
-%% Local hd
-
-%% Network drive

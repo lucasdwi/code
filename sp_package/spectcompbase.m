@@ -140,7 +140,6 @@ disp('Calculating power corrleations using powerCorr.m...')
 [r,rVect] = powerCorr(psdTrls); %#ok<ASGLU>
 toc
 %% Calculate coherence
-
 if strcmpi(cohMethod,'mat')
     tic
     disp('Using mscohere.m to calculate coherence...')

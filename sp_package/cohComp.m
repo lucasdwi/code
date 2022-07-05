@@ -65,7 +65,7 @@ chans = size(trls{logicFind(0,empt,'==','first')}.trial,1);
 cmbs = nchoosek(1:chans,2);
 % Determine combinations to skip due to zeroed channels
 if ~isempty(zeroedChannel)
-    skipInd = logicFind(1,any(cmbs == zeroedChannel),2,'==');
+    skipInd = logicFind(1,any(cmbs == zeroedChannel,2),'==');
     % Remove skipInds from cmbs
     cmbs(skipInd,:) = [];
 end
@@ -100,7 +100,8 @@ for ei = logicFind(0,empt,'==')
         if discrete
             n = size(trls{1,ei}.trial,2);
         else
-            [~,winSize] = nearestPow2(adfreq); 
+%             [~,winSize] = nearestPow2(adfreq); 
+          winSize = 3*adfreq;
             n = 1+winSize;
         end
         dt = 1/adfreq;

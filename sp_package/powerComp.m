@@ -54,7 +54,7 @@ nBand = size(bands,1);
 psdtrlData = cell(1,size(trlData,2));
 % Uses nearest power of 2 for speed.
 % [~,hammSize] = nearestPow2(adfreq/foi(2));
-hammSize = 126;
+hammSize = 3*adfreq;
 % Only calculate power spectra for events with data
 for ii = logicFind(0,empt,'==')
     for jj = 1:nTrials(ii)

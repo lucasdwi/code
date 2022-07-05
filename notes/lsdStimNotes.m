@@ -27,15 +27,37 @@ for ii = 1:size(files,2)
 end
 %% Baseline files
 [baseData,baseSamps,baseFiles] = collateData(['G:\GreenLab\data\'...
-    'lsdStim\processed\base\'],{'IRDM2','in';'IRDM5','in';'IRDM6','in';...
+    'lsdStim\processed\base\'],{'IRDM2_','in';'IRDM5','in';'IRDM6','in';...
     'IRDM14','in';'IRDM15','in';'IRDM16','in';'IRDM21','in'},{'pow',...
     'coh'},'trl','raw');
 %% Post LSD files
 [lsdData,lsdSamps,lsdFiles] = collateData(['G:\GreenLab\data\lsdStim\'...
-    'processed\postLSD\'],{'PostLSD2','ex'},{'pow','coh'},'trl','raw');
+    'processed\postLSD\'],{'.mat'},{'pow','coh'},'trl','raw');
 %% Base, Washout, Stim
-[data,samps,files] = collateData(['C:\Users\Pythia\Documents\GreenLab\'...
-    'data\lsdStim\processed\'],{'.mat'},{'pow','coh'},'trl','raw');
+[data,samps,files] = collateData('G:\GreenLab\data\lsdStim\processed\',...
+    {'.mat'},{'pow','coh'},'trl','raw');
+%%
+% load('lsd-baseVsal-base_zscore_stimImag_all-216feat.mat')
+allBaseZ = zscore(cat(1,allData{1}{:,1}));
+allLSD = cat(1,lsdData{1}{[2:7],3});
+allSal = cat(1,allData{1}{:,3});
+lsdZ = (allLSD-mean(cat(1,allData{1}{:,1}),1))./std(cat(1,allData{1}{:,1}),[],1);
+salZ = (allSal-mean(cat(1,allData{1}{:,1}),1))./std(cat(1,allData{1}{:,1}),[],1);
+x = 1;
+[bN,bE] = histcounts(allBaseZ(:,x),30);
+bN = bN./sum(bN);
+bE = bE(2:end)-(bE(2)-bE(1))/2;
+% histogram(lsdZ(:,x),30)
+[sN,sE] = histcounts(salZ(:,x),30);
+sE = sE(2:end)-(sE(2)-sE(1))/2;
+sN = sN./sum(sN);
+figure
+hold on
+plot(bE,smooth(bN))
+plot(sE,smooth(sN))
+xlabel('z-score from base')
+ylabel('% of samples')
+legend({'base','stim'})
 %%
 these = reshape(data{1}',3,3,7);
 theseSamps = reshape(samps{1}',3,3,7);

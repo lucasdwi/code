@@ -326,6 +326,7 @@ for rep = 1:repeats
     % Get beta coefficients of lambda_1se (bestLam) - N.B. these values are
     % not comparable due to varying shrinkage, only used to compute
     % survival rates
+    if ~strcmp(family,'multinomial')
     for r = 1:nResp
         for c = 1:cfg.cvIterations
             betas(c,:,r) = CVfits{c,r}.glmnet_fit.beta(:,logicFind(minLam(c,r),CVfits{c,r}.lambda,'=='));
@@ -334,6 +335,11 @@ for rep = 1:repeats
         % Also get sign of betas for predictive directionality
         signBeta(r,:) = sign(mean(betas(:,:,r)));
     end
+    else
+       betas = [];
+       survBeta = [];
+       signBeta = [];
+    end
     % Pull out model
     mdl{r} = CVfits{bestLambdaInds(r),r};
     toc
@@ -341,21 +347,26 @@ for rep = 1:repeats
     if ~isempty(cfg.naive)
         nPred = size(testY,1);
         % Preallocate
-        predY = zeros(1,nPred);
+        predY = cell(1,nResp);
         acc = [];%zeros(1,nResp);
+        [xRoc,yRoc] = deal(cell(1,nResp));
         % Use best CVfit for each model
         for r = 1:nResp
             % If family is gaussian (continuous), use defualt prediction
             % 'type' ('link')
             if strcmpi(family,'gaussian') || strcmpi(family,'poisson')
-                [predY(r,:)] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm]);
+                [predY{r}] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm]);
                 % Compare predY to testY: difference
-                acc(r,:) = predY(r,:) - testY(:,r)';
+                acc(r,:) = predY{r} - testY(:,r)';
             % Otherwise, if binomial or multinomial, use 'response' type to
             % get probability of group 1 assignment
             elseif strcmpi(family,'binomial') || strcmpi(family,'multinomial')
-                [predY(r,:)] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm],'response');
-                [~,~,~,acc(r)] = perfcurve(testY,predY(r,:),1);
+                [predY{r}] = cvglmnetPredict(mdl{r},testX,['lambda_',cfg.minTerm],'response');
+                if strcmpi(family,'binomial')
+                    [xRoc{r},yRoc{r},~,acc(r)] = perfcurve(testY,predY{r},1);
+                else
+                    acc = [];
+                end
             end
         end
     else
@@ -398,6 +409,10 @@ for rep = 1:repeats
     accArray{rep}.acc = acc;
     accArray{rep}.pred = predY;
     accArray{rep}.mdl = mdl;
+    if strcmpi(family,'binomial')
+       accArray{rep}.x = xRoc{rep};
+       accArray{rep}.y = yRoc{rep};
+    end
     cvFitsArray{rep} = CVfits;
     % Create hist array
     hist.cfg = cfg;
@@ -408,5 +423,5 @@ for rep = 1:repeats
     hist.repeats = repeats;
     hist.testInd = naiveInd;
     hist.trainX = trainX;
-    hist.testX = testX;
+    hist.trainY = trainY;
 end

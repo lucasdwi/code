@@ -1,4 +1,4 @@
-function [trainX,trainY,testX,testY] = trainTest(x,y,perc)
+function [trainX,trainY,testX,testY,trainInd,testInd] = trainTest(x,y,perc)
 %% Splits dataset into training and testing sets
 % INPUTS
 % x = x data to be split; format: array, samples X features

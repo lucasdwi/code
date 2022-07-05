@@ -38,7 +38,8 @@ end
 %%
 % Create second order Chebychev Type I stopband filter from 59 to 61 Hz
 % with 0.5 dB of ripple
-[b,a] = cheby1(p.Results.order,p.Results.ripple,[p.Results.low p.Results.high]*2/fs,'stop');
+[b,a] = cheby1(p.Results.order,p.Results.ripple,[p.Results.low ...
+    p.Results.high]*2/fs,'stop');
 % Plot filter
 if display == 1
     fvtool(b,a,'Fs',fs);

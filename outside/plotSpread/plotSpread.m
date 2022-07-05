@@ -25,7 +25,7 @@ function handles = plotSpread(varargin)
 %           distributionIdx). See linespec for admissible markers.
 %           Default: '.'
 %		categoryIdx: grouping variable that determines group membership for data
-%			points across distributions. Grouping is resolved by calling
+%			points across difigurestributions. Grouping is resolved by calling
 %           grp2idx.
 %       categoryColors : color identifier (cell array of
 %           strings), or colormap, with one color per category.
@@ -499,7 +499,7 @@ for iData = 1:nData
                         'color',plotColors{iData,iCategory},...
                         'lineStyle','none',...
                         'DisplayName',plotLabels{iData,iCategory},...
-                        'markersize',15);
+                        'markersize',5);
                 case 'flipped'
                     ph(iData,iCategory) = plot(ah,data(currentIdx,2),...
                         data(currentIdx,1),...
@@ -507,7 +507,7 @@ for iData = 1:nData
                         'color',plotColors{iData,iCategory},...
                         'lineStyle','none',...
                         'DisplayName',plotLabels{iData,iCategory},...
-                        'markersize',15);
+                        'markersize',5);
             end
         end
     end

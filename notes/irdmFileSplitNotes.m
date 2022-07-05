@@ -1,7 +1,5 @@
 %% NEW VERSION
-% Uses LFP channel name to determine box; FP01 = 1, FP09 = 2, FP017 = 3,
-% FP25 = 4
-
+% Events to boxes
 % Box 1 = 25:32
 % Box 2 = 33:40
 % Box 3 = 41:48
@@ -9,8 +7,28 @@
 inds = [25:32;33:40;41:48;49:56];
 stimInds = reshape(9:24,4,4)';
 dInds = reshape(1:32,8,4)';
-chan = {'FP01','FP09','FP17','FP25'};
-files = fileSearch('F:\irdmRound2\toSplit','.mat');
+chans = cell(1,32);
+for ii = 1:32
+    if ii < 10
+        chans(ii) = {['FP0',num2str(ii)]};
+    else
+        chans(ii) = {['FP',num2str(ii)]};
+    end
+end
+chans = reshape(chans,8,4)';
+
+% Get processed file names; for checking data
+procFiles = fileSearch('F:\irdmRound2\processedContinuous3\','.mat');
+procParts = cell(1,2);
+for ii = 1:numel(procFiles)
+    this = strsplit(procFiles{ii},'_'); 
+    procParts(ii,1:2) = [this(1),this(end-1)];
+end
+% Set defualt box number to 4, even if not all boxes were used
+nBox = 4;
+% Get file names
+files = fileSearch('F:\irdmRound2\toSplit\','.mat');
+% Set up array of AUCs
 auc = [];
 for ii = 1:size(files,2)
     disp([num2str(ii),' of ',num2str(numel(files))])
@@ -23,48 +41,101 @@ for ii = 1:size(files,2)
     last = logicFind(1,cellfun(@(x) isequal(x,'DDT'),parts),'==');
     ddt = 1;
     if isempty(last)
-        last = logicFind(1,cellfun(@(x) isequal(x,'Base'),parts),'==');
+        % Look for 'ase' to grab 'base' and 'depBase'
+        last = logicFind(1,contains(parts,'ase'),'==');
         ddt = 0;
     end
-    nRat = last-1;
-    % Set box to 1
-%     nBox = 1;
-    for k = 1:nRat
-        nBox = logicFind(oldLFPTs.label((k-1)*8+1),chan,'==');
-        % First check if this is a DDT file with behavior
-        if ddt
-            % Check if behavior data exists in logical box (nth box for nth
-            % rat), if so skip to next box with behavior
-%             while isempty(oldEventTs.t{inds(nBox,1)})
-%                 nBox = nBox+1;
-%             end
-            theseInds = [inds(nBox,:),stimInds(k,:)];
-            eventTs.t = oldEventTs.t(theseInds);
-            eventTs.label = oldEventTs.label(theseInds);
-        else
-            eventTs = [];
+    % Check if the number of LFP channels outnumbers how many would be
+    % expected based on the number of animals in file name
+    nChan = size(oldLFPTs.data,1);
+    if nChan > (last-1)*8
+        warning(['There are more LFP channels (',num2str(nChan),')'...
+            ' than expected (',num2str((last-1)*8),')'])
+    else
+        if nChan < (last-1)*8
+            warning(['There are fewer LFP channels (',num2str(nChan),')'...
+                ' than expected (',num2str((last-1)*8),')'])
         end
-        % LFP data inds have no gaps, so index based off nRat
-        dInds = (k-1)*8+1:(k-1)*8+8;
-        LFPTs.data = oldLFPTs.data(dInds,:);
-        LFPTs.label = oldLFPTs.label((dInds));
-        
-        
-        newName = strjoin([parts{k},parts(last:end)],'_');
-        % Run ddtTrials
-        if ddt
-            trials = ddtTrials(eventTs,LFPTs,0);
-            % Add auc to table
-            auc = [auc;{newName},trials(1,1).auc];
+    end
+    % Set rat counter
+    nRat = 1;
+    % Split, going through each potential box
+    for k = 1:nBox
+        % First check if any data from this box exists and get inds
+        dInds = contains(oldLFPTs.label,chans(k,:));
+        if any(dInds)
+            % Check if this is a DDT file with behavior, if so split events
+            if ddt
+                theseInds = [inds(k,:),stimInds(k,:)];
+                eventTs.t = oldEventTs.t(theseInds);
+                eventTs.label = oldEventTs.label(theseInds);
+            else
+                % Otherwise inset empty events
+                eventTs = [];
+            end
+            % Split LFP data
+            LFPTs.data = oldLFPTs.data(dInds,:);
+            LFPTs.label = oldLFPTs.label((dInds));
+            % Create new file name
+            newName = strjoin([parts{nRat},parts(last:end)],'_');
+            % Run ddtTrials
+            if ddt
+                % Check for empty feeder (indicates)
+                trials = ddtTrials(eventTs,LFPTs,0);
+                % Add auc to table
+                auc = [auc;{newName},trials(1,1).auc];
+            else
+                trials = [];
+            end
+            % Look for already split file and compare LFPTs and eventTs to
+            % make sure they were split correctly
+            % Check ID and date
+            thisInd = logicFind(1,contains(procParts(:,1),parts{nRat}) &...
+                contains(procParts(:,2),parts{end}(1:end-4)),'==');
+            if isempty(thisInd)
+                warning(['no matching processed file for ',parts{nRat}])
+                keyboard
+            else
+                % Re-name LFPTs and eventTs
+                newLFPTs = LFPTs;
+                newEventTs = eventTs;
+                % Load split LFPTs
+                load(['E:\processedMat\',...
+                    procFiles{thisInd}(1:end-8),'.mat'],'LFPTs','eventTs');
+                % Check first column and labels
+                if newLFPTs.data(:,1) ~= LFPTs.data(:,1)
+                    warning('LFP mismatch')
+                    keyboard
+                end
+                if any(~strcmp(newLFPTs.label,LFPTs.label))
+                    warning('label mismatch')
+                    keyboard
+                end
+                % Check stim events, if any
+                if ~isempty(newEventTs.t{9})
+                    if ~isempty(eventTs.t{9}) && contains(parts{1},'stim')
+                        if eventTs.t{9}(1) ~=  newEventTs.t{9}(1)
+                            warning('stim event mismatch')
+                            keyboard
+                        end
+                    end
+                end
+            end
+            save(['F:\irdmRound2\toProcess\',newName],'eventTs','LFPTs',...
+                'adfreq','trials')
+            nRat = nRat +1;
         else
-            trials = [];
+            warning('Either events or LFP missing')
         end
-        save(['F:\irdmRound2\split\',newName],'eventTs','LFPTs',...
-            'adfreq','trials')
-%         nBox = nBox+1;            
     end
     movefile(files{ii},'F:\irdmRound2\mat\')
 end
+%% manual skipper
+trials = [];
+save(['F:\irdmRound2\split\',newName],'eventTs','LFPTs',...
+    'adfreq','trials')
+k = k+1;
+nRat = nRat+1;
 %% OLD VERSION
 oldLFPTs = LFPTs; oldEventTs = eventTs;
 % %

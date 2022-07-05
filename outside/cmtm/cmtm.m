@@ -143,9 +143,9 @@ end
 % Compute coherence
 Cxy = sum([fkx.*conj(fky)]');
 ph = angle(Cxy)*180/pi;
-c = abs(Cxy)./sqrt(sum(abs(fkx').^2).*sum(abs(fky').^2));
+% c = abs(Cxy)./sqrt(sum(abs(fkx').^2).*sum(abs(fky').^2));
 % Imaginary coherence
-% % c = imag(Cxy./sqrt(sum(abs(fkx').^2).*sum(abs(fky').^2)));
+c = imag(Cxy./sqrt(sum(abs(fkx').^2).*sum(abs(fky').^2)));
 
 % Correct for the bias of the estimate
 if qbias == 1

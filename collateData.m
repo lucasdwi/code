@@ -129,11 +129,11 @@ for sI = 1:nStr
                             % Permute coh.rel into a similar pattern as
                             % power
                             if isfield(coh{iE},'rel')
-                                thisCoh = reshape(permute(...
-                                    coh{iE}.rel,[2,1,3]),cmb*b,t)';
+                                thisCoh = reshape(permute(squeeze(...
+                                    coh{iE}.rel),[2,1,3]),cmb*b,t)';
                             else
-                                thisCoh = reshape(permute(...
-                                    coh{iE}.normBandCoh,[2,1,3]),cmb*b,t)';
+                                thisCoh = reshape(permute(squeeze(...
+                                    coh{iE}.normBandCoh),[2,1,3]),cmb*b,t)';
                             end
                         else
                             if isfield(coh{iE},'band')
@@ -144,7 +144,8 @@ for sI = 1:nStr
                             % Permute coh.rel into a similar pattern as
                             % power
                             thisCoh = reshape(permute(...
-                                coh{iE}.mBandCoh,[2,1,3]),cmb*b,t)';
+                                squeeze(coh{iE}.mBandCoh),[2,1,3]),...
+                                cmb*b,t)';
                         end
                     else
                         % Average over 4th dimension in case of
@@ -192,7 +193,11 @@ for sI = 1:nStr
                     thisData{iE} = [thisData{iE},thisCorr];
                 end
                 % Grab sampleInfo for timing
-                thisSamp{iE} = trls{1,iE}.sampleinfo;
+                if isfield(psdTrls{1,iE},'t')
+                    thisSamp{iE} = psdTrls{1,iE}.t;
+                else
+                    thisSamp{iE} = trls{1,iE}.sampleinfo;
+                end
                 % Convert to absolute and relative time
 %                 absTime{iE} = LFPTs.tvec(thisSamp{iE});
 %                 relTime{iE} = (absTime{iE}-absTime{iE}(1))./...

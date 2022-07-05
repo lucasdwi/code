@@ -419,8 +419,7 @@ dAR = reshape(drinkAR,1,900);
 wA = reshape(waterA,1,900);
 dnA = reshape(neitherDA,1,900);
 % Split drink test by sex
-dFA = reshape(drinkA(:,fInd),1,500);
-dMA = reshape(drinkA(:,mInd),1,400);
+dFA = reshape(drinkA(),1,500);
 % save('F:\paper3\analyzed\final\feedAlcoholOtherFullModelsLOO2.mat',...
 %     'mFeedX','mFeedY','mFeedXR','mFeedYR','fA','fAR','mDrinkX',...
 %     'mDrinkY','mDrinkXR','mDrinkYR','dA','dAR')

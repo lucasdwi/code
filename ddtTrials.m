@@ -121,7 +121,7 @@ for ii = 1:nTones
                     trial(ii).outcome = [thisReward,'_free'];
                     trial(ii).feeder = thisFeed;
                     % Grab lever press time, using thisReward to determine
-                    % lever
+                    % levertrials
                     trial = lpt(thisReward,eventTs,trial,ii,tone);
                     % Calculate latency to lever press from nose poke
                     trial = npl(trial,ii,nearestNosePoke);
@@ -177,6 +177,30 @@ end
 trialCell = struct2cell(trial);
 % Convert blockN cells to array
 blocks = cell2mat(trialCell(4,:));
+% Visualization
+if vis
+    figure
+    hold on
+    for ii = 1:8
+        plot(eventTs.t{ii},ones(1,numel(eventTs.t{ii}))*ii,'.')
+    end
+    % Get block numbers
+    uBlocks = unique(blocks(~isnan(blocks)));
+    % Find last trial of each block
+    bInds = zeros(numel(uBlocks),1);
+    for ii = 1:numel(uBlocks)
+        bInds(ii) = logicFind(uBlocks(ii),blocks,'==','last');
+        plot([trial(bInds(ii)).stop-2 trial(bInds(ii)).stop-2],...
+            [0.5 8.5],'--k')
+    end
+    for ii = 1:numel(eventTs.t{7})
+        text(eventTs.t{7}(ii),7.5,num2str(ii),'HorizontalAlignment',...
+            'center')
+    end
+    set(gca,'yticklabel',eventTs.label(1:8),'ytick',(1:8))
+    ylim([0.5 8.5])
+    xlabel('Time (s)')
+end
 % Calculate delays from lever press to feeder
 delays = round(extractfield(trial,'feeder')-...
     extractfield(trial,'leverPress'),1);
@@ -203,30 +227,6 @@ for ii = 1:5
 end
 [trial(:).auc] = deal(sum(percentDelay)*100);
 [trial(:).trapzAUC] = deal(trapz(theseDelays,percentDelay));
-% Visualization
-if vis
-    figure
-    hold on
-    for ii = 1:8
-        plot(eventTs.t{ii},ones(1,numel(eventTs.t{ii}))*ii,'.')
-    end
-    % Get block numbers
-    uBlocks = unique(blocks(~isnan(blocks)));
-    % Find last trial of each block
-    bInds = zeros(numel(uBlocks),1);
-    for ii = 1:numel(uBlocks)
-        bInds(ii) = logicFind(uBlocks(ii),blocks,'==','last');
-        plot([trial(bInds(ii)).stop-2 trial(bInds(ii)).stop-2],...
-            [0.5 8.5],'--k')
-    end
-    for ii = 1:numel(eventTs.t{7})
-        text(eventTs.t{7}(ii),7.5,num2str(ii),'HorizontalAlignment',...
-            'center')
-    end
-    set(gca,'yticklabel',eventTs.label(1:8),'ytick',(1:8))
-    ylim([0.5 8.5])
-    xlabel('Time (s)')
-end
 end
 %%
 function thisReward = whichLever(eventTs,tone)

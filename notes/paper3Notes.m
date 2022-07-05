@@ -57,8 +57,6 @@ set(gca,'Xtick',1:5)
 xlabel('Test Animal'); ylabel('AUC')
 legend({'Female Model','Male Model'},'location','nw')
 title('Female')
-%%
-
 %% Get information on data
 % Count number of trials for each group from each animal
 ids = unique(allData.ID);
@@ -285,8 +283,8 @@ legend({['W->W: ',num2str(mWWA),'\pm',num2str(cWWA)],...
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1);
 xlabel('FPR'); ylabel('TPR')
 title('Water vs. Alcohol')
-%% Build model alcohol vs. water/notDrik
-load('D:\paper3\waterAlcoholNotData.mat')
+%% Build model alcohol vs. water/notDrink
+load('D:\paper3\waterAlcoholNotData2.mat')
 % Count number of trials for each group from each animal
 ids = unique(allData.ID);
 for ii = 1:size(ids,1)

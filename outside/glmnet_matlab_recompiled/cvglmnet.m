@@ -210,7 +210,7 @@ function CVerr = cvglmnet(x,y,family,options,type,nfolds,foldid,parallel,keep,gr
 %    25 Jul 2010: Check for input matrix format and size
 %    27 Sep 2010: Fixed a bug of undefined "df" in multinomial fitting,
 %                 pointed by Jeff Howbert from Insilicos.
-%%
+
 %%% Set default values
 if nargin < 3 || isempty(family)
     family = 'gaussian';
@@ -236,7 +236,7 @@ end
 if nargin < 10 || isempty(grouped)
     grouped = true;
 end
-%%
+
 options = glmnetSet(options);
 
 if (~isempty(options.lambda)) && (length(options.lambda)<2)
@@ -263,7 +263,7 @@ is_offset = glmfit.offset;
 options.lambda = glmfit.lambda;
 
 nz = glmnetPredict(glmfit,[],[],'nonzero');
-if (strcmp(glmfit.class,'multnet'))
+if strcmp(glmfit.class,'multnet')
     nnz = zeros(length(options.lambda),length(nz));
     for i = 1:length(nz)
         nnz(:,i) = transpose(sum(nz{i},1));
@@ -322,7 +322,7 @@ else
         end
         xr = x(~which,:); yr = y(~which,:);
         cpredmat{i} = glmnet(xr, yr, family, opts);
-    end
+    end    
 end
 
 switch cpredmat{1}.class

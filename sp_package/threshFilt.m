@@ -41,8 +41,7 @@ chans = size(LFPTs.data,1);
 % Set up threshInd to have one cell per channel to keep track of all
 % threshold crossing indices
 threshInd = cell(1,chans); % Columns = channels; {1,:} = indices above thresh; {2,:} = onset indices; {3,:} = offset indices
-% Set up zeroedChannel to keep track of channels that were too noisy (>30%
-% noise)
+% Set up zeroedChannel to keep track of channels that were too noisy
 zeroedChannel = [];
 % Set chk_nan to zero
 chk_nan = 0;
@@ -50,7 +49,7 @@ for iI = 1:chans
     threshInd{iI} = logicFind(thresh,abs(LFPTs.data(iI,:)),'>');
     % Checks if amount of data beyond threhold exceeds 50%, if so set whole
     % channel to 0
-    if length(threshInd{iI}) >= 0.5*length(LFPTs.data(iI,:))
+    if length(threshInd{iI}) >= 90*length(LFPTs.data(iI,:))
        LFPTs.data(iI,:) = 0;
        % Keep trach of zeroed channels
        zeroedChannel = [zeroedChannel,iI]; %#ok<AGROW>
