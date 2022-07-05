@@ -30,6 +30,7 @@ cfg.file = file;
 cfg.nFilt = [57 63];
 cfg.dsf = 1;
 cfg.thresh = 2; 
+
 cfg.onset = 0.0125;
 cfg.offset = 1;
 cfg.foi = [1 1 100];
@@ -44,6 +45,7 @@ cfg.bands = {'delta',[1,4];
 cfg.overlap = 0.5;
 cfg.cohMethod = 'mtm';
 cfg.skip = [];
+%cfg.eoi = [{'Base1',[0,5]};{'Base2',[0,5]};{'Stim1',[0,5]}];
 % for ii = 1:540
 %    cfg.eoi(ii,:) =  {['Stim',num2str(ii)],[0 0.25]};
 % end
