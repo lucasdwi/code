@@ -12,12 +12,18 @@ function [trainX,trainY,testX,testY,trainInd,testInd] = trainTest(x,y,perc)
 %__________________________________________________________________________
 % LDD 2019-12-16
 %%
+% Calculate size of input data
 n = size(x,1);
+% Calculate number of samples for training
 trainN = floor(n*(1-perc));
-testN = n-trainN;
+% Calculate number of samples for testing
+testN = n-trainN; % not used at this point
+% Create randomized index list 
 inds = randperm(n,n);
+% Split randomized index list into train and test indices 
 trainInd = inds(1:trainN);
 testInd = inds(trainN+1:end);
+% Use train and test indices to split data into train and test sets
 trainX = x(trainInd,:);
 trainY = y(trainInd);
 testX = x(testInd,:);

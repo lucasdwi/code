@@ -28,7 +28,7 @@ function [cfg] = scbParamsMulti(file)
 % cfg.sdir = 'F:\irdmRound2\toProcess\';
 % cfg.sdir = 'F:\angelaAlcoholDual\New folder';
 % cfg.sdir = 'F:\angelaAlcoholDual\Pre\';
-cfg.sdir = 'F:\LSD+stim\split\';
+cfg.sdir = 'G:\GreenLab\data\lsd\scoredMat';
 % file = 'H10RegChowNov23';
 cfg.file = file;
 cfg.nFilt = [57 63];
@@ -38,7 +38,7 @@ cfg.thresh = 2;
 cfg.onset = 0.0125;
 cfg.offset = 1;
 cfg.foi = [1 1 100];
-cfg.fixed = 0;
+cfg.fixed = 1;
 cfg.discrete = 1;
 cfg.bands = {'delta',[1,4];
              'theta',[5,10];

@@ -195,8 +195,13 @@ for iE = logicFind(0,cellfun(@isempty,intTime(:,1)),'==')
             % will evenly split into the most windows
         else
             if fixed
+                % only keep not naned data
+                if ~isnan(sum(intTime{iE,iT}))
                 numTrls = floor(size(intTime{iE,iT},2)/(minInt*adfreq));
                 clnTrls{iE,iT} = intTime{iE,iT}(1:numTrls*(minInt*adfreq));
+                else
+                    clnTrls{iE,iT} = [];
+                end
                 % Otherwise, figure out where clean data windows exist that
                 % are long enough
             else

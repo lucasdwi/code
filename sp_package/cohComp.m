@@ -100,8 +100,8 @@ for ei = logicFind(0,empt,'==')
         if discrete
             n = size(trls{1,ei}.trial,2);
         else
-%             [~,winSize] = nearestPow2(adfreq); 
-          winSize = 3*adfreq;
+            [~,winSize] = nearestPow2(adfreq); 
+%           winSize = 3*adfreq;
             n = 1+winSize;
         end
         dt = 1/adfreq;
@@ -127,10 +127,14 @@ for ei = logicFind(0,empt,'==')
                 [Cxy(ci,:,ti),f] = mscohere(x,y,window,oSamp,foiV,adfreq);
             elseif strcmpi(method,'mtm')
                 if discrete
+                   if isnan(sum(x)) || isnan(sum(y))
+                           thisCxy = nan(1,length(s));
+                   else
                     [f,thisCxy,~,~,~] = cmtm(x,y,1/adfreq,...
                         p.Results.NW,0,0,0);
                     % Truncate signal and store
                     Cxy(ci,:,ti) = thisCxy(1:nearest_idx3(foi(end),f));
+                   end
                 else
                     % Convert winSize from seconds to samples
 %                     winSizeSamp = winSize*adfreq;

@@ -92,6 +92,9 @@ for sI = 1:nStr
                             [b,c,t] = size(psdTrls{iE}.relPow);
                             % Reshape and transpose
                             thisPow = reshape(psdTrls{iE}.relPow,b*c,t)';
+%                             thisPow = reshape(psdTrls{iE}.meanRelPow,b*c,t)';
+%                             thisPow = reshape(psdTrls{iE}.avgRelPow,b*c,t)';
+
                         else
                             [b,c,t] = size(psdTrls{iE}.bandPow);
                             % Reshape and transpose
@@ -129,8 +132,10 @@ for sI = 1:nStr
                             % Permute coh.rel into a similar pattern as
                             % power
                             if isfield(coh{iE},'rel')
+%                                 thisCoh = reshape(permute(squeeze(...
+%                                     coh{iE}.rel),[2,1,3]),cmb*b,t)';
                                 thisCoh = reshape(permute(squeeze(...
-                                    coh{iE}.rel),[2,1,3]),cmb*b,t)';
+                                    coh{iE}.meanRelCoh),[2,1,3]),cmb*b,t)';
                             else
                                 thisCoh = reshape(permute(squeeze(...
                                     coh{iE}.normBandCoh),[2,1,3]),cmb*b,t)';
@@ -193,11 +198,11 @@ for sI = 1:nStr
                     thisData{iE} = [thisData{iE},thisCorr];
                 end
                 % Grab sampleInfo for timing
-                if isfield(psdTrls{1,iE},'t')
-                    thisSamp{iE} = psdTrls{1,iE}.t;
-                else
+%                 if isfield(psdTrls{1,iE},'t')
+%                     thisSamp{iE} = psdTrls{1,iE}.t;
+%                 else
                     thisSamp{iE} = trls{1,iE}.sampleinfo;
-                end
+%                 end
                 % Convert to absolute and relative time
 %                 absTime{iE} = LFPTs.tvec(thisSamp{iE});
 %                 relTime{iE} = (absTime{iE}-absTime{iE}(1))./...

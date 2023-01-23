@@ -53,8 +53,8 @@ nBand = size(bands,1);
 % Preallocate psdtrlData
 psdtrlData = cell(1,size(trlData,2));
 % Uses nearest power of 2 for speed.
-% [~,hammSize] = nearestPow2(adfreq/foi(2));
-hammSize = 3*adfreq;
+[~,hammSize] = nearestPow2(adfreq/foi(2));
+% hammSize = 3*adfreq;
 % Only calculate power spectra for events with data
 for ii = logicFind(0,empt,'==')
     for jj = 1:nTrials(ii)
@@ -64,10 +64,15 @@ for ii = logicFind(0,empt,'==')
             win = hamming(hammSize);
             fVect = foi(1):foi(2):foi(3);
             if discrete
-                % Returns two-sided Welch PSD estimate at fois
-                [Pxx,F] = pwelch(data,win,[],fVect,adfreq);
-                % Convert PSD into dB and store
-                psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
+                if isnan(sum(data))
+                    psdtrlData{ii}.Pow(k,:,jj) = nan(1,length(fVect),...
+                        1);
+                else
+                    % Returns two-sided Welch PSD estimate at fois
+                    [Pxx,F] = pwelch(data,win,[],fVect,adfreq);
+                    % Convert PSD into dB and store
+                    psdtrlData{ii}.Pow(k,:,jj) = (10*log10(Pxx))';
+                end
             else
                 % Check if NaNed data
                 if isnan(sum(data))

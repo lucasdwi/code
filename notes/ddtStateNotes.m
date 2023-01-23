@@ -68,7 +68,7 @@ w = 1./(n/sum(n));
 for ii = 1:numel(uID)
     baseCatW{ii} = repmat(w(ii),n(ii),1);
 end
-%% Get sample sizes
+% Get sample sizes
 mInds = contains(sexData.sex,'M');
 fInds = contains(sexData.sex,'F');
 mSamp = n(mInds);
@@ -108,6 +108,9 @@ for ii = 1:size(cmbsM,1)
         linspace(0,1,50));
     yM(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
         linspace(0,1,50));
+    % Permuted
+    [~,~,~,aPM(ii)] = perfcurve(testMaleY{ii}(randperm(numel(testMaleY{ii}),...
+        numel(testMaleY{ii}))),pred,1);
     % Single features
     for jj = 1:216
         mdl = fitglm(trainX(:,jj),trainY,'weights',trainW,...
@@ -115,6 +118,24 @@ for ii = 1:size(cmbsM,1)
         pred = predict(mdl,testMaleX{ii}(:,jj));
         coeffM(ii,jj) = table2array(mdl.Coefficients(2,1));
         [~,~,~,aMS(ii,jj)] = perfcurve(testMaleY{ii},pred,1);
+    end
+    if ii <= 100
+        % Weight contributions of each rat
+        n = cellfun(@(x) size(x,1),baseCatMaleX(:));
+        w = 1./(n/sum(n));
+        trainW = [];
+        for jj = 1:numel(w)
+            trainW = [trainW;repmat(w(jj),n(jj),1)];
+        end
+        [trainX80,trainY80,testX80,testY80,trainInds] = trainTest(...
+            [trainX;testMaleX{1}],[trainY;testMaleY{1}],0.2);
+        mdl80 = fitglm(trainX80,trainY80,'weights',trainW(trainInds),...
+            'distribution','binomial');
+        pred = predict(mdl80,testX80);
+        [~,~,~,a80(ii)] = perfcurve(testY80,pred,1);
+
+        [~,~,~,a80p(ii)] = perfcurve(testY80(randperm(numel(testY80),...
+            numel(testY80))),pred,1);
     end
 end
 %% Build L2O female model; also subset down to 12 rats in training set
@@ -155,15 +176,265 @@ for ii = 1:size(cmbsF,1)
         linspace(0,1,50));
     yF(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
         linspace(0,1,50));
-    % Single features
-    for jj = 1:216
-        mdl = fitglm(trainX(:,jj),trainY,'weights',trainW,...
-            'distribution','binomial');
-        pred = predict(mdl,testFemaleX{ii}(:,jj));
-        coeffF(ii,jj) = table2array(mdl.Coefficients(2,1));
-        [~,~,~,aFS(ii,jj)] = perfcurve(testFemaleY{ii},pred,1);
+    % Permuted
+    [~,~,~,aPF(ii)] = perfcurve(testFemaleY{ii}(randperm(numel(testFemaleY{ii}),...
+        numel(testFemaleY{ii}))),pred,1);
+    % Feature permutation (beta and high gamma)
+    feat = names({'lmPFC','rmPFC','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+    'rNAcC'},{'d','t','a','b','lg','hg'});
+    hgInds = logicFind(1,contains(feat(1:216),'hg'),'==');
+    hgTrainX = trainX;
+    for h = 1:numel(hgInds)
+        hgTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),h);
     end
+    mdl = fitglm(hgTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFHG(ii)] = perfcurve(testFemaleY{ii},pred,1);
+
+    bInds = logicFind(1,contains(feat(1:216),'b'),'==');
+    bTrainX = trainX;
+    for b = 1:numel(bInds)
+        bTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),b);
+    end
+    mdl = fitglm(bTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFB(ii)] = perfcurve(testFemaleY{ii},pred,1);
+
+    ofclInds = logicFind(1,contains(feat(1:216),'lOFC'),'==');
+    ofclTrainX = trainX;
+    for o = 1:numel(ofclInds)
+        ofclTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(ofclTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFOFCl(ii)] = perfcurve(testFemaleY{ii},pred,1);
+
+    ofcrInds = logicFind(1,contains(feat(1:216),'rOFC'),'==');
+    ofcrTrainX = trainX;
+    for o = 1:numel(ofcrInds)
+        ofcrTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(ofcrTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFOFCr(ii)] = perfcurve(testFemaleY{ii},pred,1);
+
+    pfclInds = logicFind(1,contains(feat(1:216),'lPFC'),'==');
+    pfclTrainX = trainX;
+    for p = 1:numel(pfclInds)
+        pfclTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(pfclTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFPFCl(ii)] = perfcurve(testFemaleY{ii},pred,1);
+
+    pfcrInds = logicFind(1,contains(feat(1:216),'rPFC'),'==');
+    pfcrTrainX = trainX;
+    for p = 1:numel(pfcrInds)
+        pfcrTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(pfcrTrainX,trainY,'weights',trainW,'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX{ii});
+    [~,~,~,aFPFCr(ii)] = perfcurve(testFemaleY{ii},pred,1);
+    if ii <= 100 % Run 80:20
+        % Weight contributions of each rat
+        % Grab 14 random rats
+        rats = randperm(numel(baseCatFemaleYlog),17);
+        n = cellfun(@(x) size(x,1),baseCatFemaleX(rats));
+        w = 1./(n/sum(n));
+        trainW = [];
+        for jj = 1:numel(w)
+            trainW = [trainW;repmat(w(jj),n(jj),1)];
+        end
+        [trainX80,trainY80,testX80,testY80,trainInds] = trainTest(...
+            cat(1,baseCatFemaleX{rats}),cat(1,baseCatFemaleYlog{rats}),0.2);
+        mdl80 = fitglm(trainX80,trainY80,'weights',trainW(trainInds),...
+            'distribution','binomial');
+        pred = predict(mdl80,testX80);
+        [~,~,~,a80F(ii)] = perfcurve(testY80,pred,1);
+
+        [~,~,~,aP80F(ii)] = perfcurve(testY80(randperm(numel(testY80),...
+            numel(testY80))),pred,1);
+    end
+    % Single features
+%     for jj = 1:216
+%         mdl = fitglm(trainX(:,jj),trainY,'weights',trainW,...
+%             'distribution','binomial');
+%         pred = predict(mdl,testFemaleX{ii}(:,jj));
+%         coeffF(ii,jj) = table2array(mdl.Coefficients(2,1));
+%         [~,~,~,aFS(ii,jj)] = perfcurve(testFemaleY{ii},pred,1);
+%     end
 end
+%% Compare LOO performance to rats held out
+figure
+hold on
+for ii = 1:17
+    plot(ii,aF(any(cmbsF==ii,2)),'.k')
+    plot(ii,mean(aF(any(cmbsF==ii,2))),'or')
+end
+%% 80:20
+baseCatFemaleX = baseCatX(fInds);
+baseCatFemaleY = baseCatY(fInds);
+baseCatFemaleYlog = cellfun(@(x) x > median(cat(1,baseCatFemaleY{:})),...
+    baseCatFemaleY,'uniformoutput',0);
+for ii = 1:100
+    disp(ii)
+    inds12 = randperm(numel(baseCatFemaleX),12);
+    [trainX,trainY,testFemaleX,testFemaleY,inds] = trainTest(cat(1,baseCatFemaleX{inds12}),...
+        cat(1,baseCatFemaleYlog{inds12}),0.2);
+    % Weight contributions of each rat
+    n = cellfun(@(x) size(x,1),baseCatFemaleX(inds12));
+    w = 1./(n/sum(n));
+    trainW = [];
+    for jj = 1:numel(w)
+        trainW = [trainW;repmat(w(jj),n(jj),1)];
+    end
+    % Build model
+    mdlF{ii} = fitglm(trainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdlF{ii},testFemaleX);
+    [thisX,thisY,~,aF(ii)] = perfcurve(testFemaleY,pred,1);
+    xF(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+        linspace(0,1,50));
+    yF(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+        linspace(0,1,50));
+    % Permuted
+    [~,~,~,aPF(ii)] = perfcurve(testFemaleY(randperm(numel(testFemaleY),...
+        numel(testFemaleY))),pred,1);
+    % Feature permutation (beta and high gamma)
+    feat = names({'lmPFC','rmPFC','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+        'rNAcC'},{'d','t','a','b','lg','hg'});
+    hgInds = logicFind(1,contains(feat(1:216),'hg'),'==');
+    hgTrainX = trainX;
+    for h = 1:numel(hgInds)
+        hgTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),h);
+    end
+    mdl = fitglm(hgTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFHG(ii)] = perfcurve(testFemaleY,pred,1);
+
+    bInds = logicFind(1,contains(feat(1:216),'b'),'==');
+    bTrainX = trainX;
+    for b = 1:numel(bInds)
+        bTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),b);
+    end
+    mdl = fitglm(bTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFB(ii)] = perfcurve(testFemaleY,pred,1);
+
+    ofclInds = logicFind(1,contains(feat(1:216),'lOFC'),'==');
+    ofclTrainX = trainX;
+    for o = 1:numel(ofclInds)
+        ofclTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(ofclTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFOFCl(ii)] = perfcurve(testFemaleY,pred,1);
+
+    ofcrInds = logicFind(1,contains(feat(1:216),'rOFC'),'==');
+    ofcrTrainX = trainX;
+    for o = 1:numel(ofcrInds)
+        ofcrTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(ofcrTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFOFCr(ii)] = perfcurve(testFemaleY,pred,1);
+
+    pfclInds = logicFind(1,contains(feat(1:216),'lPFC'),'==');
+    pfclTrainX = trainX;
+    for p = 1:numel(pfclInds)
+        pfclTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(pfclTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFPFCl(ii)] = perfcurve(testFemaleY,pred,1);
+
+    pfcrInds = logicFind(1,contains(feat(1:216),'rPFC'),'==');
+    pfcrTrainX = trainX;
+    for p = 1:numel(pfcrInds)
+        pfcrTrainX(:,h) = trainX(randperm(size(trainX,1),size(trainX,1)),o);
+    end
+    mdl = fitglm(pfcrTrainX,trainY,'weights',trainW(inds),'distribution',...
+        'binomial');
+    pred = predict(mdl,testFemaleX);
+    [~,~,~,aFPFCr(ii)] = perfcurve(testFemaleY,pred,1);
+end
+%% Plot M and F models as histograms with pvalues and permuted
+figure
+hold on
+[f,xi,bw] = ksdensity(aPF);
+plot(xi,f*bw)
+[f,xi,bw] = ksdensity(aF,'BandWidth',0.05);
+plot(xi,f*bw)
+plot([mean(aFB) mean(aFB)],[0 0.25])
+plot([mean(aFHG) mean(aFHG)],[0 0.25])
+plot([mean(aFOFCl) mean(aFOFCl)],[0 0.25])
+plot([mean(aFPFCl) mean(aFPFCl)],[0 0.25])
+plot([mean(aFOFCr) mean(aFOFCr)],[0 0.25])
+plot([mean(aFPFCr) mean(aFPFCr)],[0 0.25])
+legend({['permuted: ',num2str(round(mean(aPF),2)),'\pm',...
+    num2str(round(conf(aPF,0.95),2))],...
+    ['real: ',num2str(round(mean(aF),2)),'\pm',...
+    num2str(round(conf(aF,0.95),2)),' ',...
+    num2str((sum(aPF>mean(aF))+1)/(numel(aPF)+1))],...
+    ['B permute: ',num2str(round(mean(aFB),2)),'\pm',...
+    num2str(round(conf(aFB,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFB))+1)/(numel(aF)+1))],...
+    ['HG permute: ',num2str(round(mean(aFHG),2)),'\pm',...
+    num2str(round(conf(aFHG,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFHG))+1)/(numel(aF)+1))],...
+    ['OFC l permute: ',num2str(round(mean(aFOFCl),2)),'\pm',...
+    num2str(round(conf(aFOFCl,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFOFCl))+1)/(numel(aF)+1))],...
+    ['IL l permute: ',num2str(round(mean(aFPFCl),2)),'\pm',...
+    num2str(round(conf(aFPFCl,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFPFCl))+1)/(numel(aF)+1))],...
+    ['OFC r permute: ',num2str(round(mean(aFOFCr),2)),'\pm',...
+    num2str(round(conf(aFOFCr,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFOFCr))+1)/(numel(aF)+1))],...
+    ['IL r permute: ',num2str(round(mean(aFPFCr),2)),'\pm',...
+    num2str(round(conf(aFPFCr,0.95),2)),' ',...
+    num2str((sum(aF<mean(aFPFCr))+1)/(numel(aF)+1))]})
+%% Male
+figure
+hold on
+[f,xi,bw] = ksdensity(aPM,'BandWidth',0.05);
+plot(xi,f*bw)
+plot([mean(aM) mean(aM)],[0 0.25])
+legend({['permuted: ',num2str(round(mean(aPM),2)),'\pm',...
+    num2str(round(conf(aPM,0.95),2))],...
+    ['real: ',num2str(round(mean(aM),2)),'\pm',...
+    num2str(round(conf(aM,0.95),2)),' ',...
+    num2str((sum(aPM>mean(aM))+1)/(numel(aPM)+1))]})
+%% Male and female
+figure
+hold on
+[f,xi,bw] = ksdensity(aPM,'BandWidth',0.05);
+plot(xi,f*bw)
+plot([mean(a80) mean(a80)],[0 0.25])
+[f,xi,bw] = ksdensity(aPF);
+plot(xi,f*bw)
+plot([mean(a80F) mean(a80F)],[0 0.25])
+legend({['permuted M: ',num2str(round(mean(aPM),2)),'\pm',...
+    num2str(round(conf(aPM,0.95),2))],...
+    ['M: ',num2str(round(mean(a80),2)),'\pm',...
+    num2str(round(conf(a80,0.95),2)),' ',...
+    num2str((sum(aPM>mean(a80))+1)/(numel(aPM)+1))],...
+    ['permuted F: ',num2str(round(mean(aPF),2)),'\pm',...
+    num2str(round(conf(aPF,0.95),2))],...
+    ['F: ',num2str(round(mean(a80F),2)),'\pm',...
+    num2str(round(conf(a80F,0.95),2)),' ',...
+    num2str((sum(aPF>mean(a80F))+1)/(numel(aPF)+1))]})
 %% Cross apply models - way more iterations by testing each test set on 
 % each model...
 for ii = 1:numel(mdlF)
@@ -317,6 +588,8 @@ for ii = 1:size(cmbs,1)
     [thisX,thisY,~,aCmb(ii)] = perfcurve(testY,pred,1);
     xCmb(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,50));
     yCmb(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,linspace(0,1,50));
+
+    [~,~,~,aCmbP(ii)] = perfcurve(testY(randperm(numel(testY))),pred,1);
     for jj = 1:216
         smdl = fitglm(trainX(:,jj),trainY,'weights',trainW,...
             'distribution','binomial');
@@ -373,8 +646,9 @@ end
 % [xm,ym,~,am] = perfcurve(testYM,predM,1);
 % [xf,yf,~,af] = perfcurve(testYF,predF,1);
 
-% save('F:\irdmRound2\ddtStateSexCmb.mat','aCmb','xCmb','yCmb','aCmbF',...
-%     'xCmbF','yCmbF','aCmbM','xCmbM','yCmbM','aCmbMF','xCmbMF','yCmbMF')
+save('F:\irdmRound2\ddtStateSexCmb.mat','aCmb','xCmb','yCmb','aCmbF',...
+    'xCmbF','yCmbF','aCmbM','xCmbM','yCmbM','aCmbMF','xCmbMF','yCmbMF',...
+    'aCmbP')
 %% Plot
 figure
 hold on
@@ -388,6 +662,26 @@ legend({['gen->gen: ',num2str(round(mean(aCmb),2)),'\pm',...
     ,2))]},'location','se')
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 xlabel('FPR'); ylabel('TPR')
+%% histograms and pvalues
+figure
+hold on
+[f,xi,bw] = ksdensity(aCmbP);
+plot(xi,f*bw)
+plot([mean(aCmb) mean(aCmb)],[0 0.25])
+plot([mean(aCmbM) mean(aCmbM)],[0 0.25])
+plot([mean(aCmbF) mean(aCmbF)],[0 0.25])
+legend({['permuted: ',num2str(round(mean(aCmbP),2)),'\pm',...
+    num2str(round(conf(aCmbP,0.95),2))],...
+    ['gen->gen: ',num2str(round(mean(aCmb),2)),'\pm',...
+    num2str(round(conf(aCmb,0.95),2)),' ',...
+    num2str((sum(aCmbP>mean(aCmb))+1)/(numel(aCmbP)+1))],['gen->M: ',...
+    num2str(round(mean(aCmbM),2)),'\pm',...
+    num2str(round(conf(aCmbM,0.95),2)),' ',...
+    num2str((sum(aCmbP>mean(aCmbM))+1)/(numel(aCmbP)+1))],['gen->F: ',...
+    num2str(round(mean(aCmbF),2)),'\pm',...
+    num2str(round(conf(aCmbF,0.95),2)),' ',...
+    num2str((sum(aCmbP>mean(aCmbF))+1)/(numel(aCmbP)+1))]})
+set(gca,'XLim',[0 1],'ylim',[0 0.2])
 %% Compare single features - female vs. cmb
 feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
     'rNAcC'},{'d','t','a','b','lg','hg'});

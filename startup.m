@@ -4,8 +4,8 @@ addpath(genpath('G:\GreenLab\code\'))
 % Remove fieldtrip
 % rmpath(genpath('G:\GreenLab\fieldtrip-master\'))
 % Data
-addpath(genpath('G:\GreenLab\data\'))
-cd('G:\GreenLab\')
+% addpath(genpath('G:\GreenLab\data\'))
+% cd('G:\GreenLab\')
 %% Set up plotting defaults
 % % Reset defaults (perhaps redundant, but better safe than sorry)
 % reset(0);

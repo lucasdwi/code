@@ -40,7 +40,8 @@ inFiles = [];
 % Go through strings and populate fileStruct starting with any 'in' strings
 if ~isempty(inStr)
     for iSi = 1:size(inStr,2)
-        inFiles = [inFiles; dir(['*',inStr{iSi},'*'])]; %#ok<AGROW>
+%         inFiles = [inFiles; dir(['**/*',inStr{iSi},'*'])]; %#ok<AGROW>
+          inFiles = [inFiles; dir(['*',inStr{iSi},'*'])]; %#ok<AGROW>
     end
 else
     % Otherwise, grab all files

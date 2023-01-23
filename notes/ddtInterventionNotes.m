@@ -490,9 +490,9 @@ legend(inter)
 xlabel('z-score')
 ylabel('proportion')
 %% Base vs. Stim (i.e., stim efffects)
-% cd('F:/irdmRound2/baseVstim/')
+cd('F:/irdmRound2/baseVstim/')
 for ii = 1:20
-%     load(['baseStim',num2str(ii),'.mat'])
+    load(['baseStim',num2str(ii),'.mat'])
     for jj = 1:sum(~cellfun(@(x) isempty(x),acc(1,:)))
         ilA(ii,jj) = acc{1,jj}{1}.acc;
         ilX(ii,jj,:) = acc{1,jj}{1}.x;
@@ -709,10 +709,10 @@ for ii = 1:100
        [~,~,~,aSCoreL2O(ii,jj)] = perfcurve(coreL2OMhist.cfg.naive.testY,pred,1);
    end
 end
-save('F:\irdmRound2\baseInterModels.mat','coreX','coreY','coreA',...
-    'coeffCore','aSCore','coreXL2O','coreYL2O','coreL2O','coeffCoreL2O',...
-    'aSCoreL2O','mphX','mphY','mphA','mphXPerm','mphYPerm','mphXL2O',...
-    'mphYL2O','mphPermA','mphL2O','coeffIL','aIL','coeffILL3O','aILL3O')
+% save('F:\irdmRound2\baseInterModels.mat','coreX','coreY','coreA',...
+%     'coeffCore','aSCore','coreXL2O','coreYL2O','coreL2O','coeffCoreL2O',...
+%     'aSCoreL2O','mphX','mphY','mphA','mphXPerm','mphYPerm','mphXL2O',...
+%     'mphYL2O','mphPermA','mphL2O','coeffIL','aIL','coeffILL3O','aILL3O')
 %% Performance figure
 figure
 hold on
@@ -742,6 +742,28 @@ ylabel('TPR')
 title('MPH3')
 % doubleHist(coreA,coreL2O)
 % doubleHist(ilA,ilAPerm)
+%% performance histograms with pvalues
+figure 
+hold on
+[f,xi,bw] = ksdensity(corePermA,'BandWidth',0.05);
+plot(xi,f*bw)
+plot([mean(coreA) mean(coreA)],[0 0.25])
+legend({['permuted: ',num2str(round(mean(corePermA),2)),'\pm',...
+    num2str(round(conf(corePermA,0.95),2))],...
+    ['real: ',num2str(round(mean(coreA),2)),'\pm',...
+    num2str(round(conf(coreA,0.95),2))]})
+title(['sCore p = ',num2str((sum(corePermA>mean(coreA))+1)/101)])
+
+figure 
+hold on
+[f,xi,bw] = ksdensity(ilAPerm);
+plot(xi,f*bw)
+plot([mean(ilA) mean(ilA)],[0 0.25])
+legend({['permuted: ',num2str(round(mean(ilAPerm),2)),'\pm',...
+    num2str(round(conf(ilAPerm,0.95),3))],...
+    ['real: ',num2str(round(mean(ilA),3)),'\pm',...
+    num2str(round(conf(ilA,0.95),3))]})
+title(['sIL p = ',num2str((sum(ilAPerm>mean(ilA))+1)/101)])
 %% Single features IL vs. NAcC quadrant plot and feature list
 fullFeat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
     'rNAcC'},{'d','t','a','b','lg','hg'});
@@ -1331,6 +1353,43 @@ title([inter{4},num2str(round(mean(negALOOM(1,:),'omitnan'),2)),'\pm',...
     num2str(round(conf(negALOOM(1,~isnan(negALOOM(1,:))),0.95),2))])
 disp(['sIL- permuted = ',num2str(mean(negAllAR)),'\pm',num2str(conf(negAllAR,0.95))])
 disp(['sIL- all = ',num2str(mean(negAllA)),'\pm',num2str(conf(negAllA,0.95))])
+%% distribution and p-value figures
+figure
+hold on
+[f,xi,bw] = ksdensity(posAllAR(1,[1:8,10:21]));
+plot(xi,f*bw)
+plot([mean(posAllA(1,[1:8,10:21])) mean(posAllA(1,[1:8,10:21]))], [0 .25])
+title([inter{1},'p = ',num2str((sum(posAllAR(1,[1:8,10:21])>...
+    mean(posAllA(1,[1:8,10:21])))+1)/21)])
+legend({['real: ',num2str(round(mean(posAllA(1,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllA(1,[1:8,10:21]),0.95),3))],...
+    ['permuted: ',num2str(round(mean(posAllAR(1,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllAR(1,[1:8,10:21]),0.95),3))]})
+
+
+figure
+hold on
+[f,xi,bw] = ksdensity(posAllAR(2,[1:8,10:21]));
+plot(xi,f*bw)
+plot([mean(posAllA(2,[1:8,10:21])) mean(posAllA(2,[1:8,10:21]))], [0 .25])
+title([inter{2},'p = ',num2str((sum(posAllAR(2,[1:8,10:21])>...
+    mean(posAllA(2,[1:8,10:21])))+1)/21)])
+legend({['real: ',num2str(round(mean(posAllA(2,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllA(2,[1:8,10:21]),0.95),3))],...
+    ['permuted: ',num2str(round(mean(posAllAR(2,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllAR(2,[1:8,10:21]),0.95),3))]})
+
+figure
+hold on
+[f,xi,bw] = ksdensity(posAllAR(3,[1:8,10:21]));
+plot(xi,f*bw)
+plot([mean(posAllA(3,[1:8,10:21])) mean(posAllA(3,[1:8,10:21]))], [0 .25])
+title([inter{3},'p = ',num2str((sum(posAllAR(3,[1:8,10:21])>...
+    mean(posAllA(3,[1:8,10:21])))+1)/21)])
+legend({['real: ',num2str(round(mean(posAllA(3,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllA(3,[1:8,10:21]),0.95),3))],...
+    ['permuted: ',num2str(round(mean(posAllAR(3,[1:8,10:21])),3)),'\pm',...
+    num2str(round(conf(posAllAR(3,[1:8,10:21]),0.95),3))]})
 %%
 figure
 hold on
@@ -1942,7 +2001,7 @@ legend({['all: ',num2str(round(mean(allA),2)),'\pm',...
 %% Inter effect combined groups
 for ii = 1:100
     load(['F:\irdmRound2\interEffectPosCmbGroup\interEffectPosCmbGroup',...
-        num2str(ii),'.mat'],'accLOO','groupAcc')
+        num2str(ii),'.mat'])
     for jj = 1:15
         allA(ii,jj) = accLOO{jj}{1}.acc;
         allX(ii,jj,:) = interp1(linspace(0,1,numel(accLOO{jj}{1}.x)),...
@@ -1958,17 +2017,17 @@ for ii = 1:100
             groupAcc{ii,jj}{1}.y,linspace(0,1,50));
         if jj == 1
             prob = cvglmnetPredict(groupAcc{ii,jj}{1}.mdl{1},...
-                groupHist{jj}.cfg.naive.testX);
+                groupHist{ii,jj}.cfg.naive.testX);
             [x,y,~,permA(ii,jj)] = perfcurve(...
-                groupHist{jj}.cfg.naive.testY(randperm(numel(groupHist{jj}.cfg.naive.testY))),prob,1);
+                groupHist{ii,jj}.cfg.naive.testY(randperm(numel(groupHist{ii,jj}.cfg.naive.testY))),prob,1);
             permX(ii,:) = interp1(linspace(0,1,numel(x)),x,...
                 linspace(0,1,50));
             permY(ii,:) = interp1(linspace(0,1,numel(y)),y,...
                 linspace(0,1,50));
         end
     end
-    groupSingleA(ii,:,:) = singleGroupA;
-    groupSingleCoeff(ii,:,:) = singleGroupCoeff;
+%     groupSingleA(ii,:,:) = singleGroupA;
+%     groupSingleCoeff(ii,:,:) = singleGroupCoeff;
 end
 %%
 figure
@@ -1985,6 +2044,17 @@ plot(squeeze(mean(groupX(:,2,:),1)),squeeze(mean(groupY(:,2,:),1)))
 plot(squeeze(mean(groupX(:,3,:),1)),squeeze(mean(groupY(:,3,:),1)))
 legend({'all groups; LOO','sIL+sCore; 80/20','sIL+MPH; 80/20',...
     'sCore+MPH; 80/20'})
+%% sIL+sCore histogram plot
+figure
+hold on
+[f,xi,bw] = ksdensity(permA);
+plot(xi,f*bw)
+plot([mean(groupA(:,1)) mean(groupA(:,1))],[0 0.25])
+legend({['permuted: ',num2str(round(mean(permA),2)),'\pm',...
+    num2str(round(conf(permA',0.95),2))],...
+    ['real: ',num2str(round(mean(groupA(:,1)),2)),'\pm',...
+    num2str(round(conf(groupA(:,1)',0.95),2))]})
+title(['sIL+sCore: p = ',num2str((sum(permA(:,1)>groupA(:,1))+1)/101)])
 %% 
 fullFeat = names({'lmPFC','rmPFC','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
     'rNAcC'},{'d','t','a','b','lg','hg'});

@@ -62,7 +62,7 @@ end
 %%
 if chk_nan ~= 0
     %% Find onset and offset cuttoff
-    % Convert onse and offset to samples (seconds*samples/second = samples)
+    % Convert onset and offset to samples (seconds*samples/second = samples)
     % and round up if needed to avoid fractional indexing
     onset = ceil(onset*adfreq);
     offset = ceil(offset*adfreq);

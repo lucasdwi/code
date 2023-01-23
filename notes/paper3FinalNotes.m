@@ -241,10 +241,10 @@ nD = 100;
 [dX,dY] = deal(zeros(nSteps,81,nD));
 c = 1;
 for jj = steps
-    cd(['D:\paper3\analyzed\final\genModel\',num2str(jj),'feedWeight'])
+    cd(['D:\paper3\analyzed\final\genModel\',num2str(jj),'feedWeightLOO'])
     for ii = 1:81
         % Load data and calculate ROCs
-        load(['feedDrinkOther',num2str(ii),'.mat'],'acc','accR',...
+        load(['feedDrinkOtherLOO',num2str(ii),'.mat'],'acc','accR',...
             'drinkAcc','feedAcc','hist','histR','feedRocX','feedRocY',...
             'drinkRocX','drinkRocY')
         [x,y,~,genAcc(ii,c)] = perfcurve(hist.cfg.naive.testY,...
@@ -305,60 +305,132 @@ title(['generalized model: ',num2str(steps(this)),'feedWeight'])
 % hold on
 % shadedErrorBar(steps,mean(fAcc),std(fAcc),[],1)
 % shadedErrorBar(steps,mean(dAcc),std(dAcc),[],1)
-%% LOO feed vs. other - full model
-% N.B.: run this with or without LOO
-cd D:\paper3\analyzed\final\feedOtherAllLOO\
-% cd D:\paper3\analyzed\final\feedOtherAll\
-% Set up indices of where sweet-fat samples and chow samples end 
-indSplit = [38,57;40,60;40,60;40,60;40,60;40,60;29,43;40,60;40,60];
+%% 80:20 feed vs. other
+cd D:\paper3\analyzed\final\feedOtherNew\
 for ii = 1:100
-   load(['feedOtherAllLOO',num2str(ii),'.mat'],'acc','accR','hist','histR')
-%    load(['feedOtherAll',num2str(ii),'.mat'],'acc','accR','hist','histR')
-   for jj = 1:9
-       [thisX,thisY,~,feedA(ii,jj)] = perfcurve(...
-           hist{jj}.cfg.naive.testY,acc{jj}{1}.pred,1);
-       [thisXR,thisYR,~,feedAR(ii,jj)] = perfcurve(...
-           histR{jj}.cfg.naive.testY,accR{jj}{1}.pred,1);
-       feedX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),...
-           thisX,linspace(0,1,81));
-       feedY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),...
-           thisY,linspace(0,1,81));
-       feedXR(ii,jj,:) = interp1(linspace(0,1,numel(thisXR)),...
-           thisXR,linspace(0,1,81));
-       feedYR(ii,jj,:) = interp1(linspace(0,1,numel(thisYR)),...
-           thisYR,linspace(0,1,81));
-       % Test model on sweet-fat vs. chow and neither independently
-       [thisX,thisY,~,chowA(ii,jj)] = perfcurve(...
-           hist{jj}.cfg.naive.testY(1:indSplit(jj,2)),...
-           acc{jj}{1}.pred(1:indSplit(jj,2)),1);
-       chowX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
-           linspace(0,1,81));
-       chowY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
-           linspace(0,1,81));
-       [thisX,thisY,~,neitherFA(ii,jj)] = perfcurve(...
-           hist{jj}.cfg.naive.testY([1:indSplit(jj,1),...
-           indSplit(jj,2)+1:end]),acc{jj}{1}.pred([1:indSplit(jj,1),...
-           indSplit(jj,2)+1:end]),1);
-       neitherFX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
-           linspace(0,1,81));
-       neitherFY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
-           linspace(0,1,81));
-   end
+   load(['feedOther',num2str(ii),'.mat'])
+   [thisX,thisY,~,feedA(ii)] = perfcurve(...
+       hist.cfg.naive.testY,acc{1}.pred{1},1);
+   [thisXR,thisYR,~,feedAR(ii)] = perfcurve(...
+       histR.cfg.naive.testY,accR{1}.pred{1},1);
+   feedX(ii,:) = interp1(linspace(0,1,numel(thisX)),...
+       thisX,linspace(0,1,81));
+   feedY(ii,:) = interp1(linspace(0,1,numel(thisY)),...
+       thisY,linspace(0,1,81));
+   feedXR(ii,:) = interp1(linspace(0,1,numel(thisXR)),...
+       thisXR,linspace(0,1,81));
+   feedYR(ii,:) = interp1(linspace(0,1,numel(thisYR)),...
+       thisYR,linspace(0,1,81));
+   % Test model on sweet-fat vs. chow and neither independently
+   %        [thisX,thisY,~,chowA(ii,jj)] = perfcurve(...
+   %            hist{jj}.cfg.naive.testY(1:indSplit(jj,2)),...
+   %            acc{jj}{1}.pred(1:indSplit(jj,2)),1);
+   [thisX,thisY,~,chowA(ii)] = perfcurve(...
+      hist.cfg.naive.testY(testDataSet==1|testDataSet==2),...
+       acc{1}.pred{1}(testDataSet==1|testDataSet==2),1);
+   chowX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+       linspace(0,1,81));
+   chowY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+       linspace(0,1,81));
+   %        [thisX,thisY,~,neitherFA(ii,jj)] = perfcurve(...
+   %            hist{jj}.cfg.naive.testY([1:indSplit(jj,1),...
+   %            indSplit(jj,2)+1:end]),acc{jj}{1}.pred([1:indSplit(jj,1),...
+   %            indSplit(jj,2)+1:end]),1);
+   [thisX,thisY,~,neitherFA(ii)] = perfcurve(...
+       hist.cfg.naive.testY(testDataSet==1|testDataSet==3)...
+       ,acc{1}.pred{1}(testDataSet==1|testDataSet==3),1);
+   neitherFX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+       linspace(0,1,81));
+   neitherFY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+       linspace(0,1,81));
 end
-
-cd D:\paper3\analyzed\final\drinkOtherAllLOO\
+%%
+chowP = (sum(feedAR>mean(chowA))+1)/(numel(feedAR)+1);
+neitherP = (sum(feedAR>mean(neitherFA))+1)/(numel(feedAR)+1);
+figure
+hold on
+plot(mean(feedX,1),mean(feedY,1))
+plot(mean(chowX,1),mean(chowY,1))
+plot(mean(neitherFX,1),mean(neitherFY,1))
+plot(mean(feedXR,1),mean(feedXR,1))
+legend({['feed: ',num2str(round(mean(feedA),2)),'\pm',...
+    num2str(round(conf(feedA,0.95),2))],...
+    ['sf vs. chow: ',num2str(round(mean(chowA),2)),'\pm',...
+    num2str(round(conf(chowA,0.95),2)),' ',num2str(chowP)],...
+    ['sf vs. neither: ',num2str(round(mean(neitherFA),2)),'\pm',...
+    num2str(round(conf(neitherFA,0.95),2)),' ',num2str(neitherP)],...
+    ['permuted: ',num2str(round(mean(feedAR),2)),'\pm',...
+    num2str(round(conf(feedAR,0.95),2))]},'location','se')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR')
+title('feed: 80:20')
+%% 80:20 drink vs. other
+cd D:\paper3\analyzed\final\drinkOtherNew\
+for ii = 1:100
+   load(['drinkOther',num2str(ii),'.mat'])
+   [thisX,thisY,~,drinkA(ii)] = perfcurve(...
+       hist.cfg.naive.testY,acc{1}.pred{1},1);
+   [thisXR,thisYR,~,drinkAR(ii)] = perfcurve(...
+       histR.cfg.naive.testY,accR{1}.pred{1},1);
+   drinkX(ii,:) = interp1(linspace(0,1,numel(thisX)),...
+       thisX,linspace(0,1,81));
+   drinkY(ii,:) = interp1(linspace(0,1,numel(thisY)),...
+       thisY,linspace(0,1,81));
+   drinkXR(ii,:) = interp1(linspace(0,1,numel(thisXR)),...
+       thisXR,linspace(0,1,81));
+   drinkYR(ii,:) = interp1(linspace(0,1,numel(thisYR)),...
+       thisYR,linspace(0,1,81));
+   % Test on water
+   [thisX,thisY,~,waterA(ii)] = perfcurve(...
+      hist.cfg.naive.testY(testDataSet==1|testDataSet==2),...
+       acc{1}.pred{1}(testDataSet==1|testDataSet==2),1);
+   waterX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+       linspace(0,1,81));
+   waterY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+       linspace(0,1,81));
+   % Test on neither
+   [thisX,thisY,~,neitherDA(ii)] = perfcurve(...
+       hist.cfg.naive.testY(testDataSet==1|testDataSet==3)...
+       ,acc{1}.pred{1}(testDataSet==1|testDataSet==3),1);
+   neitherDX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+       linspace(0,1,81));
+   neitherDY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+       linspace(0,1,81));
+end
+%%
+waterP = (sum(drinkAR>mean(waterA))+1)/(numel(drinkAR)+1);
+neitherP = (sum(drinkAR>mean(neitherDA))+1)/(numel(drinkAR)+1);
+figure
+hold on
+plot(mean(drinkX,1),mean(drinkY,1))
+plot(mean(waterX,1),mean(waterY,1))
+plot(mean(neitherDX,1),mean(neitherDY,1))
+plot(mean(drinkXR,1),mean(drinkXR,1))
+legend({['drink: ',num2str(round(mean(drinkA),2)),'\pm',...
+    num2str(round(conf(drinkA,0.95),2))],...
+    ['EtOH vs. water: ',num2str(round(mean(waterA),2)),'\pm',...
+    num2str(round(conf(waterA,0.95),2)),' ',num2str(waterP)],...
+    ['EtOH vs. neither: ',num2str(round(mean(neitherDA),2)),'\pm',...
+    num2str(round(conf(neitherDA,0.95),2)),' ',num2str(neitherP)],...
+    ['permuted: ',num2str(round(mean(drinkAR),2)),'\pm',...
+    num2str(round(conf(drinkAR,0.95),2))]},'location','se')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+xlabel('FPR'); ylabel('TPR')
+title('drink: 80:20')
+%%
+cd D:\paper3\analyzed\final\drinkOtherLOONew\
 % cd D:\paper3\analyzed\final\drinkOtherAll\
 [x,y,xR,yR] = deal(cell(100,9));
 % Set up indices of where EtOH samples and water samples end 
 indSplit = [4,15;6,26;40,43;40,48;40,60;3,5;5,10;40,51;5,25];
 for ii = 1:100
-   load(['drinkOtherAllLOO',num2str(ii),'.mat'],'acc','accR','hist','histR')
+   load(['drinkOtherLOO',num2str(ii),'.mat'],'acc','accR','hist','histR')
 %    load(['drinkOtherAll',num2str(ii),'.mat'],'acc','accR','hist','histR')
    for jj = 1:9
        [thisX,thisY,~,drinkA(ii,jj)] = perfcurve(...
-           hist{jj}.cfg.naive.testY,acc{jj}{1}.pred,1);
+           hist{jj}.cfg.naive.testY,acc{jj}{1}.pred{1},1);
        [thisXR,thisYR,~,drinkAR(ii,jj)] = perfcurve(...
-           histR{jj}.cfg.naive.testY,accR{jj}{1}.pred,1);
+           histR{jj}.cfg.naive.testY,accR{jj}{1}.pred{1},1);
        drinkX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),...
            thisX,linspace(0,1,81));
        drinkY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),...
@@ -370,14 +442,14 @@ for ii = 1:100
        % Test model on EtOH vs. water and neither independently
        [thisX,thisY,~,waterA(ii,jj)] = perfcurve(...
            hist{jj}.cfg.naive.testY(1:indSplit(jj,2)),...
-           acc{jj}{1}.pred(1:indSplit(jj,2)),1);
+           acc{jj}{1}.pred{1}(1:indSplit(jj,2)),1);
        waterX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
            linspace(0,1,81));
        waterY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
            linspace(0,1,81));
        [thisX,thisY,~,neitherDA(ii,jj)] = perfcurve(...
            hist{jj}.cfg.naive.testY([1:indSplit(jj,1),...
-           indSplit(jj,2)+1:end]),acc{jj}{1}.pred([1:indSplit(jj,1),...
+           indSplit(jj,2)+1:end]),acc{jj}{1}.pred{1}([1:indSplit(jj,1),...
            indSplit(jj,2)+1:end]),1);
        neitherDX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
            linspace(0,1,81));
@@ -385,6 +457,49 @@ for ii = 1:100
            linspace(0,1,81));
    end
 end
+%% LOO feed vs. other - full model
+cd D:\paper3\analyzed\final\feedOtherLOO\
+for ii = 1:100
+   load(['feedOtherLOO',num2str(ii),'.mat'],'acc','accR','hist',...
+       'histR','testDataSet')
+   for jj = 1:9
+       [thisX,thisY,~,feedA(ii,jj)] = perfcurve(...
+           hist{jj}.cfg.naive.testY,acc{jj}{1}.pred{1},1);
+       [thisXR,thisYR,~,feedAR(ii,jj)] = perfcurve(...
+           histR{jj}.cfg.naive.testY,accR{jj}{1}.pred{1},1);
+       feedX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),...
+           thisX,linspace(0,1,81));
+       feedY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),...
+           thisY,linspace(0,1,81));
+       feedXR(ii,jj,:) = interp1(linspace(0,1,numel(thisXR)),...
+           thisXR,linspace(0,1,81));
+       feedYR(ii,jj,:) = interp1(linspace(0,1,numel(thisYR)),...
+           thisYR,linspace(0,1,81));
+       % Test model on sweet-fat vs. chow and neither independently
+%        [thisX,thisY,~,chowA(ii,jj)] = perfcurve(...
+%            hist{jj}.cfg.naive.testY(1:indSplit(jj,2)),...
+%            acc{jj}{1}.pred(1:indSplit(jj,2)),1);
+       [thisX,thisY,~,chowA(ii,jj)] = perfcurve(...
+           hist{jj}.cfg.naive.testY(testDataSet{jj}==1|testDataSet{jj}==2),...
+           acc{jj}{1}.pred{1}(testDataSet{jj}==1|testDataSet{jj}==2),1);
+       chowX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+           linspace(0,1,81));
+       chowY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+           linspace(0,1,81));
+%        [thisX,thisY,~,neitherFA(ii,jj)] = perfcurve(...
+%            hist{jj}.cfg.naive.testY([1:indSplit(jj,1),...
+%            indSplit(jj,2)+1:end]),acc{jj}{1}.pred([1:indSplit(jj,1),...
+%            indSplit(jj,2)+1:end]),1);
+       [thisX,thisY,~,neitherFA(ii,jj)] = perfcurve(...
+           hist{jj}.cfg.naive.testY(testDataSet{jj}==1|testDataSet{jj}==3)...
+           ,acc{jj}{1}.pred{1}(testDataSet{jj}==1|testDataSet{jj}==3),1);
+       neitherFX(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,...
+           linspace(0,1,81));
+       neitherFY(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,...
+           linspace(0,1,81));
+   end
+end
+%% prepare LOO data for plotting
 % Reshape and mean ROC axes 
 mFeedX = mean(reshape(feedX,900,81));
 mFeedY = mean(reshape(feedY,900,81));
@@ -462,46 +577,45 @@ legend({['Real: \mu = ',num2str(round(mean(dA),2)),'\pm',...
     'Location','nw');
 title('Drink vs. not')
 %% Split and compare test sets from above
+chowP = (sum(fAR>mean(cA))+1)/(numel(fAR)+1);
+neitherP = (sum(fAR>mean(fnA))+1)/(numel(fAR)+1);
 figure
 hold on
 plot(mFeedX,mFeedY)
 plot(mChowX,mChowY)
 plot(mNeitherFX,mNeitherFY)
+plot(mFeedXR,mFeedYR)
 legend({['feed: ',num2str(round(mean(fA),2)),'\pm',...
     num2str(round(conf(fA,0.95),2))],...
     ['sf vs. chow: ',num2str(round(mean(cA),2)),'\pm',...
     num2str(round(conf(cA,0.95),2))],...
     ['sf vs. neither: ',num2str(round(mean(fnA),2)),'\pm',...
-    num2str(round(conf(fnA,0.95),2))]},'location','se')
+    num2str(round(conf(fnA,0.95),2))],...
+    ['Permuted: ',num2str(round(mean(fAR),2)),'\pm',...
+    num2str(round(conf(fAR,0.95),2))]},'location','se')
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 xlabel('FPR'); ylabel('TPR')
-title('feed')
+title('feed: LOO')
 
+waterP = (sum(dAR>mean(wA))+1)/(numel(dAR)+1);
+neitherP = (sum(dAR>mean(dnA))+1)/(numel(dAR)+1);
 figure
 hold on
 plot(mDrinkX,mDrinkY)
 plot(mWaterX,mWaterY)
 plot(mNeitherDX,mNeitherDY)
+plot(mDrinkXR,mDrinkYR)
 legend({['drink: ',num2str(round(mean(dA),2)),'\pm',...
     num2str(round(conf(dA,0.95),2))],...
     ['EtOH vs. water: ',num2str(round(mean(wA),2)),'\pm',...
-    num2str(round(conf(wA,0.95),2))],...
+    num2str(round(conf(wA,0.95),2)),' ',num2str(waterP)],...
     ['EtOH vs. neither: ',num2str(round(mean(dnA),2)),'\pm',...
-    num2str(round(conf(dnA,0.95),2))]},'location','se')
+    num2str(round(conf(dnA,0.95),2)),' ',num2str(neitherP)],...
+    ['drink perm: ',num2str(round(mean(dAR),2)),'\pm',...
+    num2str(round(conf(dAR,0.95),2))]},'location','se')
 set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
 xlabel('FPR'); ylabel('TPR')
-title('drink')
-%%
-figure
-hold on
-for ii = 1:9
-    histogram(feedA(:,ii))
-end
-figure
-hold on
-for ii = 1:9
-   plot(squeeze(mean(feedX(:,ii,:),1)),squeeze(mean(feedY(:,ii,:),1)))
-end
+title('drink: LOO')
 %% LOO feed vs. other - subset features
 % N.B.: run with or without LOO
 % Feeding
@@ -991,6 +1105,498 @@ xlabel('feed auc')
 ylabel('drink auc')
 title('single feature comparison')
 legend(h,{'power','coherence','top gen features'},'location','north')
+%% single features with permuted and groups
+for ii = 1:100
+    load(['H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\feedOther\','feedOther',num2str(ii),'.mat'])
+    fA(ii) = acc{1}.acc;
+    fAP(ii) = accR{1}.acc;
+    fAs(ii,:) = sFA;
+    fAsP(ii,:) = sFAR;
+    gFA(ii,:) = groupFA;
+    load(['H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\drinkOther\','drinkOther',num2str(ii),'.mat'])
+    dA(ii) = acc{1}.acc;
+    dAP(ii) = accR{1}.acc;
+    dAs(ii,:) = sDA;
+    dAsP(ii,:) = sDAR;
+    gDA(ii,:) = groupDA;
+end
+%%
+for ii = 1:18
+    fP(ii) = (sum(fAsP(:,ii)>mean(fAs(:,ii)))+1)/(101);
+    dP(ii) = (sum(dAsP(:,ii)>mean(dAs(:,ii)))+1)/(101);
+end
+%% feature groups
+load('H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\24sweetChowNotDataNew.mat', 'R')
+feedShellInds = [1:12,25:30];
+Rfeed = R(feedShellInds,feedShellInds);
+faFeat = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+faFeat = faFeat(feedShellInds);
+for ii = 1:18
+    groupFeed{ii} = faFeat(abs(Rfeed(:,ii))>0.5);
+end
+mgfa = mean(gFA)';
+load('H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\waterAlcoholNotData.mat', 'R')
+drinkShellInds = [13:24,55:60];
+Rdrink = R(drinkShellInds,drinkShellInds);
+daFeat = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
+daFeat = daFeat(drinkShellInds);
+for ii = 1:18
+    groupDrink{ii} = daFeat(abs(Rdrink(:,ii))>0.5);
+end
+mgda = mean(gDA)';
+%% correlations within data sets - feeding vs. not; drinking vs. not
+load('H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\24sweetChowNotDataNew.mat')
+allRF = corrcoef(cat(1,allFeedData{:,1},allFeedData{:,2},...
+    allFeedData{:,3}));
+sfR = corrcoef(cat(1,allFeedData{:,1}));
+nfR = corrcoef(cat(1,allFeedData{:,3}));
+for k = 1:200
+    for ii = 1:9
+        thisN = min(cellfun(@(x) size(x,1),allFeedData(ii,:)));
+        thisSub{ii,1} = allFeedData{ii,1}(randperm(size(...
+            allFeedData{ii,1},1),thisN),:);
+        thisSub{ii,2} = allFeedData{ii,2}(randperm(size(...
+            allFeedData{ii,2},1),thisN),:);
+        thisSub{ii,3} = allFeedData{ii,3}(randperm(size(...
+            allFeedData{ii,3},1),thisN),:);
+    end
+    subAllRF(:,:,k) = corrcoef(cat(1,thisSub{:,1},thisSub{:,2},...
+        thisSub{:,3}));
+    subSFR(:,:,k) = corrcoef(cat(1,thisSub{:,1}));
+    subNFR(:,:,k) = corrcoef(cat(1,thisSub{:,3}));
+end
+%%
+feedShellInds = [1:12,25:30];
+figure
+subplot(1,3,1)
+pcolor(padarray(allRF(feedShellInds,feedShellInds),[1 1],'post'))
+title('all')
+subplot(1,3,2)
+pcolor(padarray(sfR(feedShellInds,feedShellInds),[1 1],'post'))
+title('sf')
+subplot(1,3,3)
+pcolor(padarray(nfR(feedShellInds,feedShellInds),[1 1],'post'))
+title('not')
+colormap('viridis')
+figure
+subplot(1,3,1)
+pcolor(padarray(subAllRF(feedShellInds,feedShellInds),[1 1],'post'))
+title('sub all')
+subplot(1,3,2)
+pcolor(padarray(subSFR(feedShellInds,feedShellInds),[1 1],'post'))
+title('sub sf')
+subplot(1,3,3)
+pcolor(padarray(subNFR(feedShellInds,feedShellInds),[1 1],'post'))
+title('sub not')
+colormap('viridis')
+%%
+load('H:\Shared drives\dwielDoucetteLab\data\paper3\analyzed\final\waterAlcoholNotData.mat')
+%%
+drinkShellInds = [13:24,55:60];
+this = cat(1,allData{:,1},allData{:,2},allData{:,3});
+allRD = corrcoef(table2array(this(:,drinkShellInds)));
+this = cat(1,allData{:,1});
+edR = corrcoef(table2array(this(:,drinkShellInds)));
+this = cat(1,allData{:,2});
+wdR = corrcoef(table2array(this(:,drinkShellInds)));
+this = cat(1,allData{:,3});
+ndR = corrcoef(table2array(this(:,drinkShellInds)));
+c = 1;
+this = cell(1,3);
+for k = 1:200
+    for ii = 1:9
+        thisN = min(cellfun(@(x) size(x,1),allData(ii,:)));
+        thisSub{ii,1} = table2array(allData{ii,1}(randperm(size(...
+            allData{ii,1},1),thisN),drinkShellInds));
+        thisSub{ii,2} = table2array(allData{ii,2}(randperm(size(...
+            allData{ii,2},1),thisN),drinkShellInds));
+        thisSub{ii,3} = table2array(allData{ii,3}(randperm(size(...
+            allData{ii,3},1),thisN),drinkShellInds));
+    end
+    subAllRD(:,:,k) = corrcoef(cat(1,thisSub{:,1},thisSub{:,2},...
+        thisSub{:,3}));
+    subEDR(:,:,k) = corrcoef(cat(1,thisSub{:,1}));
+    subWDR(:,:,k) = corrcoef(cat(1,thisSub{:,2}));
+    subNDR(:,:,k) = corrcoef(cat(1,thisSub{:,3}));
+    for r = 1:25
+        for ii = 1:9
+            for jj = 1:18
+                for m = 1:3
+                    this{ii,m}(:,jj) = thisSub{ii,m}(randperm(size(...
+                        thisSub{ii,m},1)),jj);
+                end
+            end
+        end
+        subAllRDPerm(:,:,c) = corrcoef(cat(1,this{:,1},this{:,2},this{:,3}));
+        subEDRPerm(:,:,c) = corrcoef(cat(1,this{:,1}));
+        subWDRPerm(:,:,c) = corrcoef(cat(1,this{:,2}));
+        subNDRPerm(:,:,c) = corrcoef(cat(1,this{:,3}));
+        c=c+1;
+    end
+%     subEvN(:,:,k) = corr(subNDR(:,:,k),subEDR(:,:,k),'type','spearman');
+%     subEvW(:,:,k) = corr(subEDR(:,:,k),subWDR(:,:,k),'type','spearman');
+%     for jj = 1:25
+%         thisR = randperm(18);
+%         subEvNperm(:,:,c) = corr(subNDR(thisR,thisR,k),...
+%             subEDR(:,:,k),'type','spearman');
+%         subEvWPerm(:,:,c) = corr(subEDR(thisR,thisR,k),...
+%             subWDR(:,:,k),'type','spearman');
+%         c = c+1;
+%     end
+end
+%% remove 1's and only look at upper half
+subAllRDPerm(subAllRDPerm == 1) = NaN;
+subEDRPerm(subEDRPerm == 1) = NaN;
+subWDRPerm(subWDRPerm == 1) = NaN;
+subNDRPerm(subNDRPerm == 1) = NaN;
+
+subAllRDPermUpper = [];
+subEDRPermUpper = [];
+subWDRPermUpper = [];
+subNDRPermUpper = [];
+for ii = 1:5000
+    subAllRDPermUpper(:,:,ii) = triu(subAllRDPerm(:,:,ii),1);
+    subEDRPermUpper(:,:,ii) = triu(subEDRPerm(:,:,ii),1);
+    subWDRPermUpper(:,:,ii) = triu(subAllRDPerm(:,:,ii),1);
+    subNDRPermUpper(:,:,ii) = triu(subNDRPerm(:,:,ii),1);
+end
+subAllRDPermUpper(subAllRDPermUpper==0) = NaN;
+subEDRPermUpper(subEDRPermUpper==0) = NaN;
+subWDRPermUpper(subWDRPermUpper==0) = NaN;
+subNDRPermUpper(subNDRPermUpper==0) = NaN;
+%%
+figure
+subplot(1,4,1)
+histogram(reshape(subAllRDPermUpper,1,numel(subAllRDPermUpper)),'NumBins',30);
+xlim([-0.55 0.55])
+subplot(1,4,2)
+histogram(reshape(subEDRPermUpper,1,numel(subEDRPermUpper)),'NumBins',30);
+xlim([-0.55 0.55])
+subplot(1,4,3)
+histogram(reshape(subWDRPermUpper,1,numel(subWDRPermUpper)),'NumBins',30);
+xlim([-0.55 0.55])
+subplot(1,4,4)
+histogram(reshape(subNDRPermUpper,1,numel(subNDRPermUpper)),'NumBins',30);
+xlim([-0.55 0.55])
+%%
+figure
+subplot(1,4,1)
+this = allRD;
+this(this==1) = NaN;
+this(abs(this)<0.5) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('all')
+subplot(1,4,2)
+this = edR;
+this(this==1) = NaN;
+this(abs(this)<0.5) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('etoh')
+subplot(1,4,3)
+this = wdR;
+this(this==1) = NaN;
+this(abs(this)<0.5) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('water')
+subplot(1,4,4)
+this = ndR;
+this(this==1) = NaN;
+this(abs(this)<0.5) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('not')
+colormap('viridis')
+%%
+figure
+subplot(1,4,1)
+this = mean(subAllRD,3);
+this(abs(this)<0.5) = NaN;
+this(this == 1) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('sub all')
+subplot(1,4,2)
+this = mean(subEDR,3);
+this(abs(this)<0.5) = NaN;
+this(this == 1) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('sub etoh')
+subplot(1,4,3)
+this = mean(subWDR,3);
+this(abs(this)<0.5) = NaN;
+this(this == 1) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('sub water')
+subplot(1,4,4)
+this = mean(subNDR,3);
+this(abs(this)<0.5) = NaN;
+this(this == 1) = NaN;
+pcolor(padarray(this,[1 1],'post'))
+title('sub not')
+colormap('viridis')
+%% differences
+% ethanol from water
+for ii = 1:5000
+    evwPerm(:,:,ii) = subWDRPerm(:,:,ii)-subEDRPerm(:,:,ii);
+    evwPermUpper(:,:,ii) = triu(evwPerm(:,:,ii),1);
+end
+evwPermUpper(evwPermUpper==0) = NaN;
+figure
+histogram(reshape(evwPermUpper,1,numel(evwPermUpper)),'NumBins',30)
+x = 0.1:0.1:1;
+for ii = 1:numel(x)
+    ps(ii) = (sum(abs(evwPermUpper)>x(ii),[1,2,3])+1)/5001;
+end
+evw = mean(subWDR,3)-mean(subEDR,3);
+figure
+this = evw;
+this(abs(this)<=0.7) = NaN;
+pcolor(padarray(this,[1,1],'post'))
+colormap viridis
+%%
+drinkShellInds = [13:24,55:60];
+[sortDA,sortDAind] = sort(mean(dAs,1),'descend');
+daFeat = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
+daFeat = daFeat(drinkShellInds);
+daFeat = daFeat(sortDAind)';
+
+feedShellInds = [1:12,25:30];
+[sortFA,sortFAind] = sort(mean(fAs,1),'descend');
+faFeat = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+faFeat = faFeat(feedShellInds);
+faFeat = faFeat(sortFAind)';
+%% alcohol permuted features
+a2 = [];
+for ii = 1:153
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm2/drinkOtherPerm2_',num2str(ii),'.mat'],...
+        'acc')
+    a2(ii) = acc{1}.acc;
+end
+a3 = [];
+for ii = 1:816
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm3/drinkOtherPerm3_',num2str(ii),'.mat'],...
+        'acc')
+    a3(ii) = acc{1}.acc;
+end
+a4 = [];
+for ii = 1:3060
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm4/drinkOtherPerm4_',num2str(ii),'.mat'],...
+        'acc')
+    a4(ii) = acc{1}.acc;
+end
+a5 = [];
+for ii = 1:8568
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm5/drinkOtherPerm5_',num2str(ii),'.mat'],...
+        'acc')
+    a5(ii) = acc{1}.acc;
+end
+a6 = [];
+c = 1;
+for ii = 1:10
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm6/drinkOtherPerm6_',num2str(ii),'.mat'],...
+        'acc')
+    for jj = 1:numel(acc)
+        a6(c) = acc{jj}{1}.acc;
+        c = c+1;
+    end
+end
+a7 = [];
+c = 1;
+for ii = 1:10
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm7/drinkOtherPerm7_',num2str(ii),'.mat'],...
+        'acc')
+    for jj = 1:numel(acc)
+        a7(c) = acc{jj}{1}.acc;
+        c = c+1;
+    end
+end
+a8 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm8/drinkOtherPerm8_',num2str(ii),'.mat'],...
+        'acc')
+    a8(ii) = acc{1}.acc;
+end
+a9 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm9/drinkOtherPerm9_',num2str(ii),'.mat'],...
+        'acc')
+    a9(ii) = acc{1}.acc;
+end
+a10 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm10/drinkOtherPerm10_',num2str(ii),'.mat'],...
+        'acc')
+    a10(ii) = acc{1}.acc;
+end
+a11 = [];
+for ii = 1:1000
+    disp(ii)
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm11/drinkOtherPerm11_',num2str(ii),'.mat'],...
+        'acc')
+    a11(ii) = acc{1}.acc;
+end
+%%
+a12 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm12/drinkOtherPerm12_',num2str(ii),'.mat'],...
+        'acc')
+    a12(ii) = acc{1}.acc;
+end
+%%
+a13 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm13/drinkOtherPerm13_',num2str(ii),'.mat'],...
+        'acc')
+    a13(ii) = acc{1}.acc;
+end
+%%
+a14 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/drinkOtherPerm14/drinkOtherPerm14_',num2str(ii),'.mat'],...
+        'acc')
+    a14(ii) = acc{1}.acc;
+end
+%%
+figure
+hold on
+plot(2:14,[mean(a2) mean(a3) mean(a4) mean(a5) mean(a6) ...
+    mean(a7) mean(a8) mean(a9) mean(a10) mean(a11) mean(a12) ...
+    mean(a13) mean(a14)],'ok')
+plot([2 2],[mean(a2)-2*std(a2) mean(a2)+2*std(a2)],'-k')
+plot([3 3],[mean(a3)-2*std(a3) mean(a3)+2*std(a3)],'-k')
+plot([4 4],[mean(a4)-2*std(a4) mean(a4)+2*std(a4)],'-k')
+plot([5 5],[mean(a5)-2*std(a5) mean(a5)+2*std(a5)],'-k')
+plot([6 6],[mean(a6)-2*std(a6) mean(a6)+2*std(a6)],'-k')
+plot([7 7],[mean(a7)-2*std(a7) mean(a7)+2*std(a7)],'-k')
+plot([8 8],[mean(a8)-2*std(a8) mean(a8)+2*std(a8)],'-k')
+plot([9 9],[mean(a9)-2*std(a9) mean(a9)+2*std(a9)],'-k')
+plot([10 10],[mean(a10)-2*std(a10) mean(a10)+2*std(a10)],'-k')
+plot([11 11],[mean(a11)-2*std(a11) mean(a11)+2*std(a11)],'-k')
+plot([12 12],[mean(a12)-2*std(a12) mean(a12)+2*std(a12)],'-k')
+plot([13 13],[mean(a13)-2*std(a13) mean(a13)+2*std(a13)],'-k')
+plot([14 14],[mean(a14)-2*std(a14) mean(a14)+2*std(a14)],'-k')
+%% feeding permuted features
+f2 = [];
+for ii = 1:153
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm2/feedOtherPerm2_',num2str(ii),'.mat'],...
+        'acc')
+    f2(ii) = acc{1}.acc;
+end
+f3 = [];
+for ii = 1:816
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm3/feedOtherPerm3_',num2str(ii),'.mat'],...
+        'acc')
+    f3(ii) = acc{1}.acc;
+end
+f4 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm4/feedOtherPerm4_',num2str(ii),'.mat'],...
+        'acc')
+    f4(ii) = acc{1}.acc;
+end
+f5 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm5/feedOtherPerm5_',num2str(ii),'.mat'],...
+        'acc')
+    f5(ii) = acc{1}.acc;
+end
+f6 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm6/feedOtherPerm6_',num2str(ii),'.mat'],...
+        'acc')
+    f6(ii) = acc{1}.acc;
+end
+f7 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm7/feedOtherPerm7_',num2str(ii),'.mat'],...
+        'acc')
+    f7(ii) = acc{1}.acc;
+end
+f8 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm8/feedOtherPerm8_',num2str(ii),'.mat'],...
+        'acc')
+    f8(ii) = acc{1}.acc;
+end
+f9 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm9/feedOtherPerm9_',num2str(ii),'.mat'],...
+        'acc')
+    f9(ii) = acc{1}.acc;
+end
+f10 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm10/feedOtherPerm10_',num2str(ii),'.mat'],...
+        'acc')
+    f10(ii) = acc{1}.acc;
+end
+f11 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm11/feedOtherPerm11_',num2str(ii),'.mat'],...
+        'acc')
+    f11(ii) = acc{1}.acc;
+end
+f12 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm12/feedOtherPerm12_',num2str(ii),'.mat'],...
+        'acc')
+    f12(ii) = acc{1}.acc;
+end
+f13 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm13/feedOtherPerm13_',num2str(ii),'.mat'],...
+        'acc')
+    f13(ii) = acc{1}.acc;
+end
+f14 = [];
+for ii = 1:1000
+    load(['H:/Shared drives/dwielDoucetteLab/data/paper3/analyzed/',...
+        'final/feedOtherPerm14/feedOtherPerm14_',num2str(ii),'.mat'],...
+        'acc')
+    f14(ii) = acc{1}.acc;
+end
+%%
+figure
+hold on
+plot(2:14,[mean(f2) mean(f3) mean(f4) mean(f5) mean(f6) ...
+    mean(f7) mean(f8) mean(f9) mean(f10) mean(f11) mean(f12) ...
+    mean(f13) mean(f14)],'ok')
+plot([2 2],[mean(f2)-2*std(f2) mean(f2)+2*std(f2)],'-k')
+plot([3 3],[mean(f3)-2*std(f3) mean(f3)+2*std(f3)],'-k')
+plot([4 4],[mean(f4)-2*std(f4) mean(f4)+2*std(f4)],'-k')
+plot([5 5],[mean(f5)-2*std(f5) mean(f5)+2*std(f5)],'-k')
+plot([6 6],[mean(f6)-2*std(f6) mean(f6)+2*std(f6)],'-k')
+plot([7 7],[mean(f7)-2*std(f7) mean(f7)+2*std(f7)],'-k')
+plot([8 8],[mean(f8)-2*std(f8) mean(f8)+2*std(f8)],'-k')
+plot([9 9],[mean(f9)-2*std(f9) mean(f9)+2*std(f9)],'-k')
+plot([10 10],[mean(f10)-2*std(f10) mean(f10)+2*std(f10)],'-k')
+plot([11 11],[mean(f11)-2*std(f11) mean(f11)+2*std(f11)],'-k')
+plot([12 12],[mean(f12)-2*std(f12) mean(f12)+2*std(f12)],'-k')
+plot([13 13],[mean(f13)-2*std(f13) mean(f13)+2*std(f13)],'-k')
+plot([14 14],[mean(f14)-2*std(f14) mean(f14)+2*std(f14)],'-k')
 %% Dep 24 vs. chow
 % load('D:\paper3\24sweetChowNotData.mat')
 % [thisX,thisW,thisY] = deal(cell(9,2));
@@ -1145,80 +1751,262 @@ animal{1} = [1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5];
 animal{2} = [1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4,5,5,5,5,5];
 % save('D:\paper3\analyzed\final\maleFemale.mat','male','female','animal')
 %% Male female drink models
-cd D:/paper3/analyzed/final/maleFemaleDrink/
-% [mfAUC,fmAUC] = deal(zeros(1,100));
-% [maleAUC,femaleAUC] = deal(zeros(5,100));
-% [fmXall,fmYall] = deal(zeros(100,92));
-% [mfXall,mfYall] = deal(zeros(100,101));
-[femaleX,femaleY] = deal(zeros(100,5,31));
-[maleX,maleY] = deal(zeros(100,4,31));
+cd D:/paper3/analyzed/final/maleFemaleDrinkSubset/
+drinkShellInds = [13:24,55:60];
 for ii = 1:100
     load(['maleFemale',num2str(ii),'.mat'])
-%     mfAUC2(ii,:) = mfA;
-%     fmAUC2(ii,:) = fmA;
-%     fmXall(ii,:) = fmX;
-%     fmYall(ii,:) = fmY;
-%     mfXall(ii,:) = mfX;
-%     mfYall(ii,:) = mfY;
+    % Fix typo
+%     maleMod80.testX = maleMod80.textX;
     % Female
-    for jj = 1:5
-        femaleAUC(jj,ii) = femaleMod{jj}.auc;
-        fmAUC(jj,:,ii) = femaleMod{jj}.mAuc;
-%         femaleA(jj,ii,:) = femaleMod{jj}.single;
-%         femaleSign(jj,ii,:) = femaleMod{jj}.singleSign;
-        if numel(femaleMod{jj}.x) < 31
-            femaleX(ii,jj,:) = interp1(linspace(0,1,...
-                numel(femaleMod{jj}.x)),femaleMod{jj}.x,linspace(0,1,31));
-            femaleY(ii,jj,:) = interp1(linspace(0,1,...
-                numel(femaleMod{jj}.y)),femaleMod{jj}.y,linspace(0,1,31));
-        else
-            femaleX(ii,jj,:) = femaleMod{jj}.x;
-            femaleY(ii,jj,:) = femaleMod{jj}.y;
+    female80AUC(ii) = femaleMod80.a;
+    female80x(ii,:) = femaleMod80.x;
+    female80y(ii,:) = femaleMod80.y;
+    % Female -> male
+    prob = cvglmnetPredict(femaleMod80.mdl,...
+        zscore(table2array(maleMod80.testX(:,drinkShellInds))),...
+        'lambda_1se','response');
+    [x,y,~,fm80A(ii)] = perfcurve(maleMod80.testY,prob,1);
+    fm80X(ii,:) = interp1(linspace(0,1,numel(x)),x,linspace(0,1,30));
+    fm80Y(ii,:) = interp1(linspace(0,1,numel(y)),y,linspace(0,1,30));
+    % LOO
+    for jj = 1:10
+        % Female
+        femaleLOOAUC(jj,ii) = femaleMod{jj}.auc;
+        femaleLOOX(jj,ii,:) = interp1(linspace(0,1,...
+            numel(femaleMod{jj}.x)),femaleMod{jj}.x,linspace(0,1,30));
+        femaleLOOY(jj,ii,:) = interp1(linspace(0,1,...
+            numel(femaleMod{jj}.y)),femaleMod{jj}.y,linspace(0,1,30));
+        % Female -> male
+        fmA(ii,jj,:) = femaleMod{jj}.mAuc;
+        for k = 1:10
+            thisX(k,:) = interp1(linspace(0,1,...
+                numel(femaleMod{jj}.mX{k})),...
+                femaleMod{jj}.mX{k},linspace(0,1,30));
+            thisY(k,:) = interp1(linspace(0,1,...
+                numel(femaleMod{jj}.mY{k})),...
+                femaleMod{jj}.mY{k},linspace(0,1,30));
         end
-        for k = 1:4
-            if  numel(femaleMod{jj}.mX{k}) < 31
-                fmXall(ii,jj,k,:) = interp1(linspace(0,1,...
-                    numel(femaleMod{jj}.mX{k})),femaleMod{jj}.mX{k},...
-                    linspace(0,1,31));
-                fmYall(ii,jj,k,:) = interp1(linspace(0,1,...
-                    numel(femaleMod{jj}.mY{k})),femaleMod{jj}.mY{k},...
-                    linspace(0,1,31));
-            else
-                fmXall(ii,jj,k,:) = femaleMod{jj}.mX{k};
-                fmYall(ii,jj,k,:) = femaleMod{jj}.mY{k};
-            end           
+        fmX(ii,jj,:) = mean(thisX,1);
+        fmY(ii,jj,:) = mean(thisY,1);
+        % Male
+        maleLOOAUC(jj,ii) = maleMod{jj}.auc;
+        maleLOOX(jj,ii,:) = interp1(linspace(0,1,...
+            numel(maleMod{jj}.x)),maleMod{jj}.x,linspace(0,1,30));
+        maleLOOY(jj,ii,:) = interp1(linspace(0,1,...
+            numel(maleMod{jj}.y)),maleMod{jj}.y,linspace(0,1,30));
+        % Male -> female
+        mfA(ii,jj,:) = maleMod{jj}.fAuc;
+        for k = 1:10
+            thisX(k,:) = interp1(linspace(0,1,...
+                numel(maleMod{jj}.fX{k})),maleMod{jj}.fX{k},...
+                linspace(0,1,30));
+            thisY(k,:) = interp1(linspace(0,1,...
+                numel(maleMod{jj}.fY{k})),maleMod{jj}.fY{k},...
+                linspace(0,1,30));
         end
+        mfX(ii,jj,:) = mean(thisX,1);
+        mfY(ii,jj,:) = mean(thisY,1);
     end
     % Male
-    for jj = 1:4
-        maleAUC(jj,ii) = maleMod{jj}.auc;
-        mfAUC(jj,:,ii) = maleMod{jj}.fAuc;
-%         maleA(jj,ii,:) = maleMod{jj}.single;
-%         maleSign(jj,ii,:) = maleMod{jj}.singleSign;
-        if numel(maleMod{jj}.x) < 31
-            maleX(ii,jj,:) = interp1(linspace(0,1,numel(maleMod{jj}.x)),...
-                maleMod{jj}.x,linspace(0,1,31));
-            maleY(ii,jj,:) = interp1(linspace(0,1,numel(maleMod{jj}.y)),...
-                maleMod{jj}.y,linspace(0,1,31));
-        else
-            maleX(ii,jj,:) = maleMod{jj}.x;
-            maleY(ii,jj,:) = maleMod{jj}.y;
-        end
-        for k = 1:5
-            if  numel(maleMod{jj}.fX{k}) < 31
-                mfXall(ii,jj,k,:) = interp1(linspace(0,1,...
-                    numel(maleMod{jj}.fX{k})),maleMod{jj}.fX{k},...
-                    linspace(0,1,31));
-                mfYall(ii,jj,k,:) = interp1(linspace(0,1,...
-                    numel(maleMod{jj}.fY{k})),maleMod{jj}.fY{k},...
-                    linspace(0,1,31));
-            else
-                mfXall(ii,jj,k,:) = maleMod{jj}.fX{k};
-                mfYall(ii,jj,k,:) = maleMod{jj}.fY{k};
-            end
-        end
-    end
+    male80AUC(ii) = maleMod80.a;
+    male80x(ii,:) = maleMod80.x;
+    male80y(ii,:) = maleMod80.y;   
+    % Male -> female
+    prob = cvglmnetPredict(maleMod80.mdl,zscore(table2array(...
+        femaleMod80.testX(:,drinkShellInds))),'lambda_1se','response');
+    [x,y,~,mf80A(ii)] = perfcurve(femaleMod80.testY,prob,1);
+    mf80X(ii,:) = interp1(linspace(0,1,numel(x)),x,linspace(0,1,30));
+    mf80Y(ii,:) = interp1(linspace(0,1,numel(y)),y,linspace(0,1,30));
 end
+%% Permuted
+cd('D:/paper3/analyzed/final/maleFemaleDrinkPermutedSubset')
+clear thisX thisY
+for ii = 1:252
+    load(['maleFemaleP',num2str(ii),'.mat'])
+    fP(ii,:) = femaleP.a;
+    for jj = 1:10
+        thisX(jj,:) = interp1(linspace(0,1,numel(femaleP.x{jj})),...
+            femaleP.x{jj},linspace(0,1,20));
+        thisY(jj,:) = interp1(linspace(0,1,numel(femaleP.y{jj})),...
+            femaleP.y{jj},linspace(0,1,20));
+    end
+    fPX(ii,:) = mean(thisX,1);
+    fPY(ii,:) = mean(thisY,1);
+    f80P(ii) = female80P.a;
+    f80PX(ii,:) = interp1(linspace(0,1,numel(female80P.x)),female80P.x,linspace(0,1,30));
+    f80PY(ii,:) = interp1(linspace(0,1,numel(female80P.y)),female80P.y,linspace(0,1,30));
+
+    mP(ii,:) = maleP.a;
+    for jj = 1:10
+        thisX(jj,:) = interp1(linspace(0,1,numel(maleP.x{jj})),maleP.x{jj},linspace(0,1,20));
+        thisY(jj,:) = interp1(linspace(0,1,numel(maleP.y{jj})),maleP.y{jj},linspace(0,1,20));
+    end
+    mPX(ii,:) = mean(thisX,1);
+    mPY(ii,:) = mean(thisY,1);
+    m80P(ii) = female80P.a;
+    m80PX(ii,:) = interp1(linspace(0,1,numel(male80P.x)),male80P.x,linspace(0,1,30));
+    m80PY(ii,:) = interp1(linspace(0,1,numel(male80P.y)),male80P.y,linspace(0,1,30));
+end
+%% apply model with both sexes to each sex
+cd D:\paper3\analyzed\final\drinkOtherNew\
+maleID = {'AH11','AH12','AH16','AH17','AH20','AH38','AH39','AH87',...
+    'AH88','AH90'};
+femaleID = {'AH1','AH3','AH4','AH5','AH8','AH26','AH29','AH30','AH80',...
+    'AH81'};
+for ii = 1:100
+    % load general model
+    load(['drinkOther',num2str(ii),'.mat'])
+    fInds = [];
+    for jj = 1:numel(femaleID)
+        fInds(:,jj) = strcmp(animalID,femaleID{jj});
+    end
+    fInds = any(fInds,2);
+    mInds = [];
+    for jj = 1:numel(maleID)
+        mInds(:,jj) = strcmp(animalID,maleID{jj});
+    end
+    mInds = any(mInds,2);
+    % gen -> F
+    prob = cvglmnetPredict(acc{1}.mdl{1},zscore(hist.cfg.naive.testX(fInds,:)),...
+        'lambda_1se','response');
+    [thisX,thisY,~,fA(ii)] = perfcurve(hist.cfg.naive.testY(fInds,:),...
+        prob,1);
+    fX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,50));
+    fY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,linspace(0,1,50));
+    % gen -> M
+    prob = cvglmnetPredict(acc{1}.mdl{1},zscore(hist.cfg.naive.testX(mInds,:)),...
+        'lambda_1se','response');
+    [thisX,thisY,~,mA(ii)] = perfcurve(hist.cfg.naive.testY(mInds,:),...
+        prob,1);
+    mX(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,50));
+    mY(ii,:) = interp1(linspace(0,1,numel(thisY)),thisY,linspace(0,1,50));
+    a(ii) = acc{1}.acc;
+    aR(ii) = accR{1}.acc;
+end
+%%
+figure
+hold on
+plot(mean(fX),mean(fY))
+plot(mean(mX),mean(mY))
+legend({['female: ',num2str(round(mean(fA),2)),'\pm',...
+    num2str(round(conf(fA,0.95),2)),' ',...
+    num2str((sum(aR>mean(fA))+1)/(numel(aR)+1))],['male: ',...
+    num2str(round(mean(mA),2)),'\pm',num2str(round(conf(mA,0.95),2)),...
+    ' ',num2str((sum(aR>mean(mA))+1)/(numel(aR)+1))]})
+%% male and female plots
+% single plot - 80:20
+figure
+hold on
+plot(mean(female80x),mean(female80y),'--k')
+plot(mean(f80PX),mean(f80PY),'-k')
+plot(mean(male80x),mean(male80y),'--','color',[0.7,0.7,0.7])
+plot(mean(m80PX),mean(m80PY),'color',[0.7,0.7,0.7])
+plot(mean(fX),mean(fY),'b')
+plot(mean(mX),mean(mY),'r')
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['female: ',num2str(round(mean(female80AUC),2)),'\pm',...
+    num2str(round(conf(female80AUC,0.95),2)),' ',...
+    num2str((sum(f80P>mean(female80AUC))+1)/(numel(f80P)+1))],...
+    ['f perm: ',num2str(round(mean(f80P),2)),'\pm',...
+    num2str(round(conf(f80P,0.95),2))],...
+    ['male: ',num2str(round(mean(male80AUC),2)),'\pm',...
+    num2str(round(conf(male80AUC,0.95),2)),' ',...
+    num2str((sum(m80P>mean(male80AUC))+1)/(numel(m80P)+1))],...
+    ['m perm: ',num2str(round(mean(m80P),2)),'\pm',...
+    num2str(round(conf(m80P,0.95),2))],...
+    ['drink->female: ',num2str(round(mean(fA),2)),'\pm',...
+    num2str(round(conf(fA,0.95),2)),' ',...
+    num2str((sum(aR>mean(fA))+1)/(numel(aR)+1))],['drink->male: ',...
+    num2str(round(mean(mA),2)),'\pm',num2str(round(conf(mA,0.95),2)),...
+    ' ',num2str((sum(aR>mean(mA))+1)/(numel(aR)+1))]})
+box off
+%%
+figure
+hold on
+plot(mean(female80x),mean(female80y))
+plot(mean(f80PX),mean(f80PY))
+title(['female 80:20; p = ',...
+    num2str((sum(f80P>mean(female80AUC))+1)/(numel(f80P)+1))])
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['female: ',num2str(round(mean(female80AUC),2)),'\pm',...
+    num2str(round(conf(female80AUC,0.95),2))],['permuted: ',...
+    num2str(round(mean(f80P),2)),'\pm',...
+    num2str(round(conf(f80P,0.95),2))]})
+box off
+
+figure
+hold on
+plot(squeeze(mean(femaleLOOX,[1,2])),squeeze(mean(femaleLOOY,[1,2])))
+plot(mean(fPX),mean(fPY))
+title(['female LOO; p = ',...
+    num2str((sum(reshape(fP,1,numel(fP))>mean(femaleLOOAUC,[1,2]))+1)/...
+    (numel(fP)+1))])
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['female: ',num2str(round(mean(femaleLOOAUC,[1,2]),2)),'\pm',...
+    num2str(round(conf(reshape(femaleLOOAUC,1,numel(femaleLOOAUC)),0.95)...
+    ,2))],['permuted: ',num2str(round(mean(fP,[1,2]),2)),'\pm',...
+    num2str(round(conf(reshape(fP,1,numel(fP)),0.95),2))]})
+box off
+
+figure
+hold on
+plot(mean(male80x),mean(male80y))
+plot(mean(m80PX),mean(m80PY))
+title(['male 80:20; p = ',...
+    num2str((sum(m80P>mean(male80AUC))+1)/(numel(m80P)+1))])
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['male: ',num2str(round(mean(male80AUC),2)),'\pm',...
+    num2str(round(conf(male80AUC,0.95),2))],['permuted: ',...
+    num2str(round(mean(m80P),2)),'\pm',...
+    num2str(round(conf(m80P,0.95),2))]})
+box off
+
+figure
+hold on
+plot(squeeze(mean(maleLOOX,[1,2])),squeeze(mean(maleLOOY,[1,2])))
+plot(mean(mPX),mean(mPY))
+title(['male LOO; p = ',...
+    num2str((sum(reshape(mP,1,numel(mP))>mean(maleLOOAUC,[1,2]))+1)/...
+    (numel(mP)+1))])
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+legend({['male: ',num2str(round(mean(maleLOOAUC,[1,2]),2)),'\pm',...
+    num2str(round(conf(reshape(maleLOOAUC,1,numel(maleLOOAUC)),0.95)...
+    ,2))],['permuted: ',num2str(round(mean(mP,[1,2]),2)),'\pm',...
+    num2str(round(conf(reshape(mP,1,numel(mP)),0.95),2))]})
+box off
+
+figure
+hold on
+plot(mean(mf80X),mean(mf80Y))
+plot(mean(fm80X),mean(fm80Y))
+plot(mean(f80PX),mean(f80PY))
+plot(mean(m80PX),mean(m80PY))
+legend({['m->f: ',num2str(round(mean(mf80A),2)),'\pm',...
+    num2str(round(conf(mf80A,0.95),3)),' ',...
+    num2str((sum(f80P>mean(mf80A))+1)/(numel(f80P)+1))],['f->m: ',...
+    num2str(round(mean(fm80A),2)),'\pm',...
+    num2str(round(conf(fm80A,0.95),3)),...
+    ' ',num2str((sum(m80P>mean(fm80A))+1)/(numel(m80P)+1))],...
+    ['permuted female: ',num2str(round(mean(f80P),2)),'\pm',...
+    num2str(round(conf(f80P,0.95),2))],...
+    ['permuted male: ',num2str(round(mean(m80P),2)),'\pm',...
+    num2str(round(conf(m80P,0.95),2))]})
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+title('80:20')
+box off
+
+figure
+hold on
+plot(squeeze(mean(mfX,[1,2])),squeeze(mean(mfY,[1,2])))
+plot(squeeze(mean(fmX,[1,2])),squeeze(mean(fmY,[1,2])))
+legend({['m->f: ',num2str(round(mean(mfA,[1,2,3]),2)),'\pm',...
+    num2str(round(conf(reshape(mfA,1,numel(mfA)),0.95),3))],['f->m: ',...
+    num2str(round(mean(fmA,[1,2,3]),2)),'\pm',...
+    num2str(round(conf(reshape(fmA,1,numel(mfA)),0.95),3))]})
+set(gca,'xtick',0:0.5:1,'ytick',0:0.5:1)
+title('LOO')
+box off
+
 %%
 figure
 hold on
@@ -1308,7 +2096,7 @@ title('female->male')
 ylabel('female left out')
 xlabel('male tested')
 set(gca,'xtick',1:5,'ytick',1:5)
-% %% Pre-Drinking vs. Not Drinking
+%% Pre-Drinking vs. Not Drinking
 % files = fileSearch('D:\paper3\preDrinkCombined2\','.mat');
 % fStuff = cellfun(@(x) strsplit(x,'_'),files,'UniformOutput',0);
 % ids = cellfun(@(x) x{1},fStuff,'UniformOutput',0);
@@ -1398,7 +2186,7 @@ watInds = [25:36,52:61,67:69];
 for ii = 1:nFiles
     % Get water, alcohol, and not data/samps
     if ~any(ismember(ii,watInds))
-       load(['D:\paper3\drinkNot\',fStuff{ii}{1},'_',fStuff{ii}{2},...
+       load(['D:\paper3\waterAlcohol\notDrink\',fStuff{ii}{1},'_',fStuff{ii}{2},...
            '_drink_vs_~drink.mat'])
        if ~isempty(trls{1})
            alcSamps{ii} = trls{1}.sampleinfo;
@@ -1473,7 +2261,9 @@ end
 % Go through preSamps and remove corresponding notData
 % Reset inds and go through files
 inds = [];
-past = cell(69,26);
+pastWin = 50;
+past = cell(69,pastWin);
+
 allPre = []; allPreID = []; allNot = []; allNotID = [];
 for k = 1:nFiles
     load(['D:\paper3\periDrink\',files{k}])
@@ -1502,60 +2292,60 @@ for k = 1:nFiles
     for ii = 1:size(hist.eventTs.t{1,alcInd},1)
         % And go back through time, checking if any data came from that
         % epoch
-        for jj = 1:26
-            if ~isempty(trls{1,27-jj})
-                if jj > 1 && overlapPre{k,28-jj}(ii) == 1
-                    overlapPre{k,27-jj}(ii) = 1;
+        for jj = 1:pastWin
+            if ~isempty(trls{1,pastWin+1-jj})
+                if jj > 1 && overlapPre{k,pastWin+2-jj}(ii) == 1
+                    overlapPre{k,pastWin+1-jj}(ii) = 1;
                 else
                     % Get index of corresponding pre-window for each drink
                     % event going backwards through time
                     dummy = logicFind(...
                         nearest_idx3(hist.eventTs.t{1,alcInd}(ii),...
                         LFPTs.tvec)-(2000+400*(jj-1)),...
-                        trls{1,27-jj}.sampleinfo(:,1),'==');
+                        trls{1,pastWin+1-jj}.sampleinfo(:,1),'==');
                     if isempty(dummy)
                         inds{k}(ii,jj) = 0;
                     else
                         inds{k}(ii,jj) = dummy;
                         % Get samples for pre window
-                        preSamps = trls{27-jj}.sampleinfo(...
+                        preSamps = trls{pastWin+1-jj}.sampleinfo(...
                             inds{k}(ii,jj),1):...
-                            trls{27-jj}.sampleinfo(inds{k}(ii,jj),2);
+                            trls{pastWin+1-jj}.sampleinfo(inds{k}(ii,jj),2);
                     end
                     % Check for overlap with notSamps (remove pre-drinking
                     % data from notData)
                     for m = 1:size(notSamps{k},1)
                         if any(ismember(preSamps,notSamps{k}(m,1):...
                                 notSamps{k}(m,2)))
-                            overlap{k}(m,27-jj,ii) = 1;
+                            overlap{k}(m,pastWin+1-jj,ii) = 1;
                         else
-                            overlap{k}(m,27-jj,ii) = 0;
+                            overlap{k}(m,pastWin+1-jj,ii) = 0;
                         end
                     end
                     % Check for overlap with other alcSamps (remove
                     % pre-drinking data that overlaps with previous
                     % drinking)
                     if any(ismember(preSamps,theseAlcSamps))
-                        overlapPre{k,27-jj}(ii) = 1;
+                        overlapPre{k,pastWin+1-jj}(ii) = 1;
                     else
                         if any(ismember(preSamps,theseWaterSamps))
-                            overlapPre{k,27-jj}(ii) = 2;
+                            overlapPre{k,pastWin+1-jj}(ii) = 2;
                         else
-                            overlapPre{k,27-jj}(ii) = 0;
+                            overlapPre{k,pastWin+1-jj}(ii) = 0;
                         end
                     end
                 end
             else
                 inds{k}(ii,jj) = 0;
-                overlapPre{k,27-jj}(ii) = 3;
+                overlapPre{k,pastWin+1-jj}(ii) = 3;
             end
             % Grab pre-drinking data and store in past
-            if overlapPre{k,27-jj}(ii) == 0 && inds{k}(ii,jj) ~= 0
-                [b,c,~] = size(psdTrls{1,27-jj}.relPow);
-                thisPow = reshape(psdTrls{1,27-jj}.relPow(:,:,...
+            if overlapPre{k,pastWin+1-jj}(ii) == 0 && inds{k}(ii,jj) ~= 0
+                [b,c,~] = size(psdTrls{1,pastWin+1-jj}.relPow);
+                thisPow = reshape(psdTrls{1,pastWin+1-jj}.relPow(:,:,...
                     inds{k}(ii,jj)),b*c,1)';
-                [cmb,b,~] = size(coh{1,27-jj}.normBandCoh);
-                thisCoh = reshape(permute(coh{1,27-jj}.normBandCoh(:,:,...
+                [cmb,b,~] = size(coh{1,pastWin+1-jj}.normBandCoh);
+                thisCoh = reshape(permute(coh{1,pastWin+1-jj}.normBandCoh(:,:,...
                     inds{k}(ii,jj)),[2,1,3]),cmb*b,1)';
                 theseData = [thisPow,thisCoh];
                 % If a waterAlcohol recording, get rid of extra channels
@@ -1568,7 +2358,7 @@ for k = 1:nFiles
                     allPreID = [allPreID;repmat(fStuff{k}(1),...
                         size(theseData,1),1)];
                 else
-                    past{k,27-jj} = [past{k,jj};theseData];
+                    past{k,pastWin+1-jj} = [past{k,jj};theseData];
                 end
             end
         end
@@ -1581,10 +2371,10 @@ for k = 1:nFiles
     allNotID = [allNotID;repmat(fStuff{k}(1),...
         sum(~any(any(overlap{k},3),2)),1)];
 end
-% save('F:\paper3\analyzed\final\preDrinkAllData2.mat','allNot',...
+% save('D:\paper3\analyzed\final\preDrinkAllData2.mat','allNot',...
 %     'allNotID','allPre','allPreID','past','pastID')
 %% Use everyone; either weight or downsample to 10 sample equivalent
-load('D:\paper3\analyzed\final\preDrinkAllData2.mat')
+% load('D:\paper3\analyzed\final\preDrinkAllData2.mat')
 % Count samples per animal
 uP = unique(allPreID);
 uN = unique(allNotID);
@@ -1595,6 +2385,7 @@ samp = 10;
     trainAlcX,trainAlcY,testAlcX,testAlcY,aAlc,aAlcP,alcMdl,...
     trainAlcWeight] = deal([]);
 [mdl,mdlNotInds,mdlNotSubInds] = deal(cell(100,19));
+drinkShellInds = [7:12,19:24,49:54];
 for jj = 1:100
 %     disp(jj)
     mdlNotData = []; mdlNotWeight = [];
@@ -1649,8 +2440,8 @@ for jj = 1:100
     % Build train and test sets
     [trainAlcInds,~,testAlcInds,~] = trainTest((1:numel(alcWeight))',...
         (1:numel(alcWeight))',0.2);
-    trainAlcX(jj,:,:) = alcData(trainAlcInds,:);
-    testAlcX(jj,:,:) = alcData(testAlcInds,:);
+    trainAlcX(jj,:,:) = alcData(trainAlcInds,drinkShellInds);
+    testAlcX(jj,:,:) = alcData(testAlcInds,drinkShellInds);
     trainAlcY(jj,:,:) = alcY(trainAlcInds);
     testAlcY(jj,:) = alcY(testAlcInds);
     trainAlcWeight(jj,:) = alcWeight(trainAlcInds);
@@ -1670,8 +2461,8 @@ for jj = 1:100
     % Build train and test sets
     [trainInds,~,testInds,~] = trainTest((1:numel(allWeight))',...
         (1:numel(allWeight))',0.2);
-    trainX(jj,:,:) = postData(trainInds,:);
-    testX(jj,:,:) = postData(testInds,:);
+    trainX(jj,:,:) = postData(trainInds,drinkShellInds);
+    testX(jj,:,:) = postData(testInds,drinkShellInds);
     trainY(jj,:,:) = allY(trainInds);
     testY(jj,:) = allY(testInds);
     trainWeight(jj,:) = allWeight(trainInds);
@@ -1715,15 +2506,15 @@ for jj = 1:100
    prob = predict(mdl{jj},squeeze(testX(jj,:,:)));
    [~,~,~,aSub(jj)] = perfcurve(testY(jj,:),prob,1);
 end
-% save('F:\paper3\analyzed\final\preDrinkModel2.mat','trainX','trainY',...
+% save('D:\paper3\analyzed\final\preDrinkModelSubset.mat','trainX','trainY',...
 %     'testX','testY','trainWeight','testWeight','a','aP','mdl','uN','uP',...
 %     'trainAlcX','trainAlcY','testAlcX','testAlcY','aAlc','aAlcP',...
 %     'alcMdl','trainAlcWeight','mdlNotInds','aSub')
 %% Compare single feature preDrink to drinkNot
-load('F:\paper3\analyzed\final\preDrinkModel2.mat','trainAlcX',...
-    'trainAlcY','testAlcX','testAlcY','trainAlcWeight')
+% load('F:\paper3\analyzed\final\preDrinkModel2.mat','trainAlcX',...
+%     'trainAlcY','testAlcX','testAlcY','trainAlcWeight')
 for ii = 1:100
-    for jj = 1:60
+    for jj = 1:size(trainAlcX,3)
         mdl = fitglm(squeeze(trainAlcX(ii,:,jj)),trainAlcY(ii,:),...
             'distribution','binomial','binomialSize',size(trainAlcY,2),...
             'weights',trainAlcWeight(ii,:));
@@ -1739,7 +2530,7 @@ sPDM = sign(mean(s,1));
 % Get single features of drinkOther
 [sF,fA,sD,dA] = deal([]);
 for ii = 1:100
-    load(['F:/paper3/analyzed/final/drinkOtherAll/drinkOtherAll',...
+    load(['D:/paper3/analyzed/final/drinkOther/drinkOther',...
         num2str(ii),'.mat'],'s','sDA')
     sD(ii,:) = mean(s,1);
     dA(ii,:) = mean(sDA,1);
@@ -1747,12 +2538,13 @@ end
 [sortDA,sortDAind] = sort(mean(dA,1),'descend');
 sDM = sign(mean(sD,1));
 daFeat = names({'PL','SL','PR','SR'},{'d','t','a','b','lg','hg'});
-daFeatSort = daFeat(sortDAind)';
+daShellFeat = daFeat(drinkShellInds);
+daFeatSort = daShellFeat(sortDAind)';
 figure
 hold on
-plot(mean(aS(:,1:24),1).*sPDM(1:24),mean(dA(:,1:24),1).*sDM(1:24),'o')
-plot(mean(aS(:,25:end),1).*sPDM(25:end),...
-    mean(dA(:,25:end),1).*sDM(25:end),'s')
+plot(mean(aS(:,1:12),1).*sPDM(1:12),mean(dA(:,1:12),1).*sDM(1:12),'o')
+plot(mean(aS(:,13:end),1).*sPDM(13:end),...
+    mean(dA(:,13:end),1).*sDM(13:end),'s')
 plot([-1 1],[0.5 0.5],'k')
 plot([-1 1],[-0.5 -0.5],'k')
 plot([0.5 0.5],[-1 1],'k')
@@ -1765,9 +2557,11 @@ title('pre-drink vs. drink single features')
 %% Apply pre models backwards
 % Pre-drink
 % Load pre-drink data
-load('F:/paper3/analyzed/final/preDrinkAllData2.mat')
+load('D:/paper3/analyzed/final/preDrinkAllData2.mat')
 % Load uP
-load('F:/paper3/analyzed/final/preDrinkModel2.mat','uN','mdlNotInds')
+load('D:/paper3/analyzed/final/preDrinkModelSubset.mat','uN','mdlNotInds')
+drinkShellInds = [7:12,19:24,49:54];
+% drinkShellInds = 1:60;
 % Unpack pastID
 % for ii = 1:44
 %     for jj = 1:60
@@ -1792,8 +2586,8 @@ for ii = 1:100
     % Load lasso model
 %     load(['f:/paper3/analyzed/final/drinkOtherAll/drinkOtherAll',num2str(ii),...
 %         '.mat'],'acc','accR')
-    load(['F:/paper3/analyzed/final/preDrink2/preDrink',num2str(ii),...
-        '.mat'],'acc','accR')
+    load(['D:/paper3/analyzed/final/preDrinkSubset/preDrinkSubset',...
+        num2str(ii),'.mat'],'acc','accR')
     % Preallocate
     thisX = cell(1,pastN); thisWeight = cell(1,pastN); 
     thisY = cell(1,pastN); thisXBal = cell(1,pastN); 
@@ -1836,13 +2630,13 @@ for ii = 1:100
             end
         end
 %         prob = predict(mdl{ii},thisX{jj});
-        prob = cvglmnetPredict(acc{1}.mdl{1},thisX{jj},'lambda_1se',...
-            'response');
+        prob = cvglmnetPredict(acc{1}.mdl{1},thisX{jj}(:,drinkShellInds)...
+            ,'lambda_1se','response');
         [xPast{jj,ii},yPast{jj,ii},~,aPast(jj,ii)] = ...
             perfcurve(thisY{jj},prob,1);
 %         prob = predict(mdl{ii},thisX{jj}(randperm(size(thisX{jj},1),size(thisX{jj},1)),:));
-        prob = cvglmnetPredict(accR{1}.mdl{1},thisX{jj},'lambda_1se',...
-            'response');
+        prob = cvglmnetPredict(accR{1}.mdl{1},thisX{jj}(:,drinkShellInds)...
+            ,'lambda_1se','response');
         [xPastP{jj,ii},yPastP{jj,ii},~,aPastP(jj,ii)] = ...
             perfcurve(thisY{jj},prob,1);
         % Concatenated - use all pre and match with not
@@ -1850,19 +2644,54 @@ for ii = 1:100
         thisCatX = [thisPast;allNot(randperm(size(allNot,1),size(thisPast,1)),:)];
         thisCatY = [ones(size(thisPast,1),1);zeros(size(thisPast,1),1)];
 %         prob = predict(mdl{ii},thisCatX);
-        prob = cvglmnetPredict(acc{1}.mdl{1},thisCatX,'lambda_1se','response');
+        prob = cvglmnetPredict(acc{1}.mdl{1},thisCatX(:,drinkShellInds),...
+            'lambda_1se','response');
         [~,~,~,aCat(ii,jj)] = perfcurve(thisCatY,prob,1);
     end
     aPre(ii) = acc{1}.acc;
     aPreP(ii) = accR{1}.acc;
+    xPre(ii,:) = interp1(linspace(0,1,numel(acc{1}.x)),acc{1}.x,linspace(0,1,50));
+    yPre(ii,:) = interp1(linspace(0,1,numel(acc{1}.y)),acc{1}.y,linspace(0,1,50));
+    xPreP(ii,:) = interp1(linspace(0,1,numel(accR{1}.x)),accR{1}.x,linspace(0,1,50));
+    yPreP(ii,:) = interp1(linspace(0,1,numel(accR{1}.y)),accR{1}.y,linspace(0,1,50));
 end
-% save('F:/paper3/analyzed/final/pastDrinkLasso2.mat','a','aP','aPre','aPreP')
+% save('D:/paper3/analyzed/final/pastDrinkLassoSubset.mat','aPre'...
+%     ,'aPreP','aPast','xPast','yPast','xPastP','yPastP','xPre','yPre',...
+%     'xPreP','yPreP','aPastP')
+%% Plot a couple time points
+figure
+hold on
+plot(mean(xPre,1),mean(yPre,1))
+thisX = []; thisY = [];
+for ii = 1:100
+    thisX(ii,:) = interp1(linspace(0,1,numel(xPast{9,ii})),...
+        xPast{9,ii},linspace(0,1,50));
+    thisY(ii,:) = interp1(linspace(0,1,numel(yPast{9,ii})),...
+        yPast{9,ii},linspace(0,1,50));
+end
+plot(mean(thisX),mean(thisY))
+thisX = []; thisY = [];
+for ii = 1:100
+    thisX(ii,:) = interp1(linspace(0,1,numel(xPastP{9,ii})),...
+        xPastP{9,ii},linspace(0,1,50));
+    thisY(ii,:) = interp1(linspace(0,1,numel(yPastP{9,ii})),...
+        yPastP{9,ii},linspace(0,1,50));
+end
+plot(mean([thisX;xPreP]),mean([thisY;yPreP]))
+legend(['pre: ',num2str(round(mean(aPre),2)),'\pm',...
+    num2str(round(conf(aPre,0.95),2)),' ',...
+    num2str((sum([aPreP,aPastP(8,:)]>mean(aPre))+1)/(200+1))],...
+    ['past: ',num2str(round(mean(aPast(9,:)),2)),'\pm',...
+    num2str(round(conf(aPast(9,:),0.95),3)),' ',...
+    num2str((sum([aPreP,aPastP(9,:)]>mean(aPast(9,:)))+1)/(200+1))],...
+    ['perm: ',num2str(round(mean([aPreP,aPastP(9,:)]),2)),'\pm',...
+    num2str(round(conf([aPreP,aPastP(9,:)],0.95),2))])
 %% Plot
-load('F:/paper3/analyzed/final/pastDrinkLasso2.mat')
-load('F:/paper3/analyzed/final/preDrinkModel2.mat','mdl','a','aP','uN',...
+% load('D:/paper3/analyzed/final/pastDrinkLasso2.mat')
+load('D:/paper3/analyzed/final/preDrinkModelSubset.mat','mdl','a','aP','uN',...
     'uP')
 preA = a;
-% load('F:/paper3/pastDrinkMdls.mat')
+% load('D:/paper3/pastDrinkMdls.mat')
 figure
 hold on
 % Flip around past accuracies since they are stored going backwards in time
@@ -1873,7 +2702,7 @@ h = shadedErrorBar(1:26,[mean(aPre);fliplr(mean(aPast,2))],[std(aPre);...
 h2 = shadedErrorBar(1:26,[mean(aPreP);fliplr(mean(aPastP,2))],[std(aPreP);...
     fliplr(std(aPastP,[],2))],'k','1');
 
-% set(gca,'xtick',(2:5:61),'xticklabel',-2.5:-5:-62.5)
+set(gca,'xtick',(2:5:61),'xticklabel',-2.5:-5:-62.5)
 legend([h.mainLine,h2.mainLine],{'balanced','perm'})
 xlabel('time before drinking')
 ylabel('auc')
@@ -1917,11 +2746,12 @@ end
 % save('F:/paper3/analyzed/final/preBingeAllData.mat','pre5','notBinge',...
 %     'preData')
 %% Build models
-load('F:/paper3/analyzed/final/preBingeAllData.mat')
+load('D:/paper3/analyzed/final/preBingeAllData.mat')
 % Use 10 samples per animal 
 samps = 10;
 uP = cell2mat(cellfun(@(x) size(x,1),pre5,'uniformoutput',0));
 uN = cell2mat(cellfun(@(x) size(x,1),notBinge,'uniformoutput',0));
+feedShellInds = [1:12,25:30];
 % Preallocate
 [allX,allY,allA] = deal([]);
 mdlNotInd = cell(12,100);
@@ -1966,8 +2796,8 @@ for ii = 1:100
     y = [ones(size(mdlPre,1),1);zeros(size(mdlNot,1),1)];
     [trainInds,~,testInds,~] = trainTest((1:numel(weight))',...
         (1:numel(weight))',0.2);
-    trainX(ii,:,:) = data(trainInds,:);
-    testX(ii,:,:) = data(testInds,:);
+    trainX(ii,:,:) = data(trainInds,feedShellInds);
+    testX(ii,:,:) = data(testInds,feedShellInds);
     trainY(ii,:,:) = y(trainInds);
     testY(ii,:) = y(testInds);
     trainWeight(ii,:) = weight(trainInds);
@@ -1990,11 +2820,11 @@ for ii = 1:100
     yP(ii,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,...
         size(testY,2))); %#ok
 end
-% save('F:\paper3\analyzed\final\preBingeModelData.mat','trainX','trainY',...
+% save('D:\paper3\analyzed\final\preBingeModelDataSubset.mat','trainX','trainY',...
 %   'testX','testY','trainWeight','testWeight','allX','allY','allA','xP',...
-%   'yP','aP','mdlNotInds')
+%   'yP','aP')%,'mdlNotInds')
 %% Pre-feed single features
-load('F:\paper3\analyzed\final\preBingeModelData.mat')
+load('D:\paper3\analyzed\final\preBingeModelDataSubset.mat')
 singleA = zeros(size(trainX,1),size(trainX,3));
 for ii = 1:size(trainX,1)
     for jj = 1:size(trainX,3)
@@ -2006,29 +2836,32 @@ for ii = 1:size(trainX,1)
         signA(ii,jj) = sign(table2array(mdl.Coefficients(2,1)));
     end
 end
+feedShellInds = [1:12,25:30];
 mA = mean(singleA,1);
 [msA,sortInd] = sort(mA,'descend');
 feat = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+featSub = feat(feedShellInds);
 featSort = feat(sortInd);
 % save('F:\paper3\analyzed\final\preBingeSingleFeature.mat','mA','msA',...
 %     'sortInd','featSort','signA')
 %% plot in comparison to feedNot single features
 for ii = 1:100
-    load(['F:\paper3\analyzed\final\feedOtherAll\feedOtherAll',...
+    load(['D:\paper3\analyzed\final\feedOther\feedOther',...
         num2str(ii),'.mat'])
     sF(ii,:) = mean(s,1);
     sA(ii,:) = mean(sFA,1);
 end
 [sortFA,sortFAind] = sort(mean(sA,1),'descend');
 sFM = sign(mean(sF,1));
-faFeat = feat(sortFAind)';
+feat = names({'SL','SR','CL','CR'},{'d','t','a','b','lg','hg'});
+faFeat = featSub(sortFAind)';
 
 figure
 hold on
-plot(mean(singleA(:,1:24),1).*mean(signA(:,1:24)),...
-    mean(sA(:,1:24),1).*sFM(1:24),'o')
-plot(mean(singleA(:,25:end),1).*mean(signA(:,25:end)),...
-    mean(sA(:,25:end),1).*sFM(25:end),'s')
+plot(mean(singleA(:,1:12),1).*mean(signA(:,1:12)),...
+    mean(sA(:,1:12),1).*sFM(1:12),'o')
+plot(mean(singleA(:,13:end),1).*mean(signA(:,13:end)),...
+    mean(sA(:,13:end),1).*sFM(13:end),'s')
 plot([-1 1],[0.5 0.5],'k')
 plot([-1 1],[-0.5 -0.5],'k')
 plot([0.5 0.5],[-1 1],'k')
@@ -2039,22 +2872,27 @@ ylabel('feed auc')
 legend({'power','coherence'})
 title('pre-feed vs. feed single features')
 %% Load preFeed models and apply backwards through time
-load('F:\paper3\analyzed\final\preBingeModelData.mat','mdlNotInd')
-load('F:\paper3\analyzed\final\preBingeAllData.mat')
+load('D:\paper3\analyzed\final\preBingeModelData.mat','mdlNotInd')
+load('D:\paper3\analyzed\final\preBingeAllData.mat')
+feedShellInds = [1:12,25:30];
 % Pre-allocate
 [aPast,aPastP,aFeedOtherPast] = deal(zeros(120,100));
 [a,aP,aFeedOther] = deal(zeros(1,100));
 samps = 10;
 for ii = 1:100
     disp(num2str(ii))
-    cd('F:\paper3\analyzed\final\preFeed\')
-    load(['preFeed',num2str(ii),'.mat'],'acc','accR','hist')
+    cd('D:\paper3\analyzed\final\preFeedSubset\')
+    load(['preFeedSubset',num2str(ii),'.mat'],'acc','accR','hist')
     a(ii) = acc{1}.acc;
     aP(ii) = accR{1}.acc;
+    x(ii,:) = interp1(linspace(0,1,numel(acc{1}.x)),acc{1}.x,linspace(0,1,50));
+    y(ii,:) = interp1(linspace(0,1,numel(acc{1}.y)),acc{1}.y,linspace(0,1,50));
+    xP(ii,:) = interp1(linspace(0,1,numel(accR{1}.x)),accR{1}.x,linspace(0,1,50));
+    yP(ii,:) = interp1(linspace(0,1,numel(accR{1}.y)),accR{1}.y,linspace(0,1,50));
     preMdl = acc{1}.mdl{1};
     preMdlP = accR{1}.mdl{1};
-    cd('F:\paper3\analyzed\final\feedOtherAll\')
-    load(['feedOtherAll',num2str(ii),'.mat'],'acc')
+    cd('D:\paper3\analyzed\final\feedOther\')
+    load(['feedOther',num2str(ii),'.mat'],'acc')
     feedMdl = acc{1}.mdl{1};
     thisPre = []; thisNot = [];
     for jj = 1:120%size(preData,2)
@@ -2078,15 +2916,19 @@ for ii = 1:100
         testX = [thisPre;thisNot];
         testY = [ones(size(thisPre,1),1);zeros(size(thisNot,1),1)];
         % Test
-        pred = cvglmnetPredict(preMdl,testX,'lambda_1se',...
+        pred = cvglmnetPredict(preMdl,testX(:,feedShellInds),'lambda_1se',...
             'response');
-        [~,~,~,aPast(jj,ii)] = perfcurve(testY,pred,1);
+        [thisX,thisY,~,aPast(jj,ii)] = perfcurve(testY,pred,1);
+        xPast(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,50));
+        yPast(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,linspace(0,1,50));
         % Test using random model
-        pred = cvglmnetPredict(preMdlP,testX,'lambda_1se',...
+        pred = cvglmnetPredict(preMdlP,testX(:,feedShellInds),'lambda_1se',...
             'response');
-        [~,~,~,aPastP(jj,ii)] = perfcurve(testY,pred,1);
+        [thisX,thisY,~,aPastP(jj,ii)] = perfcurve(testY,pred,1);
+        xPastP(ii,jj,:) = interp1(linspace(0,1,numel(thisX)),thisX,linspace(0,1,50));
+        yPastP(ii,jj,:) = interp1(linspace(0,1,numel(thisY)),thisY,linspace(0,1,50));
         % Also test feedNot model
-        pred = cvglmnetPredict(feedMdl,testX,'lambda_1se',...
+        pred = cvglmnetPredict(feedMdl,testX(:,feedShellInds),'lambda_1se',...
             'response');
         [~,~,~,aFeedOtherPast(jj,ii)] = perfcurve(testY,pred,1);
     end
@@ -2094,8 +2936,22 @@ for ii = 1:100
             'response'); 
     [~,~,~,aFeedOther(ii)] = perfcurve(hist.cfg.naive.testY,pred,1);
 end
-% save('F:/paper3/analyzed/final/preFeedPast.mat','a','aP','aPast',...
-%     'aPastP','aFeedOther')
+% save('D:/paper3/analyzed/final/preFeedPastSubset.mat','a','aP','aPast',...
+%     'aPastP','aFeedOther','xPast','yPast','xPastP','yPastP','x','y','xP','yP')
+%% Plot couple of time points
+figure
+hold on
+plot(mean(x),mean(y))
+plot(squeeze(mean(xPast(:,9,:),1)),squeeze(mean(yPast(:,9,:),1)))
+plot(mean([xP;squeeze(xPastP(:,9,:))]),mean([yP;squeeze(yPastP(:,9,:))]))
+legend(['pre: ',num2str(round(mean(a),2)),'\pm',...
+    num2str(round(conf(a,0.95),2)),' ',...
+    num2str((sum([aP,aPast(9,:)]>mean(a))+1)/(200+1))],['past: ',...
+    num2str(round(mean(aPast(9,:)),2)),'\pm',...
+    num2str(round(conf(aPast(9,:),0.95),2)),' ',...
+    num2str((sum([aP,aPastP(9,:)]>mean(aPast(9,:)))+1)/(200+1))],['perm: ',...
+    num2str(round(mean([aP,aPast(9,:)]),2)),'\pm',...
+    num2str(round(conf([aP,aPast(9,:)],0.95),2))])
 %%
 figure
 hold on
@@ -2110,7 +2966,7 @@ xlabel('time before feeding (s)')
 ylabel('auc')
 legend([h1.mainLine,h2.mainLine],{'real','permuted'})
 %% Go through postBinge files and remove trials that overlap with feeding
-files = fileSearch('F:/paper3/postFeed/','dep','in');
+files = fileSearch('D:/paper3/postFeed/','dep','in');
 postData = cell(1,20);
 for fi = 1:numel(files)
     load(files{fi})
@@ -2149,10 +3005,10 @@ for fi = 1:numel(files)
     end
 end
 %% Then go through and load preBinge data
-files = fileSearch('F:\paper3\preBingeCombinedNew','dep','in');
+files = fileSearch('D:\paper3\preBingeCombinedNew','dep','in');
 notFeed = []; preData = cell(1,120);
 for ii = 1:size(files,2)
-    load(files{fi})
+    load(files{ii})
     [b,c,t] = size(psdTrls{241}.relPow);
     notFeedPow = reshape(psdTrls{241}.relPow,b*c,t)';
     [cmb,b,t] = size(coh{241}.rel);
@@ -2168,15 +3024,16 @@ for ii = 1:size(files,2)
     end
 end
 %% Load feeding data
-[feedData,~,~] = collateData('F:\paper3\feed\',{'dep'},{'pow','coh'},...
-    'trl','rel');
+[feedData,~,~] = collateData('D:\paper3\feed\',{'dep'},{'pow','coh'},...
+    'avg','rel');
 feedDataCat = cell(1,10);
 for ii = 1:10
     feedDataCat{ii} = cat(1,feedData{1}{:,ii});
 end
 %% Plot
 % load('F:\paper3\analyzed\final\preBingeSingleFeature.mat','sortInd')
-feat = sortInd(1);
+n = 3;
+feat = sortInd(n);
 thisPre = cellfun(@(x) mean(x(:,feat)),preData);
 thisPreS = cellfun(@(x) std(x(:,feat)),preData);
 thisFeed = cellfun(@(x) mean(x(:,feat)),feedDataCat);
@@ -2184,8 +3041,9 @@ thisFeedS = cellfun(@(x) std(x(:,feat)),feedDataCat);
 thisPost = cellfun(@(x) mean(x(:,feat)),postData);
 thisPostS = cellfun(@(x) std(x(:,feat)),postData);
 % Load all binge data
-load('F:/paper3/analyzed/final/24sweetChowNotDataNew.mat','allFeedData')
-feedAverage = mean(cat(1,allFeedData{:,1}),1);
+% load('D:/paper3/analyzed/final/24sweetChowNotDataNew.mat','allFeedData')
+% feedAverage = mean(cat(1,allFeedData{:,1}),1);
+feedAverage = mean(thisFeed);
 notAverage = mean(notFeed,1);
 figure
 hold on
@@ -2196,13 +3054,14 @@ shadedErrorBar(75:78,thisPost(1:4),thisPostS(1:4),{'color','b'})
 shadedErrorBar(78:83,thisPost(4:9),thisPostS(4:9),{'color',[0 0.45 0.74]})
 shadedErrorBar(84:94,thisPost(10:20),thisPostS(10:20))
 plot(1:94,ones(1,94).*notAverage(feat),'k')
-plot(1:94,ones(1,94).*feedAverage(feat),'--b')
+plot(1:94,ones(1,94).*feedAverage,'--b')
 xlab = [-61.5:1:7.5,0,0,0,0,-6.5:1:12.5];
 set(gca,'xtick',1:3:94,'xticklabel',xlab(1:3:94))
+title(featSub(sortInd(n)))
 %% Drinking feature through time
 % Load data
-[data,~,files] = collateData('F:\paper3\periDrink\',{'.mat'},{'pow',...
-    'coh'},'trl','rel');
+[data,~,files] = collateData('D:\paper3\periDrink\',{'.mat'},{'pow',...
+    'coh'},'avg','rel');
 % Load an example cfg for eoi data
 load(files{1}{1},'hist')
 preDrinkInds = 1:26;
@@ -2227,10 +3086,10 @@ for ii = 1:numel(allInds)
     end
 end
 %%
-load('F:\paper3\analyzed\final\preDrinkAllData.mat')
+% load('D:\paper3\analyzed\final\preDrinkAllData.mat')
 % Set which feature to plot - use 12 for the third 'best' single feature
 % from preDrink models which highlights the temporal dynamics
-feat = 12;
+feat = 60;
 figure
 hold on
 shadedErrorBar(1:26,allDataM{1}(:,feat),allDataS{1}(:,feat))
@@ -2248,7 +3107,7 @@ set(gca,'xtick',1:2:54,'xticklabel',xlab(1:2:end));
 alcFeat = names({'PL','PR','SL','SR'},{'d','t','a','b','lg','hg'});
 title(alcFeat(feat))
 plot(1:54,ones(1,54).*mean(allPre(:,feat)),'k')
-plot(1:54,ones(1,54).*mean(allNot(:,feat)),'--b')
+plot(1:54,ones(1,54).*mean(table2array(alc(:,feat))),'--b')
 %% Build model feed + pre5 vs. not feed
 load('F:\paper3\analyzed\final\24sweetChowNotDataNew.mat')
 load('F:\paper3\analyzed\final\preBingeAllData.mat')

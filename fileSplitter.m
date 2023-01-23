@@ -21,14 +21,14 @@ function fileSplitter(sDir,searchStr,nChan)
 %   hyphens, e.g., IRDM23-MPH3)
 %%
 % check sDir ends in \ or /; else add \
-if ~contains(sDir(end),'\') || ~contains(sDir(end),'/')
+if ~contains(sDir(end),'\')
     sDir = [sDir,'\'];
 end
 files = fileSearch(sDir,searchStr);
 % Set up box indices
 boxInds = [25:32;33:40;41:48;49:56];
 stimInds = reshape(9:24,4,4)';
-dInds = reshape(1:32,8,4)';
+% dInds = reshape(1:32,8,4)';
 chans = cell(1,32);
 for ii = 1:32
     if ii < 10
@@ -55,7 +55,7 @@ for fI = 1:size(files,2)
     % Check that the number of sub-files and expected channels per sub-file
     % matches the total amount of available data
     if ~isequal(size(numInd,2)*nChan,size(LFPTs.data,1))
-        error(['There are a different number of channels than expected'... 
+        warning(['There are a different number of channels than expected'... 
             ' by the number of animals.'])
     end
     % Store LFPTs and eventTs

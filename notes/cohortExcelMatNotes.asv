@@ -79,7 +79,7 @@ for ii = 1:numel(inter)
     end
 end
 %% count number of animals with recordings for each day after intervention
-inter = {'sIL_','sCore_','sOFC_','MPH3_'};
+inter = {'sIL','sCore','sOFC','MPH3'};
 uID = unique(thisData(:,1));
 postData = cell(numel(inter),7);
 procFiles1 = fileSearch('D:\DDT\processed\','.mat');
@@ -97,7 +97,7 @@ end
 files = [];
 missing = [];
 c = 1;
-for ii = 2:numel(inter)
+for ii = 1:numel(inter)
     for jj = 1:numel(uID)
         parts = strsplit(uID{jj},'_');
         interInd = logicFind(1,cellfun(@(x) contains(x,inter(ii),...

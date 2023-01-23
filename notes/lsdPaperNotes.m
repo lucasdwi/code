@@ -10,9 +10,85 @@ end
 allPostLSD = dif(1:numel(files{1,1}));
 allPostSal = dif(numel(files{1,1})+1:end);
 minSamp = min(cellfun(@(x) size(x,1),dif));
-% save('G:\GreenLab\data\lsd\normAcuteImag.mat','allPostLSD','allPostSal','minSamp',...
+% save('G:\GreenLab\data\lsd\normAcuteImagRest.mat','allPostLSD','allPostSal','minSamp',...
 %     'data','files')
-% Only use data from the last 30 minutes
+%% Get rest times
+files1 = fileSearch('G:\Greenlab\data\lsd\restProcessed\','_Sal_');
+files2 = fileSearch('G:\Greenlab\data\lsd\restProcessed\','_LSD_');
+files = [files1,files2];
+time = linspace(0,1,1000);
+rests = zeros(size(files,2),1000);
+restsPost = nan(size(files,2),5500);
+for ii = 1:size(files,2)
+    cd 'G:\Greenlab\data\lsd\restProcessed\'
+    load(files{ii},'hist')
+    totalTime(ii) = hist.eventTs.t{1}(end);
+    starts{ii} = hist.eventTs.t{4};
+    stops{ii} = hist.eventTs.t{5};
+    startRel{ii} = round(starts{ii}./totalTime(ii),3);
+    stopRel{ii} = round(stops{ii}./totalTime(ii),3);
+    restsPost(ii,1:ceil(totalTime(ii)-inj(ii))) = 0;
+    for jj = 1:size(startRel{ii})
+        rests(ii,nearest_idx3(startRel{ii}(jj),time):...
+            nearest_idx3(stopRel{ii}(jj),time)) = 1;
+        load(['G:\GreenLab\data\lsd\processed\imagAcute\',...
+            files{ii}(1:end-9),'_pre_vs_post.mat'],'hist')
+        inj(ii) = hist.eventTs.t{3};
+        if starts{ii}(jj) >= inj(ii)
+            restsPost(ii,ceil(starts{ii}(jj)-inj(ii)):...
+                ceil(stops{ii}(jj)-inj(ii))) = 1;
+        end
+    end
+end
+%%
+salInd = contains(files,'_Sal_');
+lsdInd = contains(files,'_LSD_');
+figure
+h = pcolor(padarray([restsPost(salInd,:);...
+    nan(1,5500);...
+    mean(restsPost(salInd,:));...
+    nan(1,5500);...
+    mean(restsPost(lsdInd,:));...
+    nan(1,5500);...
+    restsPost(lsdInd,:)],...
+    [1 1],NaN,'post'));
+set(h,'EdgeColor','none')
+%%
+figure
+plot(smooth(mean(restsPost(salInd,:)),120),'b')
+hold on
+plot(smooth(mean(restsPost(lsdInd,:)),120),'r')
+set(gca,'xtick',0:600:5000,'xticklabel',[0:600:5500]./60,'ytick',0:0.25:1)
+xlim([0 5000])
+xlabel('mins post injection')
+ylabel('% of animals resting')
+legend({'SAL','LSD'})
+box off
+%%
+figure
+imagesc([rests(salInd,:);rests(lsdInd,:)]);
+hold on
+for ii = 1:size(inj,2)
+    plot([nearest_idx3(inj(ii),time) nearest_idx3(inj(ii),time)],...
+        [ii-.5 ii+.5],'r')
+end
+%% Collate  data and split into pre and post injection
+% [data,samp,files] = collateData('G:\Greenlab\data\lsd\restProcessed\',...
+%     {'_lsd';'_sal'},{'pow','coh'},'trl','');
+[data,samp,files] = collateData('G:\GreenLab\data\lsd\processed\imagAcute\',...
+    {'_lsd';'_sal'},{'pow','coh'},'trl','');
+%%
+for c = 1:2
+    for ii = 1:numel(files{c})
+%         load(['G:\GreenLab\data\lsd\processed\imagAcute\',...
+%             files{c}{ii}(1:end-9),'_pre_vs_post.mat'],'hist')
+        load(['G:\GreenLab\data\lsd\processed\imagAcute\',...
+            files{c}{ii}],'hist')
+        pre{c,ii} = data{c}{ii}(samp{c}{ii}(:,1)<hist.eventTs.t{2}*2000,:);
+        post{c,ii} = data{c}{ii}(samp{c}{ii}(:,1)>hist.eventTs.t{3}*2000,:);
+    end
+end
+%% Only use data from the last 30 minutes
 c = 1;
 for ii = 1:2
     for jj = 1:size(data{1,ii},1)
@@ -22,45 +98,112 @@ for ii = 1:2
         c = c+1;
     end
 end
-% mBase doesn't change
+mBase = cellfun(@(x) mean(x,1),allData30(:,1),'UniformOutput',0);
+sBase = cellfun(@(x) std(x,[],1),allData30(:,1),'UniformOutput',0);
 for ii = 1:numel(mBase)
     dif30{ii} = allData30{ii,2}-repmat(mBase{ii},size(allData30{ii,2},1),1);
+    dif30z{ii} = (allData30{ii,2}-...
+        repmat(mBase{ii},size(allData30{ii,2},1),1))./...
+        repmat(sBase{ii},size(allData30{ii,2},1),1);
 end
 allPostLSD30 = dif30(1:numel(files{1,1}));
 allPostSal30 = dif30(numel(files{1,1})+1:end);
+allPostLSD30z = dif30z(1:numel(files{1,1}));
+allPostSal30z = dif30z(numel(files{1,1})+1:end);
 minSamp30 = min(cellfun(@(x) size(x,1),dif30));
 % save('G:\GreenLab\data\lsd\normAcuteImag30.mat','allPostLSD30',...
-%     'allPostSal30','minSamp30','data','files','allData30')
-%% power changes in LSD relative to SAL
+%     'allPostSal30','minSamp30','data','files','allData30',...
+%     'allPostSal30z','allPostLSD30z')
+%% Compare rest times between groups on injection day and post day
+salFiles = fileSearch('G:\GreenLab\data\lsd\scoredMat\','_Sal');
+salPostFiles = fileSearch('G:\GreenLab\data\lsd\scoredMat\','_PostSal');
+lsdFiles = fileSearch('G:\GreenLab\data\lsd\scoredMat\','_LSD');
+lsdPostFiles = fileSearch('G:\GreenLab\data\lsd\scoredMat\','_PostLSD');
+for ii = 1:numel(salFiles)
+    load(salFiles{ii},'eventTs')
+    inds = eventInd(eventTs,{'rest'});
+    salRest(ii) = sum(eventTs.t{inds(2)}-eventTs.t{inds(1)});
+    salRest30(ii) = sum(eventTs.t{inds(2)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60)-eventTs.t{inds(1)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60));
+end
+for ii = 1:numel(salPostFiles)
+    load(salPostFiles{ii},'eventTs')
+    inds = eventInd(eventTs,{'rest'});
+    salPostRest(ii) = sum(eventTs.t{inds(2)}-eventTs.t{inds(1)});
+    salPostRest30(ii) = sum(eventTs.t{inds(2)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60)-eventTs.t{inds(1)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60));
+end
+for ii = 1:numel(lsdFiles)
+    load(lsdFiles{ii},'eventTs')
+    inds = eventInd(eventTs,{'rest'});
+    lsdRest(ii) = sum(eventTs.t{inds(2)}-eventTs.t{inds(1)});
+    lsdRest30(ii) = sum(eventTs.t{inds(2)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60)-eventTs.t{inds(1)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60));
+end
+for ii = 1:numel(lsdPostFiles)
+    load(lsdPostFiles{ii},'eventTs')
+    inds = eventInd(eventTs,{'rest'});
+    lsdPostRest(ii) = sum(eventTs.t{inds(2)}-eventTs.t{inds(1)});
+    lsdPostRest30(ii) = sum(eventTs.t{inds(2)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60)-eventTs.t{inds(1)}(eventTs.t{inds(2)}>...
+        eventTs.t{1}(end)-30*60));
+end
+figure
+subplot(1,2,1)
+plotSpread({salRest,lsdRest,salPostRest,lsdPostRest},...
+    'DistributionMarkers','o');
+ylabel('time (sec)')
+set(gca,'xticklabel',{'sal acute','lsd acute','sal 24 hours',...
+    'lsd 24 hours'})
+title('all data')
+subplot(1,2,2)
+plotSpread({salRest30,lsdRest30,salPostRest30,lsdPostRest30},...
+    'DistributionMarkers','o');
+ylabel('time (sec)')
+set(gca,'xticklabel',{'sal acute','lsd acute','sal 24 hours',...
+    'lsd 24 hours'})
+title('last 30 minutes')
+%% power and coherence changes in LSD relative to SAL
 salFiles = fileSearch('G:\GreenLab\data\lsd\processed\imagAcute\','Sal');
 [salPow,salCoh] = deal(cell(numel(salFiles),2));
 for ii = 1:numel(salFiles)
-    load(salFiles{ii},'psdTrls','coh')
+    load(salFiles{ii},'psdTrls','coh','trls','LFPTs')
+    inds30 = nearest_idx3(nearest_idx3(LFPTs.tvec(end)-30*60,...
+        LFPTs.tvec),trls{1,2}.sampleinfo(:,1));
     salPow{ii,1} = psdTrls{1}.Pow;
     salPow{ii,2} = psdTrls{2}.Pow;
-    
+    salPow{ii,3} = psdTrls{2}.Pow(:,:,inds30:end);
+
     [b,c,t] = size(psdTrls{1}.bandPow);
-    salBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';  
+    salBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';
     [b,c,t] = size(psdTrls{2}.bandPow);
     salBand{ii,2} = reshape(psdTrls{2}.bandPow,b*c,t)';
-    
+
     salCoh{ii,1} = coh{1}.Cxy;
     salCoh{ii,2} = coh{2}.Cxy;
+    salCoh{ii,3} = coh{2}.Cxy(:,:,inds30:end);
 end
 lsdFiles = fileSearch('G:\GreenLab\data\lsd\processed\imagAcute\','LSD');
 [lsdPow,lsdCoh] = deal(cell(numel(lsdFiles),2));
 for ii = 1:numel(lsdFiles)
-    load(lsdFiles{ii},'psdTrls','coh')
+    load(lsdFiles{ii},'psdTrls','coh','trls','LFPTs')
+    inds30 = nearest_idx3(nearest_idx3(LFPTs.tvec(end)-30*60,...
+        LFPTs.tvec),trls{1,2}.sampleinfo(:,1));
     lsdPow{ii,1} = psdTrls{1}.Pow;
     lsdPow{ii,2} = psdTrls{2}.Pow;
-    
+    lsdPow{ii,3} = psdTrls{2}.Pow(:,:,inds30);
+
     [b,c,t] = size(psdTrls{1}.bandPow);
-    lsdBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';  
+    lsdBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';
     [b,c,t] = size(psdTrls{2}.bandPow);
     lsdBand{ii,2} = reshape(psdTrls{2}.bandPow,b*c,t)';
-    
+
     lsdCoh{ii,1} = coh{1}.Cxy;
     lsdCoh{ii,2} = coh{2}.Cxy;
+    lsdCoh{ii,3} = coh{2}.Cxy(:,:,inds30:end);
 end
 %% double check band power
 bInd = [1 4;5 10;11 14;15 30;45 65;70 90];
@@ -74,7 +217,7 @@ for ii = 1:size(salPow,1)
         [b,c,t] = size(these);
         salBandChk{ii,jj} = reshape(these,b*c,t)';
         if any(salBandChk{ii,jj}~=salBand{ii,jj})
-           disp('fuck') 
+            disp('fuck')
         end
     end
 end
@@ -88,23 +231,33 @@ for ii = 1:size(lsdPow,1)
         [b,c,t] = size(these);
         lsdBandChk{ii,jj} = reshape(these,b*c,t)';
         if any(lsdBandChk{ii,jj}~=lsdBand{ii,jj})
-           disp('fuck') 
+            disp('fuck')
         end
     end
 end
 %% plot pre post lsd and sal - power
 allLSDpre = cat(3,lsdPow{:,1});
+LSDpost30 = cat(3,lsdPow{:,3});
 allLSDpost = cat(3,lsdPow{:,2});
 mLSDpre = mean(allLSDpre,3);
+sLSDpre = std(allLSDpre,[],3);
+sLSDpost = std(allLSDpost,[],3);
 mLSDpost = mean(allLSDpost,3);
+mLSDpost30 = mean(LSDpost30,3);
+sLSDpost30 = std(LSDpost30,[],3);
 lsdDiff = mLSDpost-mLSDpre;
 lsdDiffS = (abs(std(allLSDpost,[],3)+std(allLSDpre,[],3)-2*...
     std(cat(3,allLSDpre,allLSDpost),[],3))).^0.5;
 
 allSALpre = cat(3,salPow{:,1});
 allSALpost = cat(3,salPow{:,2});
+SALpost30 = cat(3,salPow{:,3});
 mSALpre = mean(allSALpre,3);
 mSALpost = mean(allSALpost,3);
+mSALpost30 = mean(SALpost30,3);
+sSALpre = std(allSALpre,[],3);
+sSALpost = std(allSALpost,[],3);
+sSALpost30 = std(SALpost30,[],3);
 salDiff = mSALpost-mSALpre;
 salDiffS = (abs(std(allSALpost,[],3)+std(allSALpre,[],3)-2*...
     std(cat(3,allSALpre,allSALpost),[],3))).^0.5;
@@ -113,13 +266,14 @@ x = (abs(std(cat(3,allSALpost,allLSDpost),[],3)+std(cat(3,allSALpost,allLSDpost)
 lsdSalDiff = lsdDiff-salDiff;
 lsdSalDiffS = (abs(lsdDiffS+salDiffS-2*(x))).^0.5;
 sites = {'ILL','CA1L','PLL','NAcL','PLR','CA1R','ILR','NAcR'};
+%%
 figure
 for ii = 1:8
     subplot(4,4,ii)
     hold on
     shadedErrorBar(1:100,lsdDiff(ii,:),lsdDiffS(ii,:),'r',1)
     shadedErrorBar(1:100,salDiff(ii,:),salDiffS(ii,:),'b',1)
-%     shadedErrorBar(1:100,lsdSalDiff(ii,:),lsdSalDiffS(ii,:),'k',1)
+    %     shadedErrorBar(1:100,lsdSalDiff(ii,:),lsdSalDiffS(ii,:),'k',1)
     plot([1 1],[-6.5 2],':k')
     plot([4 4],[-6.5 2],':k')
     plot([5 5],[-6.5 2],':k')
@@ -140,24 +294,121 @@ for ii = 1:8
     title(sites{ii})
 end
 for ii = 1:8
-   subplot(4,4,8+ii)
-   hold on
+    subplot(4,4,8+ii)
+    hold on
     shadedErrorBar(1:100,lsdSalDiff(ii,:),lsdSalDiffS(ii,:),'k',1)
-     set(gca,'xtick',0:10:100)
-     ylim([-5 1])
-     plot([0 100],[0 0],'--k')
+    set(gca,'xtick',0:10:100)
+    ylim([-5 1])
+    plot([0 100],[0 0],'--k')
+end
+%%
+figure
+for ii = 1:8
+subplot(4,2,ii)
+    hold on
+    shadedErrorBar(1:100,mLSDpre(ii,:),sLSDpre(ii,:),'k',1)
+    shadedErrorBar(1:100,mLSDpost(ii,:),sLSDpost(ii,:),'r',1)
+    plot([1 1],[-80 -20],':k')
+    plot([4 4],[-80 -20],':k')
+    plot([5 5],[-80 -20],':k')
+    plot([10 10],[-80 -20],':k')
+    plot([11 11],[-80 -20],':k')
+    plot([14 14],[-80 -20],':k')
+    plot([15 15],[-80 -20],':k')
+    plot([30 30],[-80 -20],':k')
+    plot([45 45],[-80 -20],':k')
+    plot([65 65],[-80 -20],':k')
+    plot([70 70],[-80 -20],':k')
+    plot([90 90],[-80 -20],':k')
+    set(gca,'xtick',0:10:100)
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title(sites{ii})
+end
+figure
+for ii = 1:8
+subplot(4,2,ii)
+    hold on
+    shadedErrorBar(1:100,mSALpre(ii,:),sSALpre(ii,:),'k',1)
+    shadedErrorBar(1:100,mSALpost(ii,:),sSALpost(ii,:),'b:',1)
+    plot([1 1],[-80 -20],':k')
+    plot([4 4],[-80 -20],':k')
+    plot([5 5],[-80 -20],':k')
+    plot([10 10],[-80 -20],':k')
+    plot([11 11],[-80 -20],':k')
+    plot([14 14],[-80 -20],':k')
+    plot([15 15],[-80 -20],':k')
+    plot([30 30],[-80 -20],':k')
+    plot([45 45],[-80 -20],':k')
+    plot([65 65],[-80 -20],':k')
+    plot([70 70],[-80 -20],':k')
+    plot([90 90],[-80 -20],':k')
+    set(gca,'xtick',0:10:100)
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title(sites{ii})
+end
+%%
+figure
+for ii = 1:8
+subplot(4,2,ii)
+    hold on
+    shadedErrorBar(1:100,mLSDpre(ii,:),sLSDpre(ii,:),'k',1)
+    shadedErrorBar(1:100,mLSDpost30(ii,:),sLSDpost30(ii,:),'r',1)
+    plot([1 1],[-80 -20],':k')
+    plot([4 4],[-80 -20],':k')
+    plot([5 5],[-80 -20],':k')
+    plot([10 10],[-80 -20],':k')
+    plot([11 11],[-80 -20],':k')
+    plot([14 14],[-80 -20],':k')
+    plot([15 15],[-80 -20],':k')
+    plot([30 30],[-80 -20],':k')
+    plot([45 45],[-80 -20],':k')
+    plot([65 65],[-80 -20],':k')
+    plot([70 70],[-80 -20],':k')
+    plot([90 90],[-80 -20],':k')
+    set(gca,'xtick',0:10:100)
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title(sites{ii})
+end
+figure
+for ii = 1:8
+subplot(4,2,ii)
+    hold on
+    shadedErrorBar(1:100,mSALpre(ii,:),sSALpre(ii,:),'k',1)
+    shadedErrorBar(1:100,mSALpost30(ii,:),sSALpost30(ii,:),'b:',1)
+    plot([1 1],[-80 -20],':k')
+    plot([4 4],[-80 -20],':k')
+    plot([5 5],[-80 -20],':k')
+    plot([10 10],[-80 -20],':k')
+    plot([11 11],[-80 -20],':k')
+    plot([14 14],[-80 -20],':k')
+    plot([15 15],[-80 -20],':k')
+    plot([30 30],[-80 -20],':k')
+    plot([45 45],[-80 -20],':k')
+    plot([65 65],[-80 -20],':k')
+    plot([70 70],[-80 -20],':k')
+    plot([90 90],[-80 -20],':k')
+    set(gca,'xtick',0:10:100)
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title(sites{ii})
 end
 %% coh - coherogram differences
 allLSDpre = cat(3,lsdCoh{:,1});
 allLSDpost = cat(3,lsdCoh{:,2});
-
+LSDpost30 = cat(3,lsdCoh{:,3});
 % allLSDpre = cellfun(@(x) mean(x,3),lsdCoh(:,1),'UniformOutput',0);
 % allLSDpre = cat(3,allLSDpre{:});
-% 
+%
 % allLSDpost = cellfun(@(x) mean(x,3),lsdCoh(:,2),'UniformOutput',0);
 % allLSDpost = cat(3,allLSDpost{:});
 mLSDpre = mean(allLSDpre,3);
 mLSDpost = mean(allLSDpost,3);
+mLSDpost30 = mean(LSDpost30,3);
+sLSDpost30 = std(LSDpost30,[],3);
+sLSDpre = std(allLSDpre,[],3);
 lsdDiff = mLSDpost-mLSDpre;
 % Linear propogation of error
 lsdDiffS = (abs(std(allLSDpost,[],3)+std(allLSDpre,[],3)-2*...
@@ -165,13 +416,17 @@ lsdDiffS = (abs(std(allLSDpost,[],3)+std(allLSDpre,[],3)-2*...
 
 allSALpre = cat(3,salCoh{:,1});
 allSALpost = cat(3,salCoh{:,2});
+SALpost30 = cat(3,salCoh{:,3});
 % allSALpre = cellfun(@(x) mean(x,3),salCoh(:,1),'UniformOutput',0);
 % allSALpre = cat(3,allSALpre{:});
-% 
+%
 % allSALpost = cellfun(@(x) mean(x,3),salCoh(:,2),'UniformOutput',0);
 % allSALpost = cat(3,allSALpost{:});
 mSALpre = mean(allSALpre,3);
 mSALpost = mean(allSALpost,3);
+mSALpost30 = mean(SALpost30,3);
+sSALpost30 = std(SALpost30,[],3);
+sSALpre = std(allSALpre,[],3);
 salDiff = mSALpost-mSALpre;
 % Linear propogation of error
 salDiffS = (abs(std(allSALpost,[],3)+std(allSALpre,[],3)-2*...
@@ -184,6 +439,7 @@ lsdSalDiffS = (abs(lsdDiffS+salDiffS-2*(x))).^0.5;
 sites = {'ILL','CA1L','PLL','NAcL','PLR','CA1R','ILR','NAcR'};
 cmbs = nchoosek(1:8,2);
 cmbs = cmbs([3,6,7,21,22,28],:);
+%%
 figure
 for ii = 1:size(cmbs,1)
     subplot(3,2,ii)
@@ -213,6 +469,94 @@ for ii = 1:size(cmbs,1)
     ylabel('a.u.')
     title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
 end
+%%
+figure
+for ii = 1:size(cmbs,1)
+    subplot(3,2,ii)
+    hold on
+    shadedErrorBar(1:100,decimate(mLSDpost30(ii,:),5),...
+        decimate(sLSDpost30(ii,:),5),'r',1)
+    shadedErrorBar(1:100,decimate(mSALpost30(ii,:),5),...
+        decimate(sSALpost30(ii,:),5),'b',1)
+    plot([1 1],[-1 1],':k')
+    plot([4 4],[-1 1],':k')
+    plot([5 5],[-1 1],':k')
+    plot([10 10],[-1 1],':k')
+    plot([11 11],[-1 1],':k')
+    plot([14 14],[-1 1],':k')
+    plot([15 15],[-1 1],':k')
+    plot([30 30],[-1 1],':k')
+    plot([45 45],[-1 1],':k')
+    plot([65 65],[-1 1],':k')
+    plot([70 70],[-1 1],':k')
+    plot([90 90],[-1 1],':k')
+    plot([0 100],[0 0],'--k')
+    set(gca,'xtick',0:10:100)
+    ylim([-0.3 0.3])
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+end
+%%
+figure
+for ii = 1:size(cmbs,1)
+    subplot(3,2,ii)
+    hold on
+%     shadedErrorBar(1:100,decimate(mLSDpost30(ii,:),5),...
+%         decimate(sLSDpost30(ii,:),5),'r',1)
+%     shadedErrorBar(1:100,decimate(mLSDpre(ii,:),5),...
+%         decimate(sLSDpre(ii,:),5),'k',1)
+    plot(1:100,decimate(mLSDpost30(ii,:),5),'r')
+    plot(1:100,decimate(mLSDpre(ii,:),5),'k')
+    plot([1 1],[-1 1],':k')
+    plot([4 4],[-1 1],':k')
+    plot([5 5],[-1 1],':k')
+    plot([10 10],[-1 1],':k')
+    plot([11 11],[-1 1],':k')
+    plot([14 14],[-1 1],':k')
+    plot([15 15],[-1 1],':k')
+    plot([30 30],[-1 1],':k')
+    plot([45 45],[-1 1],':k')
+    plot([65 65],[-1 1],':k')
+    plot([70 70],[-1 1],':k')
+    plot([90 90],[-1 1],':k')
+    plot([0 100],[0 0],'--k')
+    set(gca,'xtick',0:10:100)
+    ylim([-0.2 0.2])
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+end
+%%
+figure
+for ii = 1:size(cmbs,1)
+    subplot(3,2,ii)
+    hold on
+%     shadedErrorBar(1:100,decimate(mSALpost30(ii,:),5),...
+%         decimate(sLSDpost30(ii,:),5),'b',1)
+%     shadedErrorBar(1:100,decimate(mSALpre(ii,:),5),...
+%         decimate(sLSDpre(ii,:),5),'k',1)
+        plot(1:100,decimate(mSALpost30(ii,:),5),'b')
+    plot(1:100,decimate(mSALpre(ii,:),5),'k')
+    plot([1 1],[-1 1],':k')
+    plot([4 4],[-1 1],':k')
+    plot([5 5],[-1 1],':k')
+    plot([10 10],[-1 1],':k')
+    plot([11 11],[-1 1],':k')
+    plot([14 14],[-1 1],':k')
+    plot([15 15],[-1 1],':k')
+    plot([30 30],[-1 1],':k')
+    plot([45 45],[-1 1],':k')
+    plot([65 65],[-1 1],':k')
+    plot([70 70],[-1 1],':k')
+    plot([90 90],[-1 1],':k')
+    plot([0 100],[0 0],'--k')
+    set(gca,'xtick',0:10:100)
+    ylim([-0.2 0.2])
+    xlabel('frequency (Hz)')
+    ylabel('a.u.')
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+end
 %% coh - ecdfs
 [data,samp,files] = collateData(['G:\Greenlab\data\lsd\processed\',...
     'imagAcute\'],{'lsd';'sal'},{'pow','coh'},'trl','');
@@ -235,8 +579,8 @@ allSALdiff = allSALdiff(:,subInds);
 figure
 for ii = 1:36
     subplot(6,6,ii)
-%     plotSpread({allSALdiff(:,24+ii),allLSDdiff(:,24+ii)},...
-%         'distributionColor',{'b','r'})
+    %     plotSpread({allSALdiff(:,24+ii),allLSDdiff(:,24+ii)},...
+    %         'distributionColor',{'b','r'})
     ecdf(allSALdiff(:,24+ii))
     hold on
     ecdf(allLSDdiff(:,24+ii))
@@ -244,7 +588,7 @@ for ii = 1:36
     title(feat{24+ii})
 end
 %% LSD vs. Base and SAL vs. Base - Log LOO
-load('G:\GreenLab\data\lsd\normAcuteImag30.mat')
+% load('G:\GreenLab\data\lsd\normAcuteImag30.mat')
 subInds = [1:6,37:42,19:24,43:48,79:84,61:66,85:90,169:174,211:216,175:180];
 minSamp30 = min(min(cellfun(@(x) size(x,1),allData30)));
 % LSD vs. base - LOO
@@ -390,10 +734,10 @@ end
 (sum(aLSDp>mean(aLSD),[1,2,3])+1)/(numel(aLSDp)+1)
 % save('G:\GreenLab\data\lsd\LSDvBase_SALvBase_acute.mat','aLSD','aSAL','aLSDp','aSALp')
 %% Figures
-figure 
+figure
 subplot(3,1,1)
 hold on
-[f,xi,bw] = ksdensity(aLSD); 
+[f,xi,bw] = ksdensity(aLSD);
 fill(xi,f*bw,'w')
 plotSpread(aLSD','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aLSD) mean(aLSD)],[0 0.25],'-')
@@ -402,7 +746,7 @@ xlim([0 1])
 ylim([0 0.25])
 subplot(3,1,2)
 hold on
-[f,xi,bw] = ksdensity(aSAL); 
+[f,xi,bw] = ksdensity(aSAL);
 fill(xi,f*bw,'w')
 plotSpread(aSAL','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aSAL) mean(aSAL)],[0 0.35],'-')
@@ -411,7 +755,7 @@ xlim([0 1])
 ylim([0 0.35])
 subplot(3,1,3)
 hold on
-[f,xi,bw] = ksdensity(reshape(aLSDp,1,120)); 
+[f,xi,bw] = ksdensity(reshape(aLSDp,1,120));
 fill(xi,f*bw,'w')
 plotSpread(reshape(aLSDp,1,120)','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(reshape(aLSDp,1,120)) mean(reshape(aLSDp,1,120))],[0 0.25],'-')
@@ -436,50 +780,50 @@ for ii = 1:lsdN
 end
 for n = 1:30
     disp(n)
-        % LSD data
-        trainLSD = logicFind(1,~ismember(1:lsdN,inds(n,1)),'==');
-        testLSD = logicFind(0,~ismember(1:lsdN,inds(n,1)),'==');
+    % LSD data
+    trainLSD = logicFind(1,~ismember(1:lsdN,inds(n,1)),'==');
+    testLSD = logicFind(0,~ismember(1:lsdN,inds(n,1)),'==');
 
-        thisLSD24 = [];
-        for ii = trainLSD
-            rng(ii*count)
-            thisLSD24 = [thisLSD24;allPostLSD30{ii}(randperm(size(allPostLSD30{ii},1),...
-                minSamp30),:)];
-        end
-        lsdTest = allPostLSD30{testLSD}(randperm(size(allPostLSD30{testLSD},1),...
-            minSamp30),:);
-        % Saline data
-        trainSal = logicFind(1,~ismember(1:salN,inds(n,2)),'==');
-        testSal = logicFind(0,~ismember(1:salN,inds(n,2)),'==');
-        thisSal = [];
-        for ii = 1:numel(allPostSal30)
-            rng((ii+numel(allPostLSD30))*count)
-            thisSal = [thisSal;allPostSal30{ii}(randperm(size(allPostSal30{ii},1),...
-                minSamp30),:)];
-        end
-        salTest = allPostSal30{testSal}(randperm(size(allPostSal30{testSal},1),...
-            minSamp30),:);
-        % Combine and build models
-        trainX = [thisLSD24;thisSal];
-        trainY = [ones(size(thisLSD24,1),1);zeros(size(thisSal,1),1)];
-        testX = [lsdTest;salTest];
-        testY = [ones(minSamp30,1);zeros(minSamp30,1)];
+    thisLSD24 = [];
+    for ii = trainLSD
+        rng(ii*count)
+        thisLSD24 = [thisLSD24;allPostLSD30z{ii}(randperm(size(allPostLSD30z{ii},1),...
+            minSamp30),:)];
+    end
+    lsdTest = allPostLSD30z{testLSD}(randperm(size(allPostLSD30z{testLSD},1),...
+        minSamp30),:);
+    % Saline data
+    trainSal = logicFind(1,~ismember(1:salN,inds(n,2)),'==');
+    testSal = logicFind(0,~ismember(1:salN,inds(n,2)),'==');
+    thisSal = [];
+    for ii = 1:numel(allPostSal30z)
+        rng((ii+numel(allPostLSD30z))*count)
+        thisSal = [thisSal;allPostSal30z{ii}(randperm(size(allPostSal30z{ii},1),...
+            minSamp30),:)];
+    end
+    salTest = allPostSal30z{testSal}(randperm(size(allPostSal30z{testSal},1),...
+        minSamp30),:);
+    % Combine and build models
+    trainX = [thisLSD24;thisSal];
+    trainY = [ones(size(thisLSD24,1),1);zeros(size(thisSal,1),1)];
+    testX = [lsdTest;salTest];
+    testY = [ones(minSamp30,1);zeros(minSamp30,1)];
 
-        mdl = fitglm(zscore(trainX(:,subInds)),trainY,'distribution','binomial','binomialSize',numel(trainY));
-        prob = predict(mdl,zscore(testX(:,subInds)));
-        [x(count,:),y(count,:),~,a(count)] = perfcurve(testY,prob,1);
-        beta(:,:,count) = table2array(mdl.Coefficients);
-        % Single feature models
-        for jj = 1:60
-            theseTrain = trainX(:,subInds);
-            theseTest = testX(:,subInds);
-            mdl = fitglm(zscore(theseTrain(:,jj)),trainY,'distribution','binomial','binomialSize',numel(trainY));
-            acuteBeta(jj,count,:) = table2array(mdl.Coefficients(2,:));
-            prob = predict(mdl,zscore(theseTest(:,jj)));
-            [xS(count,jj,:),yS(count,jj,:),~,aS(count,jj)] = perfcurve(testY,prob,1);
-            [xSP(count,jj,:),ySP(count,jj,:),~,aSP(count,jj)] = perfcurve(testY(randperm(numel(testY),numel(testY))),prob,1);
-        end
-        count = count+1;
+    mdl = fitglm(zscore(trainX(:,subInds)),trainY,'distribution','binomial','binomialSize',numel(trainY));
+    prob = predict(mdl,zscore(testX(:,subInds)));
+    [x(count,:),y(count,:),~,a(count)] = perfcurve(testY,prob,1);
+    beta(:,:,count) = table2array(mdl.Coefficients);
+    % Single feature models
+    for jj = 1:60
+        theseTrain = trainX(:,subInds);
+        theseTest = testX(:,subInds);
+        mdl = fitglm(zscore(theseTrain(:,jj)),trainY,'distribution','binomial','binomialSize',numel(trainY));
+        acuteBeta(jj,count,:) = table2array(mdl.Coefficients(2,:));
+        prob = predict(mdl,zscore(theseTest(:,jj)));
+        [xS(count,jj,:),yS(count,jj,:),~,aS(count,jj)] = perfcurve(testY,prob,1);
+        [xSP(count,jj,:),ySP(count,jj,:),~,aSP(count,jj)] = perfcurve(testY(randperm(numel(testY),numel(testY))),prob,1);
+    end
+    count = count+1;
 end
 % Permuted
 lsdInds = nchoosek(1:6,3);
@@ -491,24 +835,24 @@ for ii = 1:size(lsdInds,1)
         c = c+1;
     end
 end
-thisLSD = cell(1,numel(allPostLSD30));
-thisSal = cell(1,numel(allPostSal30));
+thisLSD = cell(1,numel(allPostLSD30z));
+thisSal = cell(1,numel(allPostSal30z));
 for ii = 1:size(permInds,1)
     disp(ii)
     lsdInd = permInds(ii,randperm(3,3));
     salInd = permInds(ii,randperm(3,3)+3);
     lsdOtherInd = logicFind(1,~ismember(1:6,lsdInd),'==');
     salOtherInd = logicFind(1,~ismember(1:5,salInd),'==');
-    for jj = 1:numel(allPostLSD30)
-        thisLSD{jj} = allPostLSD30{jj}(randperm(size(allPostLSD30{jj},1),...
+    for jj = 1:numel(allPostLSD30z)
+        thisLSD{jj} = allPostLSD30z{jj}(randperm(size(allPostLSD30z{jj},1),...
             minSamp30),:);
     end
-    for jj = 1:numel(allPostSal30)
-        thisSal{jj} = allPostSal30{jj}(randperm(size(allPostSal30{jj},1),...
+    for jj = 1:numel(allPostSal30z)
+        thisSal{jj} = allPostSal30z{jj}(randperm(size(allPostSal30z{jj},1),...
             minSamp30),:);
     end
     testX = cat(1,thisLSD{lsdInd(1)},thisSal{salInd(1)});
-    testY = cat(1,ones(minSamp30,1),zeros(minSamp30,1)); 
+    testY = cat(1,ones(minSamp30,1),zeros(minSamp30,1));
     trainX = cat(1,thisLSD{lsdInd(2:3)},thisSal{salInd(2:3)},thisLSD{lsdOtherInd},thisSal{salOtherInd});
     trainY = cat(1,ones(minSamp30*4,1),zeros(minSamp30*5,1));
     mdl = fitglm(zscore(trainX(:,subInds)),trainY,'Distribution','binomial');
@@ -544,7 +888,7 @@ title('full')
 figure
 plot(mean(acuteBeta(:,:,1),2),mean(beta(2:61,1,:),3),'.k')
 xlabel('single feature beta'); ylabel('full feature beta')
-% save('acuteLSDvSalineLogLOOImag30.mat','a','aP','aS','aSP','acuteBeta',...
+% save('acuteLSDvSalineLogLOOImag30z.mat','a','aP','aS','aSP','acuteBeta',...
 %     'beta','x','xP','xS','xSP','y','yP','yS','yP')
 %% Plot Log LOO
 figure
@@ -558,10 +902,10 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
     num2str(round(conf(a,0.95),2))],['Permuted: ',...
     num2str(round(mean(aP),2)),'\pm',num2str(round(conf(aP,0.95),2))]},...
     'location','se')
-figure 
+figure
 subplot(2,1,1)
 hold on
-[f,xi,bw] = ksdensity(a); 
+[f,xi,bw] = ksdensity(a);
 fill(xi,f*bw,'w')
 plotSpread(a','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(a) mean(a)],[0 0.25],'-')
@@ -570,7 +914,7 @@ xlim([0 1])
 ylim([0 0.25])
 subplot(2,1,2)
 hold on
-[f,xi,bw] = ksdensity(aP); 
+[f,xi,bw] = ksdensity(aP);
 fill(xi,f*bw,'w')
 plotSpread(aP','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aP) mean(aP)],[0 0.2],'-')
@@ -621,6 +965,157 @@ for ii = 1:60
 end
 set(gca,'xtick',1:60,'xticklabel',feat)
 xtickangle(45)
+%% Plot best and worst features
+load('normAcuteImag30.mat')
+load('acuteLSDvSalineLogLOOImag30.mat')
+subInds = [1:6,37:42,19:24,43:48,79:84,61:66,85:90,169:174,211:216,175:180];
+feat = names({'ILL','CA1L','PLL','NAcL','PLR','CA1R','ILR','NAcR'},...
+    {'d','t','a','b','lg','hg'});
+feat = feat(subInds);
+mASingle = mean(aS,1).*sign(mean(acuteBeta(:,:,1),2))';
+[~,sortInd] = sort(abs(mASingle),'descend');
+mASingleSort = mASingle(sortInd)';
+sortFeat = feat(sortInd)';
+allLSD = cat(1,allPostLSD30{:});
+allLSD = allLSD(:,subInds);
+allSAL = cat(1,allPostSal30{:});
+allSAL = allSAL(:,subInds);
+mSAL = cellfun(@(x) mean(x,1),allPostSal30,'UniformOutput',false);
+mSAL = cat(1,mSAL{:});
+mLSD = cellfun(@(x) mean(x,1),allPostLSD30,'UniformOutput',false);
+mLSD = cat(1,mLSD{:});
+%%
+figure
+subplot(2,2,1)
+hold on
+plotSpread(allSAL(:,2),'distributionColors','b','xvalues',1,'binWidth',.001);
+plotSpread(mSAL(:,2),'distributionColors','#00ffff','xvalues',1,'binWidth',0.25)
+plotSpread(allLSD(:,2),'distributionColors','r','xvalues',2,'binWidth',.001)
+p = plotSpread(mLSD(:,2),'distributionColors','#ff9cff','xvalues',2,'binWidth',0.25);
+% ylim([-75 175])
+xlim([0.5 2.5])
+subplot(2,2,2)
+hold on
+plot(squeeze(mean(xS(:,2,:),1)),squeeze(mean(yS(:,2,:),1)),'k')
+plot(squeeze(mean(xSP(:,2,:),1)),squeeze(mean(yP,1)),'k--')
+subplot(2,2,3)
+hold on
+plotSpread(allSAL(:,24),'distributionColors','b','xvalues',1,'binWidth',0.001)
+plotSpread(mSAL(:,24),'distributionColors','#00ffff','xvalues',1,'binWidth',0.5)
+plotSpread(allLSD(:,24),'distributionColors','r','xvalues',2,'binWidth',0.001)
+plotSpread(mLSD(:,24),'distributionColors','#ff9cff','xvalues',2,'binWidth',0.5)
+xlim([0.5 2.5])
+% ylim([-200 400])
+subplot(2,2,4)
+hold on
+plot(squeeze(mean(xS(:,24,:),1)),squeeze(mean(yS(:,24,:),1)),'k')
+plot(squeeze(mean(xSP(:,24,:),1)),squeeze(mean(yP,1)),'k--')
+%% Plot all features
+% load('normAcuteImag30.mat')
+subInds = [1:6,37:42,19:24,43:48,79:84,61:66,85:90,169:174,211:216,175:180];
+feat = names({'ILL','CA1L','PLL','NAcL','PLR','CA1R','ILR','NAcR'},...
+    {'d','t','a','b','lg','hg'});
+feat = feat(subInds);
+
+allSAL = cat(1,allPostSal30{:});
+allLSD = cat(1,allPostLSD30{:});
+
+these = cell(1);
+for ii = subInds
+    these = {these{:},allSAL(:,ii),allLSD(:,ii)};
+end
+%%
+figure
+subplot(2,2,1)
+violin(these(:,2:13));
+ylim([-250 375])
+subplot(2,2,2)
+violin(these(:,14:25));
+ylim([-250 375])
+subplot(2,2,3)
+violin(these(:,26:37));
+ylim([-250 375])
+subplot(2,2,4)
+violin(these(:,38:49));
+ylim([-250 375])
+%%
+figure
+subplot(3,2,1)
+violin(these(:,50:61));
+set(gca,'xtick',1:2:12,'xticklabel',feat(25:30))
+ylim([-1 1])
+subplot(3,2,2)
+violin(these(:,62:73));
+set(gca,'xtick',1:2:12,'xticklabel',feat(31:36))
+ylim([-1 1])
+subplot(3,2,3)
+violin(these(:,74:85));
+set(gca,'xtick',1:2:12,'xticklabel',feat(37:42))
+ylim([-1 1])
+subplot(3,2,4)
+violin(these(:,86:97));
+set(gca,'xtick',1:2:12,'xticklabel',feat(43:48))
+ylim([-1 1])
+subplot(3,2,5)
+violin(these(:,98:109));
+set(gca,'xtick',1:2:12,'xticklabel',feat(49:54))
+ylim([-1 1])
+subplot(3,2,6)
+violin(these(:,110:121));
+set(gca,'xtick',1:2:12,'xticklabel',feat(55:60))
+ylim([-1 1])
+%%
+figure
+subplot(2,1,1)
+violin(allSAL(:,subInds(1:24)),'facecolor','b');
+set(gca,'xtick',1:24,'xticklabel',feat(1:24))
+ylim([-200 375])
+subplot(2,1,2)
+violin(allLSD(:,subInds(1:24)),'facecolor','r');
+set(gca,'xtick',1:24,'xticklabel',feat(1:24))
+ylim([-200 375])
+figure
+subplot(2,1,1)
+violin(allSAL(:,subInds(25:end)),'facecolor','b');
+set(gca,'xtick',1:36,'xticklabel',feat(25:36))
+ylim([-1 1])
+subplot(2,1,2)
+violin(allLSD(:,subInds(25:end)),'facecolor','r');
+set(gca,'xtick',1:36,'xticklabel',feat(25:36))
+ylim([-1 1])
+%%
+figure
+c = 1;
+for ii = 1:24
+    hold on
+    plotSpread(allSAL(:,subInds(ii)),'binWidth',0.001,...
+        'xvalues',c,'distributionColors','b')
+    [f,xi,bw] = ksdensity(allSAL(:,subInds(ii)));
+    plot((f*bw)*4.5+c,xi,'k','lineWidth',2)
+    c = c+1;
+    plotSpread(allLSD(:,subInds(ii)),'binWidth',0.001,...
+        'xvalues',c,'distributionColors','r');
+    [f,xi,bw] = ksdensity(allLSD(:,subInds(ii)));
+    plot((f*bw)*4.5+c,xi,'k','lineWidth',2)
+    c = c+1;
+end
+set(gca,'xtick',1.5:2:48,'xticklabel',feat)
+figure
+c = 1;
+for ii = 25:60
+    hold on
+    plotSpread(allSAL(:,subInds(ii)),'binWidth',0.001,...
+        'xvalues',c,'distributionColors','b')
+    [f,xi,bw] = ksdensity(allSAL(:,subInds(ii)));
+    plot((f*bw)*4.5+c,xi,'k','lineWidth',2)
+    c = c+1;
+    plotSpread(allLSD(:,subInds(ii)),'binWidth',0.001,...
+        'xvalues',c,'distributionColors','r');
+    [f,xi,bw] = ksdensity(allLSD(:,subInds(ii)));
+    plot((f*bw)*4.5+c,xi,'k','lineWidth',2)
+    c = c+1;
+end
+set(gca,'xtick',1.5:2:72,'xticklabel',feat(25:60))
 %% Single feature analysis - bar plot
 subInds = [1:6,37:42,19:24,43:48,79:84,61:66,85:90,169:174,211:216,175:180];
 mAS = mean(aS,1);
@@ -637,8 +1132,8 @@ coh = sum(pAdj(25:end)<=0.05);
 for jj = 1:6
     powFreq(jj) = sum(pAdj(1+(jj-1):6:24)<=0.05);
     cohFreq(jj) = sum(pAdj(25+(jj-1):6:end)<=0.05);
-%     powFreq(jj) = sum(mAS(1+(jj-1):6:48)>=0.6);
-%     cohFreq(jj) = sum(pAdj(49+(jj-1):6:end)>=0.6);
+    %     powFreq(jj) = sum(mAS(1+(jj-1):6:48)>=0.6);
+    %     cohFreq(jj) = sum(pAdj(49+(jj-1):6:end)>=0.6);
 end
 figure
 x = categorical({'\delta','\theta','\alpha','\beta','l\gamma','h\gamma'});
@@ -674,13 +1169,13 @@ for jj = 1:6
     % Compute graph with scale factor
     g = graph(adjMat,sites,'upper');
     if chan == 8
-    % Set up node coordinates based on regular octagon
-    x = [1,sqrt(2)/2,0,-sqrt(2)/2,-1,-sqrt(2)/2,0,sqrt(2)/2];
-    y = [0,sqrt(2)/2,1,sqrt(2)/2,0,-sqrt(2)/2,-1,-sqrt(2)/2];
+        % Set up node coordinates based on regular octagon
+        x = [1,sqrt(2)/2,0,-sqrt(2)/2,-1,-sqrt(2)/2,0,sqrt(2)/2];
+        y = [0,sqrt(2)/2,1,sqrt(2)/2,0,-sqrt(2)/2,-1,-sqrt(2)/2];
     elseif chan == 4
-       % Square
-       x = [1,1,-1,-1];
-       y = [1,-1,1,-1];
+        % Square
+        x = [1,1,-1,-1];
+        y = [1,-1,1,-1];
     end
     % Set edge color based on edge sign (+ = red; - = blue)
     edgeSign = g.Edges.Weight>=0;
@@ -703,7 +1198,7 @@ for jj = 1:6
     h = plot(g,'XData',x,'YData',y,'markersize',theseNodes,'linewidth',abs(g.Edges.Weight)+s,'edgecolor',edgeColor,'nodecolor',nodeColor);
     title(freqs{jj})
     axis off
-%     print(['LSD',freqs{jj},'.eps'],'-dwinc','-painters')
+    %     print(['LSD',freqs{jj},'.eps'],'-dwinc','-painters')
 end
 %% 24 hour effects: LSD vs. Saline
 [data,samp,files] = collateData(['F:\lsd\processed\imag24Hr\'],{'lsd';...
@@ -713,8 +1208,8 @@ sal24 = data{1,2};
 minSamp = min([cellfun(@(x) size(x,1),lsd24);...
     cellfun(@(x) size(x,1),sal24)]);
 save('F:\lsd\LSDvSal24HrImag.mat','lsd24','sal24','minSamp')
-% Modeling under run24HrLSDvSaline.m
-% cd D:\lsd\LSDvSal24Hr\
+%% Modeling under run24HrLSDvSaline.m
+% cd G:\GreenLab\data\lsd\LSDvSal24Hr\
 % x24 = []; y24 = [];
 % x24R = []; y24R = [];
 % for ii = 1:100
@@ -878,7 +1373,7 @@ end
 figure
 subplot(3,1,1)
 hold on
-[f,xi,bw] = ksdensity(mean(aLSD,1)); 
+[f,xi,bw] = ksdensity(mean(aLSD,1));
 fill(xi,f*bw,'w')
 plotSpread(mean(aLSD,1)','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aLSD,[1,2]) mean(aLSD,[1,2])],[0 0.25],'-')
@@ -887,7 +1382,7 @@ xlim([0 1])
 ylim([0 0.25])
 subplot(3,1,2)
 hold on
-[f,xi,bw] = ksdensity(reshape(aLSDp,1,120)); 
+[f,xi,bw] = ksdensity(reshape(aLSDp,1,120));
 fill(xi,f*bw,'w')
 plotSpread(reshape(aLSDp,1,120)','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(reshape(aLSDp,1,120)) mean(reshape(aLSDp,1,120))],[0 0.25],'-')
@@ -896,7 +1391,7 @@ xlim([0 1])
 ylim([0 0.25])
 subplot(3,1,3)
 hold on
-[f,xi,bw] = ksdensity(mean(aSAL,1)); 
+[f,xi,bw] = ksdensity(mean(aSAL,1));
 fill(xi,f*bw,'w')
 plotSpread(mean(aSAL,1)','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aSAL,[1,2]) mean(aSAL,[1,2])],[0 0.25],'-')
@@ -998,7 +1493,7 @@ for ii = 1:size(permInds,1)
             minSamp),:);
     end
     testX = cat(1,thisLSD{lsdInd(1)},thisSal{salInd(1)});
-    testY = cat(1,ones(minSamp,1),zeros(minSamp,1)); 
+    testY = cat(1,ones(minSamp,1),zeros(minSamp,1));
     trainX = cat(1,thisLSD{lsdInd(2:3)},thisSal{salInd(2:3)},thisLSD{lsdOtherInd},thisSal{salOtherInd});
     trainY = cat(1,ones(minSamp*4,1),zeros(minSamp*5,1));
     mdl = fitglm(zscore(trainX(:,subInds)),trainY,'Distribution','binomial');
@@ -1007,21 +1502,21 @@ for ii = 1:size(permInds,1)
 end
 % save('G:\GreenLab\data\lsd\LSDvSaline24HrLogLOOImag.mat','a24','x24','y24','aP24','xP24','yP24')
 %%
-% load('LSDvSaline24HrLogLOOImag.mat')
+load('LSDvSaline24HrLogLOOImag.mat')
 % Plot
 figure
 subplot(2,1,1)
 hold on
-[f,xi,bw] = ksdensity(mean(a24,2)); 
+[f,xi,bw] = ksdensity(mean(a24,2));
 fill(xi,f*bw,'w')
-plotSpread(mean(a24,2),'xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
+plotSpread(mean(a24,2),'xyori','flipped','xvalues',0.05,'spreadWidth',0.1,'distributionMarkers','.')
 plot([mean(a24,[1,2]) mean(a24,[1,2])],[0 0.25],'-')
 yticks(0:0.05:0.25)
 xlim([0 1])
 ylim([0 0.25])
 subplot(2,1,2)
 hold on
-[f,xi,bw] = ksdensity(aP24); 
+[f,xi,bw] = ksdensity(aP24);
 fill(xi,f*bw,'w')
 plotSpread(aP24','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
 plot([mean(aP24) mean(aP24)],[0 0.25],'-')
@@ -1090,9 +1585,8 @@ view([163 26])
 %% LSD Stim effects
 % eoi = base1,base2(wash),stim1
 % Raw
-[data,samp1,files,time1] = collateData(['D:\dualSite\processed\'...
-    'toUseSingleImag\'],{'IL','in'},{'pow','coh'},'trl','');
-
+% [data,samp1,files,time1] = collateData(['G:\GreenLab\data\dualSite\',...
+%     'processed\'],{'IL','in'},{'pow','coh'},'trl','');
 % eoi = base,wash,stim
 % Raw
 [data2,samp2,files2,time2] = collateData(['G:\GreenLab\data\lsdStim\'...
@@ -1102,27 +1596,26 @@ view([163 26])
 for ii = 1%:3
     allData{ii} = [data{1,ii};data2{1,ii}];
     allFiles{ii} = [files{ii,1};files2{ii,1}];
-%     relTime{ii} = [time1.rel{1,ii};time2.rel{1,ii}];
-%     absTime{ii} = [time1.abs{1,ii};time2.abs{1,ii}];   
+    %     relTime{ii} = [time1.rel{1,ii};time2.rel{1,ii}];
+    %     absTime{ii} = [time1.abs{1,ii};time2.abs{1,ii}];
     % check for any with fewer than 216 features
     feats = cellfun(@(x) size(x,2),allData{ii});
     allData{ii}(feats(:,1)<216,:) = [];
     allFiles{ii}(feats(:,1)<216,:) = [];
-%     relTime{ii}(feats(:,1)<216,:) = [];
-%     absTime{ii}(feats(:,1)<216,:) = [];
+    %     relTime{ii}(feats(:,1)<216,:) = [];
+    %     absTime{ii}(feats(:,1)<216,:) = [];
     samps{ii} = cellfun(@(x) size(x,1),allData{ii});
     % minSamps from base and wash
     minSamps{ii} = min(samps{ii}(:,[1,2]),[],2);
     % minSamps from base and stim
-%     minSamps{ii} = min(samps{ii}(:,[1,3]),[],2);
+    %     minSamps{ii} = min(samps{ii}(:,[1,3]),[],2);
 end
-
 % Only grab first 30 minutes of stim data
 % minutes = 30;
 % data30min = allData;
 % for ii = 1:size(allData{1},1)
 %     toGrab = absTime{1,1}{ii,3}(:,1)<=absTime{1}{ii,3}(1)+60*minutes;
-%     data30min{1}{ii,3} = allData{1}{ii,3}(toGrab,:);    
+%     data30min{1}{ii,3} = allData{1}{ii,3}(toGrab,:);
 % end
 
 % Grab lsd data; eoi = base,wash,stim
@@ -1138,6 +1631,252 @@ end
 % end
 % % Replace allData and lsdData with 30 minute versions
 % allData = data30min; lsdData = lsdData30min;
+%% Load pow and coh data
+cd 'G:\GreenLab\data\lsdStim\processed\baseImag\'
+for ii = 1:size(files2{1},1)
+    load(files2{1}{ii},'psdTrls','coh')
+    allSALPowPre{ii} = psdTrls{1}.Pow;
+    allSALCohPre{ii} = coh{1}.Cxy;
+    allSALPowStim{ii} = psdTrls{3}.Pow;
+    allSALCohStim{ii} = coh{3}.Cxy;
+    allSALPowPost{ii} = psdTrls{2}.Pow;
+    allSALCohPost{ii} = coh{2}.Cxy;
+end
+cd 'G:\GreenLab\data\lsdStim\processed\postLSDImag\'
+for ii = 1:size(lsdFiles{1},1)
+    load(lsdFiles{1}{ii},'psdTrls','coh')
+    allLSDPowPre{ii} = psdTrls{1}.Pow;
+    allLSDCohPre{ii} = coh{1}.Cxy;
+    allLSDPowStim{ii} = psdTrls{3}.Pow;
+    allLSDCohStim{ii} = coh{3}.Cxy;
+    allLSDPowPost{ii} = psdTrls{2}.Pow;
+    allLSDCohPost{ii} = coh{2}.Cxy;
+end
+%%
+ids = {'IRDM15';'IRDM16';'IRDM21';'IRDM5';'IRDM6'};
+for ii = 1:numel(ids)
+    salInds = contains(files2{1},ids{ii});
+    lsdInds = contains(lsdFiles{1},ids{ii});
+    
+    salPowPre{ii} = cat(3,allSALPowPre{salInds});
+    lsdPowPre{ii} = cat(3,allLSDPowPre{lsdInds});
+    salPowStim{ii} = cat(3,allSALPowStim{salInds});
+    lsdPowStim{ii} = cat(3,allLSDPowStim{lsdInds});
+    salPowPost{ii} = cat(3,allSALPowPost{salInds});
+    lsdPowPost{ii} = cat(3,allLSDPowPost{lsdInds});
+
+    salCohPre{ii} = cat(3,allSALCohPre{salInds});
+    lsdCohPre{ii} = cat(3,allLSDCohPre{lsdInds});
+    salCohStim{ii} = cat(3,allSALCohStim{salInds});
+    lsdCohStim{ii} = cat(3,allLSDCohStim{lsdInds});
+    salCohPost{ii} = cat(3,allSALCohPost{salInds});
+    lsdCohPost{ii} = cat(3,allLSDCohPost{lsdInds});
+end
+%%
+salPowPreM = mean(cat(3,salPowPre{:}),3);
+salPowPreS = std(cat(3,salPowPre{:}),[],3);
+salPowPostM = mean(cat(3,salPowPost{:}),3);
+salPowPostS = std(cat(3,salPowPost{:}),[],3);
+salPowStimM = mean(cat(3,salPowStim{:}),3);
+salPowStimS = std(cat(3,salPowStim{:}),[],3);
+
+lsdPowPreM = mean(cat(3,lsdPowPre{:}),3);
+lsdPowPreS = std(cat(3,lsdPowPre{:}),[],3);
+lsdPowPostM = mean(cat(3,lsdPowPost{:}),3);
+lsdPowPostS = std(cat(3,lsdPowPost{:}),[],3);
+lsdPowStimM = mean(cat(3,lsdPowStim{:}),3);
+lsdPowStimS = std(cat(3,lsdPowStim{:}),[],3);
+
+salCohPreM = mean(cat(3,salCohPre{:}),3);
+salCohPreS = std(cat(3,salCohPre{:}),[],3);
+salCohPostM = mean(cat(3,salCohPost{:}),3);
+salCohPostS = std(cat(3,salCohPost{:}),[],3);
+salCohStimM = mean(cat(3,salCohStim{:}),3);
+salCohStimS = std(cat(3,salCohStim{:}),[],3);
+
+lsdCohPreM = mean(cat(3,lsdCohPre{:}),3);
+lsdCohPreS = std(cat(3,lsdCohPre{:}),[],3);
+lsdCohPostM = mean(cat(3,lsdCohPost{:}),3);
+lsdCohPostS = std(cat(3,lsdCohPost{:}),[],3);
+lsdCohStimM = mean(cat(3,lsdCohStim{:}),3);
+lsdCohStimS = std(cat(3,lsdCohStim{:}),[],3);
+
+sites = {'lIL','rIL','lOFC','rOFC','lNAcS','rNAcS','lNAcC','rNAcC'};
+cmbs = nchoosek(1:8,2);
+% cInds = [1,4,5,10,11,23];
+% cmbs = cmbs(cInds,:);
+%% raw data
+figure
+for ii = 1:8
+    subplot(4,2,ii)
+    hold on
+    plot(salPowPreM(ii,:),'k')
+    plot(salPowStimM(ii,:),'b')
+    plot([1 1],[-70 -25],':k')
+    plot([5 5],[-70 -25],':k')
+    plot([10 10],[-70 -25],':k')
+    plot([15 15],[-70 -25],':k')
+    plot([30 30],[-70 -25],':k')
+    plot([45 45],[-70 -25],':k')
+    plot([65 65],[-70 -25],':k')
+    plot([70 70],[-70 -25],':k')
+    plot([90 90],[-70 -25],':k')
+%     plot(salPowPostM(ii,:),'b--')
+    ylim([-70 -25])
+    title(sites{ii})
+end
+figure
+for ii = 1:size(cmbs,1)
+    subplot(7,4,ii)
+    hold on
+    plot(decimate(salCohPreM(ii,:),5),'k')
+    plot(decimate(salCohStimM(ii,:),5),'b')
+    plot([1 1],[-0.2 0.15],':k')
+    plot([5 5],[-0.2 0.15],':k')
+    plot([10 10],[-0.2 0.15],':k')
+    plot([15 15],[-0.2 0.15],':k')
+    plot([30 30],[-0.2 0.15],':k')
+    plot([45 45],[-0.2 0.15],':k')
+    plot([65 65],[-0.2 0.15],':k')
+    plot([70 70],[-0.2 0.15],':k')
+    plot([90 90],[-0.2 0.15],':k')
+%     plot(decimate(salCohPostM(cInds(ii),:),5),'b--')
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+    ylim([-0.2 0.15])
+end
+figure
+for ii = 1:8
+    subplot(4,2,ii)
+    hold on
+    plot(salPowPreM(ii,:),'k')
+    plot(salPowStimM(ii,:),'r')
+    plot([1 1],[-70 -25],':k')
+    plot([5 5],[-70 -25],':k')
+    plot([10 10],[-70 -25],':k')
+    plot([15 15],[-70 -25],':k')
+    plot([30 30],[-70 -25],':k')
+    plot([45 45],[-70 -25],':k')
+    plot([65 65],[-70 -25],':k')
+    plot([70 70],[-70 -25],':k')
+    plot([90 90],[-70 -25],':k')
+%     plot(salPowPostM(ii,:),'r--')
+    title(sites{ii})
+    ylim([-70 -25])
+end
+figure
+for ii = 1:size(cmbs,1)
+    subplot(7,4,ii)
+    hold on
+    plot(decimate(lsdCohPreM(ii,:),5),'k')
+    plot(decimate(lsdCohStimM(ii,:),5),'r')
+    plot([1 1],[-0.2 0.15],':k')
+    plot([5 5],[-0.2 0.15],':k')
+    plot([10 10],[-0.2 0.15],':k')
+    plot([15 15],[-0.2 0.15],':k')
+    plot([30 30],[-0.2 0.15],':k')
+    plot([45 45],[-0.2 0.15],':k')
+    plot([65 65],[-0.2 0.15],':k')
+    plot([70 70],[-0.2 0.15],':k')
+    plot([90 90],[-0.2 0.15],':k')
+%     plot(decimate(lsdCohPostM(cInds(ii),:),5),'r--')
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+    ylim([-0.2 0.15])
+end
+%% subtraction figure
+salPowDiff = salPowStimM-salPowPreM;
+salPowDiffS = (abs(std(cat(3,salPowStim{:}),[],3)+std(cat(3,salPowPre{:}),[],3)-2*...
+    std(cat(3,salPowStim{:},salPowPre{:}),[],3))).^0.5;
+lsdPowDiff = lsdPowStimM-lsdPowPreM;
+lsdPowDiffS = (abs(std(cat(3,lsdPowStim{:}),[],3)+std(cat(3,lsdPowPre{:}),[],3)-2*...
+    std(cat(3,lsdPowStim{:},lsdPowPre{:}),[],3))).^0.5;
+x = (abs(std(cat(3,salPowStim{:},lsdPowStim{:}),[],3)+std(cat(3,salPowStim{:},lsdPowStim{:}),[],3)-2*...
+    std(cat(3,lsdPowPre{:},lsdPowStim{:},salPowPre{:},salPowStim{:}),[],3))).^0.5;
+lsdSalPowDiff = lsdPowDiff-salPowDiff;
+lsdSalPowDiffS = (abs(lsdPowDiffS+salPowDiffS-2*(x))).^0.5;
+
+salCohDiff = salCohStimM-salCohPreM;
+salCohDiffS = (abs(std(cat(3,salCohStim{:}),[],3)+std(cat(3,salCohPre{:}),[],3)-2*...
+    std(cat(3,salCohStim{:},salCohPre{:}),[],3))).^0.5;
+lsdCohDiff = lsdCohStimM-lsdCohPreM;
+lsdCohDiffS = (abs(std(cat(3,lsdCohStim{:}),[],3)+std(cat(3,lsdCohPre{:}),[],3)-2*...
+    std(cat(3,lsdCohStim{:},lsdCohPre{:}),[],3))).^0.5;
+x = (abs(std(cat(3,salCohStim{:},lsdCohStim{:}),[],3)+std(cat(3,salCohStim{:},lsdCohStim{:}),[],3)-2*...
+    std(cat(3,lsdCohPre{:},lsdCohStim{:},salCohPre{:},salCohStim{:}),[],3))).^0.5;
+lsdSalCohDiff = lsdCohDiff-salCohDiff;
+lsdSalCohDiffS = (abs(lsdCohDiffS+salCohDiffS-2*(x))).^0.5;
+%%
+figure
+for ii = 1:8
+    subplot(2,4,ii)
+    hold on
+    shadedErrorBar(1:100,lsdPowDiff(ii,:),lsdPowDiffS(ii,:),{'r','linewidth',1.5},1)
+    shadedErrorBar(1:100,salPowDiff(ii,:),salPowDiffS(ii,:),{'b','linewidth',1.5},1)
+    plot([1 1],[-10.5 1],':k')
+    plot([5 5],[-10.5 1],':k')
+    plot([10 10],[-10.5 1],':k')
+    plot([15 15],[-10.5 1],':k')
+    plot([30 30],[-10.5 1],':k')
+    plot([45 45],[-10.5 1],':k')
+    plot([65 65],[-10.5 1],':k')
+    plot([70 70],[-10.5 1],':k')
+    plot([90 90],[-10.5 1],':k')
+    set(gca,'xtick',0:10:100)
+%     xlabel('frequency (Hz)')
+%     ylabel('a.u.')
+    ylim([-10.5 1])
+    title(sites{ii})
+    set(gca,'xticklabel',[],'yticklabel',[],'xcolor','k','ycolor','k',...
+        'linewidth',0.75)
+end
+% for ii = 1:8
+%     subplot(4,4,8+ii)
+%     hold on
+%     shadedErrorBar(1:100,lsdSalPowDiff(ii,:),lsdSalPowDiffS(ii,:),'k',1)
+%     set(gca,'xtick',0:10:100)
+%     ylim([-4 4])
+%     plot([0 100],[0 0],'--k')
+% end
+%%
+sites = {'lIL','rIL','lOFC','rOFC','lNAcS','rNAcS','lNAcC','rNAcC'};
+cmbs = nchoosek(1:8,2);
+% cInds = [1,4,5,10,11,23];
+% cmbs = cmbs(cInds,:);
+figure
+for ii = 1:size(cmbs,1)
+    subplot(7,4,ii)
+    hold on
+    shadedErrorBar(1:100,decimate(lsdCohDiff(ii,:),5),...
+        decimate(lsdCohDiffS(ii,:),5),{'r','linewidth',1.5},1)
+    shadedErrorBar(1:100,decimate(salCohDiff(ii,:),5),...
+        decimate(salCohDiffS(ii,:),5),{'b','linewidth',1.5},1)
+    plot([1 1],[-6.5 2],':k')
+    plot([5 5],[-6.5 2],':k')
+    plot([10 10],[-6.5 2],':k')
+    plot([15 15],[-6.5 2],':k')
+    plot([30 30],[-6.5 2],':k')
+    plot([45 45],[-6.5 2],':k')
+    plot([65 65],[-6.5 2],':k')
+    plot([70 70],[-6.5 2],':k')
+    plot([90 90],[-6.5 2],':k')
+    set(gca,'xtick',0:10:100)
+%     xlabel('frequency (Hz)')
+%     ylabel('a.u.')
+    ylim([-0.4 0.3])
+    title([sites{cmbs(ii,1)},'-',sites{cmbs(ii,2)}])
+%     set(gca,'xticklabel',[],'yticklabel',[],'xcolor','k','ycolor','k',...
+%         'linewidth',0.75)
+end
+% for ii = 1:6
+%     subplot(4,3,6+ii)
+%     hold on
+% %     shadedErrorBar(1:100,decimate(lsdSalCohDiff(cInds(ii),:),5),...
+% %         decimate(lsdSalCohDiffS(cInds(ii),:),5),'k',1)
+%     plot(1:100,decimate(lsdSalCohDiff(cInds(ii),:),5),'k')
+%     set(gca,'xtick',0:10:100)
+%     ylim([-0.1 0.05])
+%     plot([0 100],[0 0],'--k')
+% end
+%%
 % Calculate stim-baseline control vs. stim-baseline drug
 ids = {'IRDM14';'IRDM15';'IRDM16';'IRDM21';'IRDM2_';'IRDM5';'IRDM6'};
 thisBaseDiff = cell(1,numel(ids));
@@ -1165,41 +1904,138 @@ minSamp = min([cellfun(@(x) size(x,1),thisBaseDiff),cellfun(@(x) ...
 % save('G:\GreenLab\data\lsdStim\lsd-baseVsal-base_zscore_stimImag_all-216feat.mat','allData',...
 %     'allFiles','lsdData','lsdFiles','lsdSamp','lsdTime','minSamp',...
 %     'minSamps','thisBaseDiff','thisLSDDiff')
+%% plot violins of feature changes
+% load('lsd-baseVsal-base_zscore_stimImag_all-216feat.mat')
+% subInds = [1:12,37:54,79:90,115:126,211:216];
+subInds = 1:216;
+feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+    'rNAcC'},{'d','t','a','b','lg','hg'})';
+feat = feat(subInds);
+allLSD = cat(1,thisLSDDiff{:});
+allSAL = cat(1,thisBaseDiff{:});
+
+these = cell(1);
+for ii = subInds
+    these = {these{:},allSAL(:,ii),allLSD(:,ii)};
+end
+%% significance
+x = [];
+ID = [];
+group = [];
+for ii = 1:5
+    x = [x;thisBaseDiff{ii};thisLSDDiff{ii}];
+    ID = [ID;repmat((ii-1)*2+1,size(thisBaseDiff{ii},1),1);...
+        repmat(ii*2,size(thisLSDDiff{ii},1),1)];
+    group = [group;repmat(0,size(thisBaseDiff{ii},1),1);...
+        repmat(1,size(thisLSDDiff{ii},1),1)];
+end
+data = table(x(:,2),group,ID);
+fitglme(data,'group ~ Var1+ID','Distribution','Binomial');
+%% band pow
+figure
+for jj = 1:8
+subplot(4,2,jj)
+h = violin(these(:,(jj-1)*12+2:(jj-1)*12+13),'medc',[]);
+for ii = 1:12
+    if iseven(ii)
+        h(ii).EdgeColor = 'r';
+        h(ii).FaceColor = '#ffd2ed';
+    else
+        h(ii).EdgeColor = 'b';
+        h(ii).FaceColor = '#e0dfff';
+    end
+    h(ii).FaceAlpha = 1;
+    h(ii).LineWidth = 1;
+end
+legend off
+ylim([-400 400])
+end
+%% band coh 
+figure
+for jj = 1:28
+subplot(4,7,jj)
+h = violin(these(:,(jj-1)*12+98:(jj-1)*12+109),'medc',[]);
+for ii = 1:12
+    if iseven(ii)
+        h(ii).EdgeColor = 'r';
+        h(ii).FaceColor = '#ffd2ed';
+    else
+        h(ii).EdgeColor = 'b';
+        h(ii).FaceColor = '#e0dfff';
+    end
+    h(ii).FaceAlpha = 1;
+    h(ii).LineWidth = 1;
+end
+title(feat((jj-1)*6+49))
+ylim([-1.25 1.25])
+legend off
+end
+%% power and coherence changes in LSD+stim relative to SAL+stim
+salFiles = fileSearch('H:\Shared drives\dwielDoucetteLab\data\dualSite\processed\toUseSingleImag\','IL');
+[salPow,salCoh] = deal(cell(numel(salFiles),2));
+for ii = 1:numel(salFiles)
+    load(salFiles{ii},'psdTrls','coh')
+    salPow{ii,1} = psdTrls{1}.Pow;
+    salPow{ii,2} = psdTrls{2}.Pow;
+
+    [b,c,t] = size(psdTrls{1}.bandPow);
+    salBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';
+    [b,c,t] = size(psdTrls{2}.bandPow);
+    salBand{ii,2} = reshape(psdTrls{2}.bandPow,b*c,t)';
+
+    salCoh{ii,1} = coh{1}.Cxy;
+    salCoh{ii,2} = coh{2}.Cxy;
+end
+lsdFiles = fileSearch('G:\GreenLab\data\lsd\processed\imagAcute\','LSD');
+[lsdPow,lsdCoh] = deal(cell(numel(lsdFiles),2));
+for ii = 1:numel(lsdFiles)
+    load(lsdFiles{ii},'psdTrls','coh')
+    lsdPow{ii,1} = psdTrls{1}.Pow;
+    lsdPow{ii,2} = psdTrls{2}.Pow;
+
+    [b,c,t] = size(psdTrls{1}.bandPow);
+    lsdBand{ii,1} = reshape(psdTrls{1}.bandPow,b*c,t)';
+    [b,c,t] = size(psdTrls{2}.bandPow);
+    lsdBand{ii,2} = reshape(psdTrls{2}.bandPow,b*c,t)';
+
+    lsdCoh{ii,1} = coh{1}.Cxy;
+    lsdCoh{ii,2} = coh{2}.Cxy;
+end
 %%
-x = []; y = []; a = []; 
-xS = []; yS = []; aS = []; 
+x = []; y = []; a = [];
+xS = []; yS = []; aS = [];
 xP = []; yP = []; aP = [];
 xSP = []; ySP = []; aSP = [];
 betaStim = [];
 % Subset indices to match other electrode array
-subInds = [1:12,37:54,79:90,115:126,211:216];
+% subInds = [1:12,37:54,79:90,115:126,211:216];
 % subInds = [5,10:12,29,40,52,58,94,99,192,196];
 subInds = 1:216;
-c = 1;
-for ii = 1:5
-    for jj = 1:5
-        cmbs(c,:) = [ii,jj];
-        c = c+1;
-    end
-end
-for ii = 1:size(cmbs,1)
-    thisBase = []; thisLSD = [];
-    for jj = 1:size(thisBaseDiff,2)
-        thisBase{jj} = thisBaseDiff{jj}(randperm(size(thisBaseDiff{jj},1),minSamp),:);
-        thisLSD{jj} = thisLSDDiff{jj}(randperm(size(thisLSDDiff{jj},1),minSamp),:);
-    end
-    otherLSD = logicFind(1,~ismember(1:5,cmbs(ii,1)),'==');
-    otherSAL = logicFind(1,~ismember(1:5,cmbs(ii,2)),'==');
-    testX = cat(1,thisBase{cmbs(ii,2)},thisLSD{cmbs(ii,1)});
-    testY = cat(1,zeros(minSamp,1),ones(minSamp,1));
-    trainX = cat(1,thisBase{otherSAL},thisLSD{otherLSD});
-    trainY = cat(1,zeros(minSamp*4,1),ones(minSamp*4,1));
-    mdl = fitglm(trainX(:,subInds),trainY,'distribution','binomial');
-    prob = predict(mdl,testX(:,subInds));
-    [~,~,~,aLOO(ii)] = perfcurve(testY,prob,1);
-end
+% c = 1;
+% for ii = 1:5
+%     for jj = 1:5
+%         cmbs(c,:) = [ii,jj];
+%         c = c+1;
+%     end
+% end
+% for ii = 1:size(cmbs,1)
+%     thisBase = []; thisLSD = [];
+%     for jj = 1:size(thisBaseDiff,2)
+%         thisBase{jj} = thisBaseDiff{jj}(randperm(size(thisBaseDiff{jj},1),minSamp),:);
+%         thisLSD{jj} = thisLSDDiff{jj}(randperm(size(thisLSDDiff{jj},1),minSamp),:);
+%     end
+%     otherLSD = logicFind(1,~ismember(1:5,cmbs(ii,1)),'==');
+%     otherSAL = logicFind(1,~ismember(1:5,cmbs(ii,2)),'==');
+%     testX = cat(1,thisBase{cmbs(ii,2)},thisLSD{cmbs(ii,1)});
+%     testY = cat(1,zeros(minSamp,1),ones(minSamp,1));
+%     trainX = cat(1,thisBase{otherSAL},thisLSD{otherLSD});
+%     trainY = cat(1,zeros(minSamp*4,1),ones(minSamp*4,1));
+%     mdl = fitglm(trainX(:,subInds),trainY,'distribution','binomial');
+%     prob = predict(mdl,testX(:,subInds));
+%     [~,~,~,aLOO(ii)] = perfcurve(testY,prob,1);
+% end
 %%
-for n = 1:20
+for n = 1:100
     disp(n)
     thisBase = []; thisLSD = [];
     for ii = 1:size(thisBaseDiff,2)
@@ -1210,34 +2046,35 @@ for n = 1:20
     [trainX,trainY,testX,testY] = trainTest(cat(1,thisBase{:},thisLSD{:}),...
         [zeros(minSamp*numel(thisBase),1);ones(minSamp*numel(thisLSD),1)],0.20);
     mdl = fitglm(trainX(:,subInds),trainY,'distribution','binomial','binomialSize',numel(trainY));
-%     betas(:,:,n) = table2array(mdl.Coefficients);
+    %     betas(:,:,n) = table2array(mdl.Coefficients);
     prob = predict(mdl,zscore(testX(:,subInds)));
     [x{n},y{n},~,a(n)] = perfcurve(testY,prob,1);
-%     % Permuted
-%     mdl = fitglm(trainX(:,subInds),trainY(randperm(numel(trainY),numel(trainY)),:),'distribution','binomial');
-%     prob = predict(mdl,testX(:,subInds));
-%     [xP{n},yP{n},~,aP(n)] = perfcurve(testY,prob,1);
-%     c = 1;
-%     for ii = subInds
-%         mdl = fitglm(trainX(:,ii),trainY,'distribution','binomial');
-%         betaStim(c,n) = table2array(mdl.Coefficients(2,1));
-%         prob = predict(mdl,testX(:,ii));
-%         [xS{n,c},yS{n,c},~,aS(n,c)] = perfcurve(testY,prob,1);
-%         [xSP{n,c},ySP{n,c},~,aSP(n,c)]= perfcurve(testY(randperm(numel(...
-%             testY),numel(testY))),prob,1);
-%         c  = c+1;
-%     end
+        % Permuted
+        mdl = fitglm(trainX(:,subInds),trainY(randperm(numel(trainY),numel(trainY)),:),'distribution','binomial');
+        prob = predict(mdl,testX(:,subInds));
+        [xP{n},yP{n},~,aP(n)] = perfcurve(testY,prob,1);
+        c = 1;
+        for ii = subInds
+            mdl = fitglm(trainX(:,ii),trainY,'distribution','binomial');
+            betaStim(c,n) = table2array(mdl.Coefficients(2,1));
+            prob = predict(mdl,testX(:,ii));
+            [xS{n,c},yS{n,c},~,aS(n,c)] = perfcurve(testY,prob,1);
+            [xSP{n,c},ySP{n,c},~,aSP(n,c)]= perfcurve(testY(randperm(numel(...
+                testY),numel(testY))),prob,1);
+            c  = c+1;
+        end
 end
-% % Single feature analysis
-% feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
-%     'rNAcC'},{'d','t','a','b','lg','hg'})';
-% % feat = names({'lmPFC','rmPFc','lNAcC','rNAcC'},...
-% %     {'d','t','a','b','lg','hg'})';
-% [sortA,sortInd] = sort(mean(aS,1)','descend');
-% sortFeat = feat(sortInd);
-% sortBeta = mean(betaStim(sortInd,:),2);
+% Single feature analysis
+feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+    'rNAcC'},{'d','t','a','b','lg','hg'})';
+% feat = names({'lmPFC','rmPFc','lNAcC','rNAcC'},...
+%     {'d','t','a','b','lg','hg'})';
+[sortA,sortInd] = sort(mean(aS,1)','descend');
+sortFeat = feat(sortInd);
+sortBeta = mean(betaStim(sortInd,:),2);
+sortA = sortA.*sign(sortBeta(sortInd));
 % save(['G:\GreenLab\data\lsdStim\'...
-%     'lsdStim-base_v_salStim-base_imag_all_216feat.mat'],'x','y','a',...
+%     'lsdStim-base_v_salStim-base_imag_all_216Feat.mat'],'x','y','a',...
 %     'xP','yP','aP','xS','yS','aS','betaStim','xSP','ySP','aSP',...
 %     'sortFeat','sortBeta')
 %% Plot
@@ -1287,6 +2124,72 @@ yticks(0:0.05:0.15)
 xlim([0 1])
 ylim([0 0.15])
 sgtitle('LSD+stim vs. SAL+stim')
+%% single feature performance spreads
+% subInds = [1:12,37:54,79:90,115:126,211:216];
+% this = aS(:,subInds);
+% thisP = aSP(:,subInds);
+this = aS;
+thisP = aSP;
+figure
+for ii = 1:8
+    subplot(4,2,ii)
+    hold on
+    plotSpread(this(:,(ii-1)*6+1:ii*6),'xvalues',1-0.75:2*3:12*3-0.75,...
+        'distributionColors','k','binWidth',0.005);
+    for jj = 1:6
+        plot([(jj-1)*6-1.25 (jj-1)*6+1.75],[mean(this(:,(ii-1)*6+jj)) ...
+            mean(this(:,(ii-1)*6+jj))],'k','lineWidth',3)
+        plot([(jj-1)*6+1.5 (jj-1)*6+4.25],[mean(thisP(:,(ii-1)*6+jj)) ...
+            mean(thisP(:,(ii-1)*6+jj))],'color','#73898e','lineWidth',3)
+    end
+    plotSpread(thisP(:,(ii-1)*6+1:ii*6),'xvalues',2+0.75:2*3:12*3+0.75,...
+        'distributionColors','#73898e','binWidth',0.005)
+    ylim([0.3 0.8])
+    title(feat((ii-1)*6+1))
+%     set(gca,'xtick',1.5:2:12.5,'xticklabel',feat((ii-1)*6+1:ii*6))
+end
+%%
+starts = (1:10:55)-2;
+stops = (1:10:55)+2;
+startsP = (5:10:55)-2;
+stopsP = (5:10:55)+2;
+figure
+for ii = 1:28
+    subplot(4,7,ii)
+    hold on
+    plotSpread(this(:,(ii-1)*6+1:ii*6),'xvalues',1:10:55,...
+        'distributionColors','k','binWidth',0.005);
+    plotSpread(thisP(:,(ii-1)*6+1:ii*6),'xvalues',5:10:55,...
+        'distributionColors','#73898e','binWidth',0.005)
+    for jj = 1:6
+        plot([starts(jj) stops(jj)],[mean(this(:,(ii-1)*6+jj)) ...
+            mean(this(:,(ii-1)*6+jj))],'k','lineWidth',3)
+        plot([startsP(jj) stopsP(jj)],[mean(thisP(:,(ii-1)*6+jj)) ...
+            mean(thisP(:,(ii-1)*6+jj))],'color','#73898e','lineWidth',3)
+    end
+%     set(gca,'xtick',1.5:2:12.5,'xticklabel',feat((ii-1)*6+1:(ii-1)*6))
+end
+%%
+figure
+hold on
+plotSpread(this(:,1:24),'xvalues',1:2:48,'distributionColors','k')
+plotSpread(thisP(:,1:24),'xvalues',2:2:48)
+set(gca,'xtick',1.5:2:48.5,'xticklabel',featSub(1:24))
+for ii = 1:24
+        plot([(ii-1)*2+1-.25 (ii-1)*2+1+.25],[mean(this(:,ii)) mean(this(:,ii))],'b')
+        plot([ii*2-.25 ii*2+.25],[mean(thisP(:,ii)) mean(thisP(:,ii))],'k')
+end
+figure 
+hold on
+plotSpread(this(:,25:60),'xvalues',1:2:72,'distributionColors','k')
+plotSpread(thisP(:,25:60),'xvalues',2:2:72)
+set(gca,'xtick',1.5:2:72.5,'xticklabel',featSub(25:60))
+for ii = 1:36
+        plot([(ii-1)*2+1-.25 (ii-1)*2+1+.25],[mean(this(:,ii+24)) ...
+            mean(this(:,ii+24))],'b')
+        plot([ii*2-.25 ii*2+.25],[mean(thisP(:,ii+24)) ...
+            mean(thisP(:,ii+24))],'k')
+end
 %%
 mAS = mean(aS,1).*sign(mean(betaStim,2))';
 [h,p] = ttest2(aS,aSP);
@@ -1314,8 +2217,8 @@ set(gca,'xtick',1.5:6.5,'xticklabel',...
     {'ILl-ILr','ILl-NAl','ILl-NAr','NAl-ILr','ILr-NAr','NAl-NAr'})
 %% Keep data sets separate; saline base v stim & lsd base v stim
 % Raw
-[data,samp1,files,time1] = collateData(['D:\dualSite\processed\'...
-    'toUseSingleImag\'],{'IL','in'},{'pow','coh'},'trl','');
+% [data,samp1,files,time1] = collateData(['D:\dualSite\processed\'...
+%     'toUseSingleImag\'],{'IL','in'},{'pow','coh'},'trl','');
 % Raw
 [data2,samp2,files2,time2] = collateData(['G:\GreenLab\data\lsdStim\'...
     'processed\baseImag\'],{'mPFC','in'},{'pow','coh'},'trl','');
@@ -1324,13 +2227,13 @@ for ii = 1%:3
     allData{ii} = [data{1,ii};data2{1,ii}];
     allFiles{ii} = [files{ii,1};files2{ii,1}];
     relTime{ii} = [time1.rel{1,ii};time2.rel{1,ii}];
-    absTime{ii} = [time1.abs{1,ii};time2.abs{1,ii}];   
+    absTime{ii} = [time1.abs{1,ii};time2.abs{1,ii}];
     % check for any with fewer than 216 features
     feats = cellfun(@(x) size(x,2),allData{ii});
     allData{ii}(feats(:,1)<216,:) = [];
     allFiles{ii}(feats(:,1)<216,:) = [];
-%     relTime{ii}(feats(:,1)<216,:) = [];
-%     absTime{ii}(feats(:,1)<216,:) = [];
+    %     relTime{ii}(feats(:,1)<216,:) = [];
+    %     absTime{ii}(feats(:,1)<216,:) = [];
     samps{ii} = cellfun(@(x) size(x,1),allData{ii});
     % minSamps from base and stim
     minSamps{ii} = min(samps{ii}(:,[1,3]),[],2);
@@ -1352,8 +2255,8 @@ for ii = 1:numel(ids)
         thisSaline{ii,2} = [thisSaline{ii,2};allData{1}{jj,3}];
     end
 end
-% Remove animals 1 and 5 (1 has missing features in LSD condition, and 
-% 5 has too few samples in both) 
+% Remove animals 1 and 5 (1 has missing features in LSD condition, and
+% 5 has too few samples in both)
 saline = thisSaline([2:4,6:7],:);
 lsd = lsdData([2:4,6:7],:);
 %%
@@ -1370,30 +2273,30 @@ for ii = 1:100
             trainTest([thisBase;thisStim],[zeros(minSamp,1);...
             ones(minSamp,1)],0.2);
     end
-%     thisTest = randi(5,1);
-%     testX = zscore(cat(1,thisBase{thisTest},thisStim{thisTest}));
-%     testY = [zeros(80,1);ones(80,1)];
-%     others = logicFind(1,~ismember(1:5,thisTest),'==');
-%     trainX = zscore([cat(1,thisBase{others});cat(1,thisStim{others})]);
-%     trainY = [zeros(80*4,1);ones(80*4,1)];
+    %     thisTest = randi(5,1);
+    %     testX = zscore(cat(1,thisBase{thisTest},thisStim{thisTest}));
+    %     testY = [zeros(80,1);ones(80,1)];
+    %     others = logicFind(1,~ismember(1:5,thisTest),'==');
+    %     trainX = zscore([cat(1,thisBase{others});cat(1,thisStim{others})]);
+    %     trainY = [zeros(80*4,1);ones(80*4,1)];
     % Normalize x values
     trainX = zscore(cat(1,thisTrainX{:}));
     trainY = cat(1,thisTrainY{:});
     testX = zscore(cat(1,thisTestX{:}));
     testY = cat(1,thisTestY{:});
-%     [trainX,trainY,testX,testY] = trainTest([cat(1,saline{:,1});cat(1,saline{:,2})],[zeros(sum(cellfun(@(x) size(x,1),saline(:,1))),1);ones(sum(cellfun(@(x) size(x,1),saline(:,2))),1)],0.2);
+    %     [trainX,trainY,testX,testY] = trainTest([cat(1,saline{:,1});cat(1,saline{:,2})],[zeros(sum(cellfun(@(x) size(x,1),saline(:,1))),1);ones(sum(cellfun(@(x) size(x,1),saline(:,2))),1)],0.2);
 
-    
+
     mdl = fitglm(trainX,trainY,'distribution','binomial','binomialSize',numel(trainY));
     prob = predict(mdl,testX);
     [xSaline{ii},ySaline{ii},tSaline{ii},aSaline(ii)] = perfcurve(testY,prob,1);
-%     betaSaline(:,:,ii) = table2array(mdl.Coefficients);
-%     for n = 1:216
-%         mdl = fitglm(trainX(:,n),trainY,'distribution','binomial','binomialSize',numel(trainY));
-%         betaSaline(n,ii) = table2array(mdl.Coefficients(2,1));
-%         prob = predict(mdl,testX(:,n));
-%         [xSalineSingle{n,ii},ySalineSingle{n,ii},tSalineSingle{n,ii},aSalineSingle(n,ii)] = perfcurve(testY,prob,1);
-%     end
+    %     betaSaline(:,:,ii) = table2array(mdl.Coefficients);
+    %     for n = 1:216
+    %         mdl = fitglm(trainX(:,n),trainY,'distribution','binomial','binomialSize',numel(trainY));
+    %         betaSaline(n,ii) = table2array(mdl.Coefficients(2,1));
+    %         prob = predict(mdl,testX(:,n));
+    %         [xSalineSingle{n,ii},ySalineSingle{n,ii},tSalineSingle{n,ii},aSalineSingle(n,ii)] = perfcurve(testY,prob,1);
+    %     end
 end
 %%
 % LSD: base v. stim model - 80:20
@@ -1416,22 +2319,22 @@ for ii = 1:100
     trainY = cat(1,thisTrainY{:});
     testX = zscore(cat(1,thisTestX{:}));
     testY = cat(1,thisTestY{:});
-%     [trainX,trainY,testX,testY] = trainTest([cat(1,lsd{:,1});cat(1,lsd{:,2})],[zeros(sum(cellfun(@(x) size(x,1),lsd(:,1))),1);ones(sum(cellfun(@(x) size(x,1),lsd(:,2))),1)],0.2);
-    
+    %     [trainX,trainY,testX,testY] = trainTest([cat(1,lsd{:,1});cat(1,lsd{:,2})],[zeros(sum(cellfun(@(x) size(x,1),lsd(:,1))),1);ones(sum(cellfun(@(x) size(x,1),lsd(:,2))),1)],0.2);
+
     mdl = fitglm(trainX,trainY,'distribution','binomial','binomialSize',numel(trainY));
     prob = predict(mdl,testX);
     [xLSD{ii},yLSD{ii},tLSD{ii},aLSD(ii)] = perfcurve(testY,prob,1);
     [xLSDP{ii},yLSDP{ii},tLSDP{ii},aLSDP(ii)] = perfcurve(testY(randperm(numel(testY),numel(testY))),prob,1);
-%     betaLSD(:,:,ii) = table2array(mdl.Coefficients);
-%     for n = 1:216
-%         mdl = fitglm(trainX(:,n),trainY,'distribution','binomial','binomialSize',numel(trainY));
-%         betaLSD(n,ii) = table2array(mdl.Coefficients(2,1));
-%         prob = predict(mdl,testX(:,n));
-%         [xLSDsingle{n,ii},yLSDsingle{n,ii},~,aLSDsingle(n,ii)] = perfcurve(testY,prob,1);
-%         
-%         prob = predict(mdl,testX(randperm(size(testX,1)),n));
-%         [xLSDsingleP{n,ii},yLSDsingleP{n,ii},~,aLSDsingleP(n,ii)] = perfcurve(testY,prob,1);
-%     end
+    %     betaLSD(:,:,ii) = table2array(mdl.Coefficients);
+    %     for n = 1:216
+    %         mdl = fitglm(trainX(:,n),trainY,'distribution','binomial','binomialSize',numel(trainY));
+    %         betaLSD(n,ii) = table2array(mdl.Coefficients(2,1));
+    %         prob = predict(mdl,testX(:,n));
+    %         [xLSDsingle{n,ii},yLSDsingle{n,ii},~,aLSDsingle(n,ii)] = perfcurve(testY,prob,1);
+    %
+    %         prob = predict(mdl,testX(randperm(size(testX,1)),n));
+    %         [xLSDsingleP{n,ii},yLSDsingleP{n,ii},~,aLSDsingleP(n,ii)] = perfcurve(testY,prob,1);
+    %     end
 end
 %% lsd LOO
 [thisTrainX,thisTrainY,thisTestX,thisTestY] = deal(cell(1,6));
@@ -1534,7 +2437,7 @@ for ii = 1:100
         linspace(0,1,160));
     interptYsaline(ii,:) = interp1(linspace(0,1,numel(ySaline{ii})),ySaline{ii},...
         linspace(0,1,160));
-    
+
     interptXlsd(ii,:) = interp1(linspace(0,1,numel(xLSD{ii})),xLSD{ii},...
         linspace(0,1,160));
     interptYlsd(ii,:) = interp1(linspace(0,1,numel(yLSD{ii})),yLSD{ii},...
@@ -1588,14 +2491,14 @@ ylim([0 0.16])
 sgtitle('LSD+stim vs baseline and SAL+stim vs baseline')
 %%
 % Single feature analysis
-feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
+feat = names({'lIL','rIL','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
     'rNAcC'},{'d','t','a','b','lg','hg'})';
 
 lsdMeanA = mean(aLSDsingle,2).*sign(mean(betaLSD,2));
 [lsdSortA,lsdSortInd] = sort(lsdMeanA,'descend');
 lsdFeat = feat(lsdSortInd)';
 betaLSDsort = mean(betaLSD(lsdSortInd,:),2);
-[~,lsdP] = ttest2(aLSDsingle',aLSDsingleP'); 
+[~,lsdP] = ttest2(aLSDsingle',aLSDsingleP');
 lsdPadj = lsdP.*216;
 lsdPadjSort = lsdPadj(lsdSortInd)';
 lsdMeanA(lsdPadj>0.05) = NaN;
@@ -1663,7 +2566,7 @@ for ii = mASsortInd
     if ~isnan(mAS(ii))
         errorbar(mean(allLSDdiff(:,ii)),mAS(ii),std(allLSDdiff(:,ii),[],1),'.b','horizontal')
         errorbar(mean(allSalDiff(:,ii)),mAS(ii),std(allSalDiff(:,ii),[],1),'.r','horizontal')
-%         plot([mean(allLSDdiff(:,ii)) mean(allSalDiff(:,ii))],[mAS(ii) mAS(ii)],'-k')
+        %         plot([mean(allLSDdiff(:,ii)) mean(allSalDiff(:,ii))],[mAS(ii) mAS(ii)],'-k')
         c = c+1;
     end
 end
@@ -1679,9 +2582,9 @@ figure
 plot(lsdMeanA(1:48),salMeanA(1:48),'.b')
 hold on
 plot(lsdMeanA(49:end),salMeanA(49:end),'.r')
-plot(lsdMeanA(abs(diffMean)>0.6),salMeanA(abs(diffMean)>0.6),'ok')
+plot(lsdMeanA(abs(diffMean)>=0.6),salMeanA(abs(diffMean)>=0.6),'ok')
 
-inds = logicFind(1,abs(diffMean)>0.6,'==');
+inds = logicFind(1,abs(diffMean)>=0.6,'==');
 above = diffMean(inds);
 [~,sortInd] = sort(abs(above),'descend');
 sorted = above(sortInd);
@@ -1705,7 +2608,7 @@ for ii = 1:4
     hold on
     plot(lsdMeanA(49:end),salMeanA(49:end),'.r')
     plot(lsdMeanA(abs(diffMean)>0.6),salMeanA(abs(diffMean)>0.6),'ok')
-    
+
     inds = logicFind(1,abs(diffMean)>0.6,'==');
     above = diffMean(inds);
     [~,sortInd] = sort(abs(above),'descend');
@@ -1720,11 +2623,11 @@ for ii = 1:4
     xlim(sort([0.46 0.81].*lims(ii,1),'ascend'))
     ylim(sort([0.46 0.81].*lims(ii,2),'ascend'))
     xlabel('LSD+stim')
-    ylabel('SAL+stim')    
+    ylabel('SAL+stim')
 end
 %%
 for ii = 1:10
-doubleHist(allLSDdiff(:,mASsortInd(ii)),allSalDiff(:,mASsortInd(ii)))
+    doubleHist(allLSDdiff(:,mASsortInd(ii)),allSalDiff(:,mASsortInd(ii)))
 end
 %%
 % Count number of incresed effect; decreased effect; and reversal of effect
@@ -1739,20 +2642,18 @@ increase = sum(increaseInd);
 decreaseInd = mean(allLSDdiff(:,~reversalInd),1)<mean(allSalDiff(:,~reversalInd),1);
 decrease = sum(decreaseInd);
 %% Single feature analysis
-
-
 cutoffA = 0.55;
 cutoffP = 0.05;
 for jj = 1:6
     powFreqLSD(jj) = sum(lsdMeanA(1+(jj-1):6:48)>=cutoffA);
     cohFreqLSD(jj) = sum(lsdMeanA(49+(jj-1):6:end)>=cutoffA);
-    
+
     powFreqSaline(jj) = sum(salineMeanA(1+(jj-1):6:48)>=cutoffA);
     cohFreqSaline(jj) = sum(salineMeanA(49+(jj-1):6:end)>=cutoffA);
-    
+
     powFreqLSDP(jj) = sum(lsdPadj(1+(jj-1):6:48)<=cutoffP);
     cohFreqLSDP(jj) = sum(lsdP(49+(jj-1):6:end)<=cutoffP);
-    
+
     powFreqSalineP(jj) = sum(salPadj(1+(jj-1):6:48)<=cutoffP);
     cohFreqSalineP(jj) = sum(salPadj(49+(jj-1):6:end)<=cutoffP);
 end
@@ -1820,7 +2721,7 @@ for jj = 1:6
     h = plot(g,'XData',x,'YData',y,'markersize',theseNodes,'linewidth',abs(g.Edges.Weight)+s,'edgecolor',edgeColor,'nodecolor',nodeColor);
     title(freqs{jj})
     axis off
-%     print(['LSD',freqs{jj},'.eps'],'-dwinc','-painters')
+    %     print(['LSD',freqs{jj},'.eps'],'-dwinc','-painters')
 end
 %% single feature analysis
 feat = names({'lmPFC','rmPFc','lOFC','rOFC','lNAcS','rNAcS','lNAcC',...
@@ -1842,8 +2743,8 @@ sigFeat = feat(pAdj<=0.05);
 pow = sum(pAdj(1:24)<=0.05);
 coh = sum(pAdj(25:end)<=0.05);
 for jj = 1:6
-%     powFreq(jj) = sum(pAdj(1+(jj-1):6:48)<=0.05);
-%     cohFreq(jj) = sum(pAdj(49+(jj-1):6:end)<=0.05);
+    %     powFreq(jj) = sum(pAdj(1+(jj-1):6:48)<=0.05);
+    %     cohFreq(jj) = sum(pAdj(49+(jj-1):6:end)<=0.05);
     powFreq(jj) = sum(aSM(1+(jj-1):6:48)>=0.6);
     cohFreq(jj) = sum(aSM(49+(jj-1):6:end)>=0.6);
 end
@@ -1866,16 +2767,16 @@ for ii = 1:3
     sBase = std(baseIRDM{ii}{1,1},[],1);
     c = 1;
     for jj = 2:3
-        zLSD(ii,c,:) = (mean(lsdIRDM{ii}{jj,1})-mLSD)./sLSD; 
+        zLSD(ii,c,:) = (mean(lsdIRDM{ii}{jj,1})-mLSD)./sLSD;
         zBase(ii,c,:) = (mean(baseIRDM{ii}{jj,1})-mBase)./sBase;
         c = c+1;
     end
 end
 %%
 for ii = 1:216
-   for jj = 1:2
-      [~,p(ii,jj)] = ttest2(zLSD(:,jj,ii),zBase(:,jj,ii));
-   end
+    for jj = 1:2
+        [~,p(ii,jj)] = ttest2(zLSD(:,jj,ii),zBase(:,jj,ii));
+    end
 end
 %%
 for ii = [5,10:12,29,40,52,58,94,99,192,196]
@@ -1915,7 +2816,7 @@ for ii = 1:5
     trainY = [ones(size(thisLSD,1),1);zeros(size(thisBase,1),1)];
     testX = [allLSDDiff{testInd}(randperm(size(allLSDDiff{testInd},1),minSamp),:);allBaseDiff{testInd}(randperm(size(allBaseDiff{testInd},1),minSamp),:)];
     testY = [ones(minSamp,1);zeros(minSamp,1)];
-    
+
     mdl = fitglm(trainX,trainY,'distribution','binomial','binomialSize',numel(trainY));
     prob = predict(mdl,testX);
     [x(ii,:),y(ii,:),t(ii,:),a(ii)] = perfcurve(testY,prob,1);
@@ -1924,15 +2825,15 @@ for ii = 1:5
     prob = predict(mdl,testX);
     [xP(ii,:),yP(ii,:),tP(ii,:),aP(ii)] = perfcurve(testY,prob,1);
     % Single feature
-%     for jj = 1:216
-%         mdl = fitglm(trainX(:,jj),trainY,'distribution','binomial','binomialSize',numel(trainY));
-%         prob = predict(mdl,testX(:,jj));
-%         [xS(ii,jj,:),yS(ii,jj,:),tS(ii,jj,:),aS(ii,jj)] = perfcurve(testY,prob,1);
-%     end
+    %     for jj = 1:216
+    %         mdl = fitglm(trainX(:,jj),trainY,'distribution','binomial','binomialSize',numel(trainY));
+    %         prob = predict(mdl,testX(:,jj));
+    %         [xS(ii,jj,:),yS(ii,jj,:),tS(ii,jj,:),aS(ii,jj)] = perfcurve(testY,prob,1);
+    %     end
 end
 %% Actual leave one out (only five models) - shitty
-x = []; y = []; t = []; a = []; 
-xS = []; yS = []; tS = []; aS = []; 
+x = []; y = []; t = []; a = [];
+xS = []; yS = []; tS = []; aS = [];
 xP = []; yP = []; tP = []; aP = [];
 xSP = []; ySP = []; tSP = []; aSP = [];
 betaStim = [];
@@ -1952,18 +2853,18 @@ for n = 1:5
     end
     trainBaseY = zeros(size(trainBaseX,1),1);
     trainLSDY = ones(size(trainLSDX,1),1);
-    
+
     lo = 6-n;
     testBaseX = thisBaseDiff{lo}(randperm(size(thisBaseDiff{lo},1),minSamp),:);
     testLSDX = thisLSDDiff{lo}(randperm(size(thisLSDDiff{lo},1),minSamp),:);
     testBaseY = zeros(size(testBaseX,1),1);
     testLSDY = ones(size(testLSDX,1),1);
-    
+
     trainX = [trainBaseX;trainLSDX];
     trainY = [trainBaseY;trainLSDY];
     testX = [testBaseX;testLSDX];
     testY = [testBaseY;testLSDY];
-    
+
     mdl = fitglm(trainX(:,subInds),trainY,'distribution','binomial','binomialSize',numel(trainY));
     prob = predict(mdl,testX(:,subInds));
     [x{n},y{n},t{n},a(n)] = perfcurve(testY,prob,1);
@@ -2005,7 +2906,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %% PCA
 % [coeff,score,latent,~,explained] = pca(allSal);
 % allLSDpca = bsxfun(@minus,allLSD,mean(allLSD))/coeff';
-% 
+%
 % figure
 % hold on
 % scatter3(score(:,1),score(:,2),score(:,3),'.')
@@ -2029,7 +2930,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %     % LSD data
 %     trainLSD = logicFind(1,~ismember(1:lsdN,inds(n,1)),'==');
 %     testLSD = logicFind(0,~ismember(1:lsdN,inds(n,1)),'==');
-%     
+%
 %     thisLSD24 = [];
 %     for ii = trainLSD
 %         rng(ii*n)
@@ -2054,7 +2955,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %     trainY = [ones(size(thisLSD24,1),1);zeros(size(thisSal,1),1)];
 %     testX = [lsdTest;salTest];
 %     testY = [ones(minSamp,1);zeros(minSamp,1)];
-%     
+%
 %     mdl = fitglm(trainX(:,subInds),trainY,'distribution','binomial',...
 %         'binomialSize',numel(trainY));
 %     prob = predict(mdl,testX(:,subInds));
@@ -2083,7 +2984,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %% Modeling under run24HrDrugvBaseline.m
 % %% Simple log LOO
 % load('F:\lsd\lsdSalBaseline.mat')
-% load('F:\lsd\LSDvSal24HrRel.mat')       
+% load('F:\lsd\LSDvSal24HrRel.mat')
 % % LSD data
 % lsd24N = numel(lsd24);
 % lsdBaseN = numel(allLSDBase);
@@ -2099,7 +3000,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 % for n = 1:6%size(inds,1)
 %     trainLSD24 = logicFind(1,~ismember(1:lsd24N,inds(n,1)),'==');
 %     testLSD24 = logicFind(0,~ismember(1:lsd24N,inds(n,1)),'==');
-%     
+%
 %     trainLSDBase = logicFind(1,~ismember(1:lsdBaseN,inds(n,1)),'==');
 %     testLSDBase = logicFind(0,~ismember(1:lsdBaseN,inds(n,1)),'==');
 %     % LSD 24
@@ -2123,7 +3024,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %     trainLSDY{n} = [ones(size(thisLSD24,1),1);zeros(size(thisLSDBase,1),1)];
 %     testLSDX{n} = [lsd24Test;lsdBaseTest];
 %     testLSDY{n} = [ones(minSamp,1);zeros(minSamp,1)];
-%     
+%
 %     mdlLSD{n} = fitglm(trainLSDX{n},trainLSDY{n},'distribution','binomial',...
 %         'binomialSize',numel(trainLSDY{n}));
 %     prob = predict(mdlLSD{n},testLSDX{n});
@@ -2150,7 +3051,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 % for n = 1:5%size(inds,1)
 %     trainSal24 = logicFind(1,~ismember(1:sal24N,inds(n,1)),'==');
 %     testSal24 = logicFind(0,~ismember(1:sal24N,inds(n,1)),'==');
-%     
+%
 %     trainSalBase = logicFind(1,~ismember(1:salBaseN,inds(n,1)),'==');
 %     testSalBase = logicFind(0,~ismember(1:salBaseN,inds(n,1)),'==');
 %     % Sal 24
@@ -2174,7 +3075,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %     trainSalY{n} = [ones(size(thisSal24,1),1);zeros(size(thisSalBase,1),1)];
 %     testSalX{n} = [sal24Test;salBaseTest];
 %     testSalY{n} = [ones(minSamp,1);zeros(minSamp,1)];
-%     
+%
 %     mdlSal{n} = fitglm(trainSalX{n},trainSalY{n},'distribution','binomial',...
 %         'binomialSize',numel(trainSalY{n}));
 %     prob = predict(mdlSal{n},testSalX{n});
@@ -2193,7 +3094,7 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %         % LSD model to saline data
 %         prob = predict(mdlLSD{jj},testSalX{ii});
 %         [lsdSalX(c,:),lsdSalY(c,:),~,lsdSalA(c)] = perfcurve(testSalY{ii},prob,1);
-%         
+%
 %         % saline model to LSD data
 %         prob = predict(mdlSal{ii},testLSDX{jj});
 %         [salLSDX(c,:),salLSDY(c,:),~,salLSDA(c)] = perfcurve(testLSDY{jj},prob,1);
@@ -2231,4 +3132,298 @@ legend({['Real: ',num2str(round(mean(a),2)),'\pm',...
 %     num2str(round(conf(salAP,0.95),2))],['LSD Model: ',...
 %     num2str(round(mean(lsdSalA),2)),'\pm',...
 %     num2str(round(conf(lsdSalA,0.95),2))]},'location','se')
+%% New LSD + stim data
+% load baselines
+[baseData,baseSamps,baseFiles] = collateData('F:\LSD+stim\processed\baselines\',...
+    {'.mat'},{'pow','coh'},'trl','rel');
+% get average and std of each animal
+for ii = 1:8
+    these = contains(baseFiles{1},['LSD',num2str(ii)]);
+    baseCat{ii} = cat(1,baseData{1}{these});
+    baseM{ii} = mean(cat(1,baseData{1}{these}));
+    baseS{ii} = std(cat(1,baseData{1}{these}));
+end
+% load last stim days
+[lastData,lastSamps,lastFiles] = collateData('F:\LSD+stim\processed\lastStim\',...
+    {'.mat'},{'pow','coh'},'trl','rel');
+%%
+% Find last stim epoch and split data into stim data and postStim data
+for ii = 1:numel(lastFiles{1})
+    load(['F:\LSD+stim\processed\lastStim\',lastFiles{1}{ii}],'hist')
+    % Get animal ID
+    parts = strsplit(lastFiles{1}{ii},'-');
+    ID = str2double(parts{1}(end));
+    % Get stim times
+    if contains(lastFiles{1}{ii},'sham')
+        stimStart = 600;
+        stimStop = 6100;
+    else
+        stimStart = hist.eventTs.t{9}(nearest_idx3(600,hist.eventTs.t{9}));
+        stimStop = hist.eventTs.t{9}(end);
+    end
+    % Stim data
+    stimData{ii} = lastData{1}{ii}(...
+        lastSamps{1}{ii}(:,1)>(stimStart*2000) & ...
+        lastSamps{1}{ii}(:,2)<(stimStop*2000),:);%-baseM{ID})./baseS{ID};
+    % Post stim data
+    postStimData{ii} = lastData{1}{ii}(...
+        lastSamps{1}{ii}(:,2)>(stimStop*2000),:);%-baseM{ID})./baseS{ID};
+end
+%% First build models differentiating between stim and baseline
+% code in runLSDstim.mat
 
+for ii = 1:100
+    clear lsdStimA lsdStimAP lsdSham salStimA salStimAP salShamA salShamAP
+    load(['F:\LSD+stim\LSDvSAL_acute\LSDstim',num2str(ii),'.mat'])
+    lsdStimAs(ii) = lsdStimA{1}.acc;
+    lsdStimAPs(ii) = lsdStimAP{1}.acc;
+    lsdShamAs(ii) = lsdShamA{1}.acc;
+    lsdShamAPs(ii) = lsdShamAP{1}.acc;
+    if exist('salStimA')
+        salStimAs(ii) = salStimA{1}.acc;
+    else
+        salStimAs(ii) = NaN;
+    end
+    if exist('salStimAP')
+        salStimAPs(ii) = salStimAP{1}.acc;
+    else
+        salStimAPs(ii) = NaN;
+    end
+    if exist('salShamA')
+        salShamAs(ii) = salShamA{1}.acc;
+    else
+        salShamAs(ii) = NaN;
+    end
+    if exist('salShamAP')
+        salShamAPs(ii) = salShamAP{1}.acc;
+    else
+        salShamAPs(ii) = NaN;
+    end
+end
+%%
+figure
+subplot(2,2,1)
+[f,xi,bw] = ksdensity(lsdStimAPs);
+fill(xi,f*bw,'w')
+plotSpread(lsdStimAPs','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
+plot([mean(lsdStimAs) mean(lsdStimAs)],[0 0.25],'-')
+subplot(2,2,2)
+[f,xi,bw] = ksdensity(lsdShamAPs);
+fill(xi,f*bw,'w')
+plotSpread(lsdShamAPs','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
+plot([mean(lsdShamAs) mean(lsdShamAs)],[0 0.25],'-')
+subplot(2,2,3)
+[f,xi,bw] = ksdensity(salStimAPs);
+fill(xi,f*bw,'w')
+plotSpread(salStimAPs','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
+plot([mean(salStimAs) mean(salStimAs)],[0 0.25],'-')
+subplot(2,2,4)
+[f,xi,bw] = ksdensity(salShamAPs);
+fill(xi,f*bw,'w')
+plotSpread(salShamAPs','xyori','flipped','xvalues',0.05,'spreadWidth',0.1)
+plot([mean(salShamAs) mean(salShamAs)],[0 0.25],'-')
+%%
+thisDiff = [];
+for ii = 1:60
+    thisDiff = [thisDiff;lsdStimAPs(ii)-lsdShamAPs(ii);...
+        lsdStimAPs(ii)-salStimAPs(ii);...
+        lsdStimAPs(ii)-salShamAPs(ii);...
+        lsdShamAPs(ii)-salStimAPs(ii);...
+        lsdShamAPs(ii)-salShamAPs(ii);...
+        salStimAPs(ii)-salShamAPs(ii)];
+end
+%% Then use post stim effects
+% code in runLSDpostSim.mat
+[lsdPostStimAs,lsdPostStimAPs,lsdPostShamAs,lsdPostShamAPs,...
+    salPostStimAs,salPostStimAPs,salPostShamAs,salPostShamAPs] = deal([]);
+for ii = 1:60
+    load(['F:\LSD+stim\LSDvsSAL_post\LSDpostStim',num2str(ii),'.mat'])
+    lsdPostStimAs(ii) = lsdStimPostA{1}.acc;
+    lsdPostStimAPs(ii) = lsdStimPostAP{1}.acc;
+    lsdPostShamAs(ii) = lsdShamPostA{1}.acc;
+    lsdPostShamAPs(ii) = lsdShamPostAP{1}.acc;
+    salPostStimAs(ii) = salStimPostA{1}.acc;
+    salPostStimAPs(ii) = salStimPostAP{1}.acc;
+    salPostShamAs(ii) = salShamPostA{1}.acc;
+    salPostShamAPs(ii) = salShamPostAP{1}.acc;
+end
+%% Then use baseline normalized post days in X minute bins
+[postData,postSamps,postFiles] = collateData(...
+    'F:\LSD+stim\processed\postStim\',{'.mat'},{'pow','coh'},'trl','');
+% Number of minutes per bin
+bin = 5;
+binSamps = bin*60*2000;
+% Total length of data to look at (minutes)
+total = 30;
+totalSamps = total*60*2000;
+for ii = 1:numel(postFiles{1})
+    for k = 1:total/bin
+        thisStart = (k-1)*binSamps+1;
+        thisStop = k*binSamps;
+        inds = postSamps{1}{ii}(:,1)>=thisStart & ...
+            postSamps{1}{ii}(:,2)<=thisStop;
+        post{ii,k} = postData{1}{ii}(inds,:);
+    end
+end
+%% Build models for each bin
+stimInd = logical([1,0,0,1,1,1,0,0,1,0,0,0,0]);
+shamInd = ~stimInd;
+lsdInd = logical([1,0,1,0,0,1,0,1,1,0,1,0,1]);
+salInd = ~lsdInd;
+n = 50;
+for ii = 1:100
+    for k = 1:size(post,2)
+        for jj = 1:size(post,1)
+            % Grab n samples, or weight as needed
+            if size(post{jj,k},1) < n
+                thisPost{jj,k} = post{jj,k};
+                thisWeight{jj,k} = repmat(n/size(post{jj,k},1),...
+                    size(post{jj,k},1),1);
+            else
+                thisPost{jj,k} = post{jj,k}(randperm(size(post{jj,k},1),...
+                    n),:);
+                thisWeight{jj,k} = ones(n,1);
+            end
+        end
+        % Combine into stim and sham groups
+        allStim = cat(1,thisPost{stimInd,k});
+        allSham = cat(1,thisPost{shamInd,k});
+        allW = cat(1,thisWeight{stimInd,k},thisWeight{shamInd,k});
+        % 80:20 split
+        [trainX,trainY,testX,testY,trainInd] = trainTest([allStim;allSham],...
+            [ones(size(allStim,1),1);zeros(size(allSham,1),1)],0.2);
+        cfg = lassoNetCfg({testX,testY},[],'n','n','n',100,'1se',...
+            allW(trainInd));
+        [~,~,~,~,accPostStim{ii,k},~] = lassoNet(trainX,trainY,'binomial',...
+            'class',1,10,1,cfg);
+        % Permuted
+        stimIndPerm = randperm(numel(postFiles{1}),sum(stimInd));
+        shamIndPerm = randperm(numel(postFiles{1}),sum(shamInd));
+        allStimPerm = cat(1,thisPost{stimIndPerm,k});
+        allShamPerm = cat(1,thisPost{shamIndPerm,k});
+        allWPerm = cat(1,thisWeight{stimIndPerm,k},...
+            thisWeight{shamIndPerm,k});
+        [trainX,trainY,testX,testY,trainInd] = trainTest([allStimPerm;...
+            allShamPerm],[ones(size(allStimPerm,1),1);...
+            zeros(size(allShamPerm,1),1)],0.2);
+        cfg = lassoNetCfg({testX,testY},[],'n','n','n',100,'1se',[]);
+        [~,~,~,~,accPostStimP{ii,k},~] = lassoNet(trainX,trainY,...
+            'binomial','class',1,10,1,cfg);
+    end
+end
+%% Models of every stim day, using that day's baseline and post stim
+[stimData,stimSamps,stimFiles] = collateData(...
+    'F:\LSD+stim\processed\allStim\',{'.mat'},{'pow','coh'},'trl','rel');
+%%
+[lsdSham,lsdStim,salSham,salStim] = deal(cell(1,2));
+for ii = 1:numel(stimFiles{1})
+    load(stimFiles{1}{ii},'hist')
+    if contains(stimFiles{1}{ii},'sham')
+        firstStim = 600;
+        lastStim = 6100;
+    else
+        firstStim = hist.eventTs.t{9}(nearest_idx3(600,hist.eventTs.t{9}));
+        lastStim = hist.eventTs.t{9}(end);
+    end
+    thisPre = stimData{1}{ii}(stimSamps{1}{ii}(:,1)<firstStim*2000,:);
+    thisPost = stimData{1}{ii}(stimSamps{1}{ii}(:,2)>lastStim*2000,:);
+    if contains(stimFiles{1}{ii},'sham') && contains(stimFiles{1}{ii},'_LSD_')
+        lsdSham = [lsdSham;{thisPre},{thisPost}];
+    end
+    if contains(stimFiles{1}{ii},'sham') && contains(stimFiles{1}{ii},'_SAL_')
+        salSham = [salSham;{thisPre},{thisPost}];
+    end
+    if contains(stimFiles{1}{ii},'sIL') && contains(stimFiles{1}{ii},'_LSD_')
+        lsdStim = [lsdStim;{thisPre},{thisPost}];
+    end
+    if contains(stimFiles{1}{ii},'sIL') && contains(stimFiles{1}{ii},'_SAL_')
+        salStim = [salStim;{thisPre},{thisPost}];
+    end
+end
+lsdSham(1,:) = [];
+lsdStim(1,:) = [];
+salSham(1,:) = [];
+salStim(1,:) = [];
+%%
+n = 50;
+% LSD stim
+for k = 1:100
+    disp(k)
+    this = [];
+    for ii = 1:size(lsdStim,1)
+        this{ii,1} = lsdStim{ii,1}(randperm(size(lsdStim{ii,1},1),n),:);
+%         this{ii,2} = lsdStim{ii,2}(randperm(size(lsdStim{ii,2},1),n),:);
+        this{ii,2} = lsdStim{ii,2}(1:50,:);
+    end
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{:,1},this{:,2}),...
+        cat(1,ones(size(lsdStim,1)*n,1),zeros(size(lsdStim,1)*n,1)),0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~, lsdStimA(k)] = perfcurve(testY,prob,1);
+    % Permuted
+    these = logical(round(rand(size(lsdStim,1),1)));
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{these,1},...
+        this{~these,2},this{~these,1},this{these,2}),[ones(sum(these)*n*2,1);...
+        zeros(sum(~these)*n*2,1)],0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,lsdStimAP(k)] = perfcurve(testY,prob,1);
+    % LSD sham
+    this = [];
+    for ii = 1:size(lsdSham,1)
+        this{ii,1} = lsdSham{ii,1}(randperm(size(lsdSham{ii,1},1),n),:);
+        this{ii,2} = lsdSham{ii,2}(randperm(size(lsdSham{ii,2},1),n),:);
+    end
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{:,1},this{:,2}),...
+        cat(1,ones(size(lsdSham,1)*n,1),zeros(size(lsdSham,1)*n,1)),0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,lsdShamA(k)] = perfcurve(testY,prob,1);
+    % Permuted
+    these = logical(round(rand(size(lsdSham,1),1)));
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{these,1},...
+        this{~these,2},this{~these,1},this{these,2}),[ones(sum(these)*n*2,1);...
+        zeros(sum(~these)*n*2,1)],0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,lsdShamAP(k)] = perfcurve(testY,prob,1);
+    % SAL stim
+    this = [];
+    for ii = 1:size(salStim,1)
+        this{ii,1} = salStim{ii,1}(randperm(size(salStim{ii,1},1),n),:);
+        this{ii,2} = salStim{ii,2}(randperm(size(salStim{ii,2},1),n),:);
+    end
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{:,1},this{:,2}),...
+        cat(1,ones(size(salStim,1)*n,1),zeros(size(salStim,1)*n,1)),0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,salStimA(k)] = perfcurve(testY,prob,1);
+    % Permuted
+    these = logical(round(rand(size(salStim,1),1)));
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{these,1},...
+        this{~these,2},this{~these,1},this{these,2}),[ones(sum(these)*n*2,1);...
+        zeros(sum(~these)*n*2,1)],0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,salStimAP(k)] = perfcurve(testY,prob,1);
+    % SAL sham
+    this = [];
+    for ii = 1:size(salSham,1)
+        this{ii,1} = salSham{ii,1}(randperm(size(salSham{ii,1},1),n),:);
+        this{ii,2} = salSham{ii,2}(randperm(size(salSham{ii,2},1),n),:);
+    end
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{:,1},this{:,2}),...
+        cat(1,ones(size(salSham,1)*n,1),zeros(size(salSham,1)*n,1)),0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,salShamA(k)] = perfcurve(testY,prob,1);
+    % Permuted
+    these = logical(round(rand(size(salSham,1),1)));
+    [trainX,trainY,testX,testY] = trainTest(cat(1,this{these,1},...
+        this{~these,2},this{~these,1},this{these,2}),[ones(sum(these)*n*2,1);...
+        zeros(sum(~these)*n*2,1)],0.2);
+    mdl = fitglm(trainX,trainY,'distribution','binomial');
+    prob = predict(mdl,testX);
+    [~,~,~,salShamAP(k)] = perfcurve(testY,prob,1);
+end
+%% Build model of LSD+stim vs base; apply over post
